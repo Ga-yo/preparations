@@ -10,7 +10,8 @@
     "build": "pnpm --filter web build",
     "lint": "pnpm --filter web lint",
     "typecheck": "pnpm --filter web typecheck",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test": "pnpm --filter web test"
   },
   "devDependencies": {
     "prettier": "^3.9.10"
