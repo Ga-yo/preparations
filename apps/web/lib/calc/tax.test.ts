@@ -33,3 +33,22 @@ test("비조정 2주택은 중과 아님, 3주택 8%, 4주택 12%", () => {
   expect(acquisitionTax({ ...p, houseCountAfter: 3 })).toMatchObject({ acquisitionTax: 40_000_000, heavyTax: true });
   expect(acquisitionTax({ ...p, houseCountAfter: 4 }).acquisitionTax).toBe(60_000_000);
 });
+
+test.each([
+  [600_000_000, 6_000_000], [600_000_001, 6_000_000], [600_007_500, 6_000_675],
+  [900_000_000, 27_000_000], [900_000_001, 27_000_000],
+])("6~9억 경계 %i원 -> 취득세 %i원", (price, tax) => {
+  expect(acquisitionTax({ ...base, price }).acquisitionTax).toBe(tax);
+});
+test("600,007,500원은 반올림 .5 올림 10001ppm, 교육세 일관", () =>
+  expect(acquisitionTax({ ...base, price: 600_007_500 })).toMatchObject({ acquisitionTax: 6_000_675, localEducationTax: 600_067 }));
+test("85㎡ 이하 농특세 0, 85.01㎡ 부과", () => {
+  expect(acquisitionTax({ ...base, price: 500_000_000, exclusiveAreaM2: 85 }).ruralSpecialTax).toBe(0);
+  expect(acquisitionTax({ ...base, price: 500_000_000, exclusiveAreaM2: 85.01 }).ruralSpecialTax).toBe(1_000_000);
+});
+test("생애최초 12억 정확히는 감면", () =>
+  expect(acquisitionTax({ ...base, price: 1_200_000_000, isFirstTime: true })).toMatchObject({ firstTimeRelief: 2_000_000 }));
+test("생애최초 2억 이하: 취득세 전액 감면, 교육세 0", () =>
+  expect(acquisitionTax({ ...base, price: 200_000_000, isFirstTime: true })).toMatchObject({
+    acquisitionTax: 2_000_000, firstTimeRelief: 2_000_000, localEducationTax: 0, total: 0,
+  }));

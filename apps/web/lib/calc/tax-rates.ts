@@ -17,7 +17,7 @@ export const HEAVY_8_PPM = 80_000;
 export const HEAVY_12_PPM = 120_000;
 
 // 제151조: 표준세율분 = 주택 취득세율의 10%(1%→0.1%, 3%→0.3%), 제13조의2 중과분 = (4% − 2%) × 20% = 0.4%
-export const EDU_STANDARD_RATIO = 0.1;
+export const EDU_STANDARD_DIVISOR = 10;
 export const EDU_HEAVY_PPM = 4_000;
 
 // 농어촌특별세법: 전용 85㎡ 초과만 부과. 표준 0.2%, 8% 중과 0.6%, 12% 중과 1.0%
