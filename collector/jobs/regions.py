@@ -23,9 +23,16 @@ def transform(df: pd.DataFrame) -> list[dict]:
     return rows
 
 
+def source_as_of(df: pd.DataFrame) -> date:
+    # 데이터 기준일 = 목록에 나타난 가장 늦은 생성/말소일자
+    d = pd.to_datetime(pd.concat([df["생성일자"], df["말소일자"]]).dropna(), format="%Y%m%d")
+    return d.max().date()
+
+
 def run() -> None:
-    rows = transform(pdr.code_bdong())
+    df = pdr.code_bdong()
+    rows = transform(df)
     n = db.upsert_rows("regions", rows, on_conflict="code")  # upsert only: FK 참조 유지
-    db.mark_freshness("regions", date.today(), "PublicDataReader code_bdong (행정표준코드관리시스템)",
+    db.mark_freshness("regions", source_as_of(df), "PublicDataReader code_bdong (행정표준코드관리시스템)",
                       f"{n} rows, {sum(r['is_active'] for r in rows)} active")
     print(f"regions: {n} rows")

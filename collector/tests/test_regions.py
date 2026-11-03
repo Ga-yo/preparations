@@ -37,3 +37,9 @@ def test_sido_only_row_has_null_sigungu():
     r = rows_by_code()["1100000000"]
     assert r["sigungu"] is None and r["eupmyeondong"] is None and r["ri"] is None
     assert r["full_name"] == "서울특별시"
+
+
+def test_source_as_of_is_max_date_in_data():
+    df = pd.read_csv(FIXTURE, dtype=str)
+    expected = max(pd.to_datetime(pd.concat([df["생성일자"], df["말소일자"]]).dropna(), format="%Y%m%d"))
+    assert regions.source_as_of(df) == expected.date()
