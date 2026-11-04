@@ -7,7 +7,8 @@ FSS_DUMMY=1 이면 API 대신 tests/fixtures/fss_mortgage_dummy.json(가짜 데�
 """
 import json
 import os
-from datetime import date
+from datetime import date, timedelta
+from urllib.parse import urlparse
 from pathlib import Path
 
 import requests
@@ -23,6 +24,11 @@ DUMMY_FIXTURE = Path(__file__).parent.parent / "tests" / "fixtures" / "fss_mortg
 RATE_TYPES = {"F": "fixed", "C": "variable"}
 
 
+def check_dummy_allowed(supabase_url: str) -> None:
+    if urlparse(supabase_url).hostname not in ("127.0.0.1", "localhost", "::1"):
+        raise RuntimeError("FSS_DUMMY=1은 로컬 Supabase(127.0.0.1, localhost, [::1])에서만 허용됩니다")
+
+
 def transform(payload: dict, as_of: date, dummy: bool = False) -> list[dict]:
     res = payload["result"]
     bases = {(b["fin_co_no"], b["fin_prdt_cd"]): b for b in res["baseList"]}
@@ -30,6 +36,8 @@ def transform(payload: dict, as_of: date, dummy: bool = False) -> list[dict]:
     for o in res["optionList"]:
         if o["mrtg_type"] != "A" or o["lend_rate_type"] not in RATE_TYPES:
             continue  # 아파트 담보만
+        if o["lend_rate_min"] is None or o["lend_rate_max"] is None:
+            continue
         groups.setdefault((o["fin_co_no"], o["fin_prdt_cd"], RATE_TYPES[o["lend_rate_type"]]), []).append(o)
     out = []
     for (co, cd, rt), opts in groups.items():
@@ -59,7 +67,8 @@ def fetch_all(key: str) -> dict:
     page = 1
     while True:
         r = requests.get(URL, params={"auth": key, "topFinGrpNo": "020000", "pageNo": page}, timeout=30)
-        r.raise_for_status()
+        if not r.ok:  # raise_for_status 메시지에는 auth=키가 담긴 URL이 들어간다
+            raise RuntimeError(f"FSS API HTTP {r.status_code}")
         res = r.json()["result"]
         if res["err_cd"] != "000":
             raise RuntimeError(f"FSS API error {res['err_cd']}: {res['err_msg']}")
@@ -74,6 +83,7 @@ def run() -> None:
     dummy = os.environ.get("FSS_DUMMY") == "1"
     today = date.today()
     if dummy:
+        check_dummy_allowed(os.environ.get("SUPABASE_URL", ""))
         payload = json.loads(DUMMY_FIXTURE.read_text(encoding="utf-8"))
     else:
         key = os.environ.get("FSS_API_KEY")
@@ -89,6 +99,6 @@ def run() -> None:
                 .or_("source_key.like.fss:*,source_key.like.dummy:*").is_("end_date", "null").execute().data}
     retire = keys_to_retire(existing, {r["source_key"] for r in rows}, dummy)
     if retire:
-        c.table("loan_products").update({"end_date": today.isoformat()}).in_("source_key", sorted(retire)).execute()
+        c.table("loan_products").update({"end_date": (today - timedelta(days=1)).isoformat()}).in_("source_key", sorted(retire)).execute()
     db.mark_freshness("loan_products:bank", today, DUMMY_SOURCE if dummy else SOURCE, "dummy" if dummy else f"{n} rows")
     print(f"loan_products_fss: {n} rows, retired {len(retire)}{' (DUMMY)' if dummy else ''}")

@@ -48,7 +48,7 @@ cross join (values
 
 -- 스트레스 DSR 가산금리(변동형 기준, DSR 산정에만 사용).
 -- 기본 행(조건 1개) = 지방(수도권·규제지역 外) 0.75%p, 2026.12.31까지. 수도권 prefix·규제지역 행(조건 2개)이 3.0%로 우선한다.
--- 2027년 이후 지방 값은 미확정이라 넣지 않았다(행이 없으면 엔진은 가산 0으로 계산하므로 연말 전 갱신 필요).
+-- 2027년 이후 지방 값은 미확정이라 넣지 않았다(행이 없으면 엔진이 rule_missing으로 대출 0원 처리하므로 연말 전 갱신 필요).
 insert into public.loan_rules (rule_type, area_type, region_prefix, lender_type, value, unit, effective_date, end_date, source, source_url, note) values
   ('stress_rate', null, null, 'bank', 0.75, 'percent', '2026-07-01', '2026-12-31',
    '금융위원회공고 제2026-362호 「3단계 스트레스 DSR 제도」 관련 행정지도 변경시행 예고 (2026.6.18)',

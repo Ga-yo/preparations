@@ -1,8 +1,10 @@
 import json
+
+import pytest
 from datetime import date
 from pathlib import Path
 
-from jobs.loan_products_fss import keys_to_retire, transform
+from jobs.loan_products_fss import check_dummy_allowed, keys_to_retire, transform
 
 PAYLOAD = json.loads((Path(__file__).parent / "fixtures" / "fss_mortgage_dummy.json").read_text(encoding="utf-8"))
 D = date(2026, 11, 4)
@@ -56,3 +58,23 @@ def test_retire_real_run():
 
 def test_retire_dummy_run():
     assert keys_to_retire(EXISTING, {"dummy:x"}, dummy=True) == {"dummy:y"}
+
+
+@pytest.mark.parametrize("u", ["http://127.0.0.1:54321", "http://localhost:54321", "http://[::1]:54321"])
+def test_dummy_allowed_local(u):
+    check_dummy_allowed(u)
+
+
+@pytest.mark.parametrize("u", ["", "https://abc.supabase.co"])
+def test_dummy_refused_remote(u):
+    with pytest.raises(RuntimeError):
+        check_dummy_allowed(u)
+
+
+def test_null_rate_options_skipped():
+    import copy
+    p = copy.deepcopy(PAYLOAD)
+    for o in p["result"]["optionList"]:
+        if o["fin_prdt_cd"] == "DUMMY-A1" and o["lend_rate_type"] == "F":
+            o["lend_rate_min"] = None
+    assert "fss:9990001:DUMMY-A1:fixed" not in {r["source_key"] for r in transform(p, D)}

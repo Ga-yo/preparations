@@ -13,7 +13,8 @@ export type BudgetInput = {
   cashAssets: number;
   extraFunds: number;
   annualIncome: number | null;
-  existingAnnualPayment: number;
+  existingDebt: number;
+  existingAnnualPayment: number | null;
   ownedHouseCount: number;
   isFirstTime: boolean | null;
   isNewlywed: boolean | null;
@@ -27,6 +28,8 @@ export type BudgetInput = {
 
 export type Diagnosis =
   | "missing_income"
+  | "region_unspecified"
+  | "debt_payment_missing"
   | "rule_missing"
   | "dsr_binding"
   | "ltv_binding"
@@ -46,6 +49,7 @@ export type BudgetResult = {
     productId: number;
     provider: string;
     name: string;
+    rateType: string | null;
     loanAmount: number;
     monthlyAtMin: number | null;
     monthlyAtMax: number | null;
@@ -116,7 +120,7 @@ export function computeBudget(input: BudgetInput): BudgetResult {
         ltvPct: ltv.value,
         capWon: cap?.value ?? null,
         dsrPrincipal: maxPrincipalByDsr({
-          annualIncome: income, existingAnnualPayment: input.existingAnnualPayment,
+          annualIncome: income, existingAnnualPayment: input.existingAnnualPayment ?? 0,
           dsrPct: dsr.value, annualRatePct: rate, stressRatePct: stress.value,
           termYears: DEFAULT_TERM_YEARS,
         }),
@@ -150,6 +154,8 @@ export function computeBudget(input: BudgetInput): BudgetResult {
 
   const diagnoses = new Set<Diagnosis>();
   if (income === null) diagnoses.add("missing_income");
+  if (input.regionCode === null) diagnoses.add("region_unspecified");
+  if (input.existingDebt > 0 && input.existingAnnualPayment === null) diagnoses.add("debt_payment_missing");
   if (lo.ruleMissing) diagnoses.add("rule_missing");
   if (income !== null && !lo.ruleMissing && lo.noProduct) diagnoses.add("no_eligible_product");
   if (lo.loan.amount === 0) diagnoses.add("funds_only");
@@ -161,7 +167,7 @@ export function computeBudget(input: BudgetInput): BudgetResult {
     const termYears = x.max_term_years !== null && x.max_term_years > 0 ? x.max_term_years : DEFAULT_TERM_YEARS;
     const loanAmount = Math.min(lo.loan.amount, x.max_amount ?? Infinity);
     const m = (r: number | null) => (r === null ? null : monthlyPayment(loanAmount, r, termYears));
-    return { productId: x.id, provider: x.provider, name: x.name, loanAmount, monthlyAtMin: m(x.rate_min), monthlyAtMax: m(x.rate_max), termYears };
+    return { productId: x.id, provider: x.provider, name: x.name, rateType: x.rate_type, loanAmount, monthlyAtMin: m(x.rate_min), monthlyAtMax: m(x.rate_max), termYears };
   };
 
   return {
@@ -171,7 +177,7 @@ export function computeBudget(input: BudgetInput): BudgetResult {
     loan: lo.loan,
     ownFunds,
     costs: lo.costs,
-    products: lo.elig.map(toProduct),
+    products: lo.loan.amount === 0 ? [] : lo.elig.map(toProduct),
     diagnoses: [...diagnoses],
     ruleSources: [...new Set(lo.used.map((r) => r.source))],
   };

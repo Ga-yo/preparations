@@ -17,7 +17,7 @@ const product = (o: Partial<LoanProduct> = {}): LoanProduct => ({
 });
 const input: BudgetInput = {
   date: "2026-11-03", cashAssets: 150_000_000, extraFunds: 50_000_000, annualIncome: 100_000_000,
-  existingAnnualPayment: 0, ownedHouseCount: 0, isFirstTime: false, isNewlywed: false,
+  existingDebt: 0, existingAnnualPayment: 0, ownedHouseCount: 0, isFirstTime: false, isNewlywed: false,
   hasNewborn: false, regionCode: null, exclusiveAreaM2: 59,
   rules: [rule("ltv", 70), rule("dsr", 40), rule("stress_rate", 1.5)],
   areas: [], products: [product()],
@@ -104,4 +104,21 @@ test("기간·가격·면적·자산·생애최초 조건", () => {
   expect(eligibleProducts([product({ asset_max: 50_000_000 })], ep)).toHaveLength(0);
   expect(eligibleProducts([product({ requires_first_time: true })], ep)).toHaveLength(0);
   expect(eligibleProducts([product({ requires_homeless: true })], { ...ep, buyerType: "one_house" })).toHaveLength(0);
+});
+
+test("지역 미지정이면 region_unspecified, 지정하면 없음", () => {
+  expect(computeBudget(input).diagnoses).toContain("region_unspecified");
+  expect(computeBudget({ ...input, regionCode: "11680" }).diagnoses).not.toContain("region_unspecified");
+});
+
+test("기존 부채가 있는데 연 상환액이 없으면 debt_payment_missing", () => {
+  const d = (o: Partial<BudgetInput>) => computeBudget({ ...input, ...o }).diagnoses;
+  expect(d({ existingDebt: 10_000_000, existingAnnualPayment: null })).toContain("debt_payment_missing");
+  expect(d({ existingDebt: 10_000_000, existingAnnualPayment: 1_000_000 })).not.toContain("debt_payment_missing");
+  expect(d({ existingDebt: 0, existingAnnualPayment: null })).not.toContain("debt_payment_missing");
+});
+
+test("대출 0원이면 상품 목록은 비고, 대출이 있으면 rateType을 담는다", () => {
+  expect(computeBudget({ ...input, annualIncome: null }).products).toEqual([]);
+  expect(computeBudget(input).products[0]!.rateType).toBe("variable");
 });

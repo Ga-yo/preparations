@@ -35,20 +35,22 @@ export const getBudget = defineTool({
       regionCode = r.code;
     }
 
-    const [rules, areas, products, fresh] = await Promise.all([
+    const [rules, areas, productsRes, fresh] = await Promise.all([
       supabase.from("loan_rules").select("*"),
       supabase.from("regulated_areas").select("*"),
       supabase.from("loan_products").select("*"),
       supabase.from("data_freshness").select("dataset, as_of, source").in("dataset", ["loan_products:bank", "regulated_areas"]),
     ]);
     const ruleRows = must(rules) ?? [];
+    const productRows = must(productsRes) ?? [];
 
     const result = computeBudget({
       date: today,
       cashAssets: profile.cash_assets ?? 0,
       extraFunds: profile.extra_funds ?? 0,
       annualIncome: profile.annual_income,
-      existingAnnualPayment: profile.existing_debt_annual_payment ?? 0,
+      existingDebt: profile.existing_debt ?? 0,
+      existingAnnualPayment: profile.existing_debt_annual_payment,
       ownedHouseCount: profile.owned_house_count,
       isFirstTime: profile.is_first_time,
       isNewlywed: profile.is_newlywed,
@@ -57,7 +59,7 @@ export const getBudget = defineTool({
       exclusiveAreaM2: args.exclusive_area_m2 ?? DEFAULT_AREA_M2,
       rules: ruleRows,
       areas: must(areas) ?? [],
-      products: must(products) ?? [],
+      products: productRows,
     });
 
     const f = Object.fromEntries((must(fresh) ?? []).map((x) => [x.dataset, x]));
@@ -65,6 +67,8 @@ export const getBudget = defineTool({
     for (const k of ["loan_products:bank", "regulated_areas"]) if (f[k]) as_of[k] = f[k].as_of;
     // loan_rules: 오늘 유효한 규칙 중 effective_date 최신 (사용 규칙만 따로 추적하지 않는 단순화)
     const valid = ruleRows.filter((r) => r.effective_date <= today && (r.end_date === null || r.end_date >= today));
+    const pol = (productRows).filter((x) => x.product_type === "policy" && x.effective_date <= today && (x.end_date === null || x.end_date >= today));
+    if (pol.length) as_of.policy_loans = pol.map((x) => x.data_as_of).sort().at(-1)!;
     if (valid.length) as_of.loan_rules = valid.map((r) => r.effective_date).sort().at(-1)!;
 
     // stale은 수집 데이터(상품)에만 적용. 법령·규칙 effective_date는 원래 오래됐을 수 있다.
