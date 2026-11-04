@@ -110,14 +110,14 @@ export function computeBudget(input: BudgetInput): BudgetResult {
     const rate = known.length === 0 ? null : pick === "min" ? Math.min(...known) : Math.max(...known);
 
     let loan: BudgetResult["loan"] = { amount: 0, binding: "ltv" };
-    if (income !== null && ltv && dsr && rate !== null) {
+    if (income !== null && ltv && dsr && stress && rate !== null) {
       loan = maxLoan({
         price,
         ltvPct: ltv.value,
         capWon: cap?.value ?? null,
         dsrPrincipal: maxPrincipalByDsr({
           annualIncome: income, existingAnnualPayment: input.existingAnnualPayment,
-          dsrPct: dsr.value, annualRatePct: rate, stressRatePct: stress?.value ?? 0,
+          dsrPct: dsr.value, annualRatePct: rate, stressRatePct: stress.value,
           termYears: DEFAULT_TERM_YEARS,
         }),
       });
@@ -131,7 +131,8 @@ export function computeBudget(input: BudgetInput): BudgetResult {
     return {
       price, loan, costs, elig, rate, heavyTax: tax.heavyTax,
       used: [ltv, dsr, cap, stress].filter((r): r is LoanRule => r !== null),
-      ruleMissing: !ltv || !dsr, noProduct: rate === null,
+      // 스트레스 금리 행이 없으면 가산 0으로 가정하지 않는다(한도 과대 방지)
+      ruleMissing: !ltv || !dsr || !stress, noProduct: rate === null,
       need: price - loan.amount + costs.total,
     };
   };

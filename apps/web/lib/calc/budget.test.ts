@@ -52,6 +52,11 @@ test("규칙 없음 → 대출 0, rule_missing (LTV 100% 가정 금지)", () => 
   expect(r.loan.amount).toBe(0);
   expect(r.diagnoses).toEqual(expect.arrayContaining(["rule_missing", "funds_only"]));
 });
+test("스트레스 금리 규칙 없음 → 대출 0, rule_missing (가산 0 가정 금지)", () => {
+  const r = computeBudget({ ...input, rules: [rule("ltv", 70), rule("dsr", 40)] });
+  expect(r.loan.amount).toBe(0);
+  expect(r.diagnoses).toEqual(expect.arrayContaining(["rule_missing", "funds_only"]));
+});
 test("적격 은행 상품 없음 → 대출 0, 금리를 지어내지 않는다", () => {
   const r = computeBudget({ ...input, products: [] });
   expect(r.loan.amount).toBe(0);
