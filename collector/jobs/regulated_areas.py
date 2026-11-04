@@ -22,9 +22,10 @@ def transform(csv_rows: list[dict], name_to_code: dict[str, str]) -> list[dict]:
 def run() -> None:
     with CSV.open(encoding="utf-8") as f:
         csv_rows = list(csv.DictReader(f))
-    # 시도·시군구 단위 활성 코드. 수백 행이라 PostgREST 기본 1000행 제한 안쪽.
+    # CSV에 나온 이름만 조회(시군구·읍면동 단위 모두). 100행 미만이라 PostgREST 1000행 제한 안쪽.
+    names = sorted({r["full_name"] for r in csv_rows})
     res = (db.client().table("regions").select("code,full_name")
-           .is_("eupmyeondong", "null").eq("is_active", True).execute())
+           .in_("full_name", names).eq("is_active", True).execute())
     dup = {n for n, c in Counter(r["full_name"] for r in res.data).items() if c > 1}
     name_to_code = {r["full_name"]: r["code"] for r in res.data if r["full_name"] not in dup}  # 동명은 미해결로 둔다
     rows = transform(csv_rows, name_to_code)
