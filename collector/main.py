@@ -1,7 +1,7 @@
 import importlib
 import sys
 
-JOBS = {"regions": "jobs.regions", "loan_products_fss": "jobs.loan_products_fss"}
+JOBS = {"regions": "jobs.regions", "regulated_areas": "jobs.regulated_areas", "loan_products_fss": "jobs.loan_products_fss"}
 
 
 def main() -> None:
