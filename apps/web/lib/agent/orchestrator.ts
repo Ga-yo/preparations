@@ -7,6 +7,9 @@ export function modelForStage(stage: number): "deepseek-v4-flash" | "deepseek-v4
   return stage === 3 || stage === 5 ? "deepseek-v4-pro" : "deepseek-v4-flash";
 }
 
+export const kstToday = (now = new Date()) =>
+  new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(now);
+
 export const MAX_STEPS_REPLY = "답변을 마무리하지 못했습니다. 질문을 조금 나눠서 다시 질문해 주세요.";
 
 export async function runAgent(p: {

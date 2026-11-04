@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { z } from "zod";
-import { runAgent } from "@/lib/agent/orchestrator";
+import { kstToday, runAgent } from "@/lib/agent/orchestrator";
 import { createClient } from "@/lib/supabase/server";
 
 const Body = z.object({ plan_id: z.uuid(), message: z.string().min(1).max(2000) });
@@ -28,14 +28,20 @@ export async function POST(req: Request) {
   const saveUser = await supabase.from("chat_messages").insert({ plan_id, role: "user", content: message });
   if (saveUser.error) return Response.json({ error: "db_error" }, { status: 500 });
 
-  const client = new OpenAI({ apiKey: process.env.DEEPSEEK_API_KEY, baseURL: "https://api.deepseek.com" });
+  // 키가 비면 openai SDK가 OPENAI_API_KEY로 폴백해 다른 키를 DeepSeek에 보내므로 먼저 막는다
+  const apiKey = process.env.DEEPSEEK_API_KEY;
+  if (!apiKey) {
+    console.error("DEEPSEEK_API_KEY is not configured");
+    return Response.json({ error: "llm_unavailable" }, { status: 502 });
+  }
   let out;
   try {
+    const client = new OpenAI({ apiKey, baseURL: "https://api.deepseek.com" });
     out = await runAgent({
       client,
       stage: plan.current_stage,
       history: [...history, { role: "user", content: message }],
-      ctx: { supabase, planId: plan_id, today: new Date().toISOString().slice(0, 10) },
+      ctx: { supabase, planId: plan_id, today: kstToday() },
     });
   } catch (e) {
     console.error("llm failed", e);

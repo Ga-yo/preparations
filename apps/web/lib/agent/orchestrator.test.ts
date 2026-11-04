@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import type OpenAI from "openai";
 import { fakeDb } from "./fake-db";
-import { modelForStage, runAgent } from "./orchestrator";
+import { kstToday, modelForStage, runAgent } from "./orchestrator";
 import { SYSTEM_PROMPT } from "./prompt";
 
 type Msg = { content: string | null; tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[] };
@@ -90,4 +90,9 @@ test("LLM에 보내는 메시지에 프로필 원값이 없다", async () => {
 test("DeepSeek 오류는 runAgent 밖으로 전파된다 (route가 502 처리)", async () => {
   const { client } = fakeClient([new Error("down")]);
   await expect(runAgent({ client, ...base, ctx: ctx() })).rejects.toThrow("down");
+});
+
+test("kstToday: KST 날짜 경계", () => {
+  expect(kstToday(new Date("2026-11-03T15:30:00Z"))).toBe("2026-11-04");
+  expect(kstToday(new Date("2026-11-03T14:59:59Z"))).toBe("2026-11-03");
 });
