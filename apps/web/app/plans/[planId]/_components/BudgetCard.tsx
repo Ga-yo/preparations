@@ -1,13 +1,6 @@
 import type { BudgetResult, Diagnosis } from "@/lib/calc/budget";
 import type { ToolResult } from "@/lib/agent/tool";
-
-export function formatWon(n: number): string {
-  const eok = Math.floor(n / 1e8);
-  const man = Math.round((n % 1e8) / 1e4);
-  if (eok && man) return `${eok}억 ${man.toLocaleString("ko-KR")}만원`;
-  if (eok) return `${eok}억원`;
-  return `${man.toLocaleString("ko-KR")}만원`;
-}
+import { formatWon } from "./format";
 
 const DIAGNOSES: Record<Diagnosis, string> = {
   missing_income: "연 소득이 입력되지 않아 대출 한도를 계산하지 못했습니다.",

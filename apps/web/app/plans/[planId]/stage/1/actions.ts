@@ -32,6 +32,7 @@ export async function saveFinancialProfile(
   planId: string,
   form: FormData,
 ): Promise<{ ok: true } | { ok: false; fieldErrors: Record<string, string[]> }> {
+  if (!z.uuid().safeParse(planId).success) return { ok: false, fieldErrors: { plan: ["invalid"] } };
   const parsed = financialProfileSchema.safeParse(Object.fromEntries(form));
   if (!parsed.success) return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors as Record<string, string[]> };
   const { createClient } = await import("@/lib/supabase/server"); // server-only: 스키마 테스트가 import할 수 있게 지연 로드
@@ -42,6 +43,8 @@ export async function saveFinancialProfile(
   const { error } = await supabase
     .from("financial_profiles")
     .upsert({ ...parsed.data, plan_id: planId, user_id: user.id });
+  // 남의 plan·없는 plan이면 FK/RLS 위반(23503, 42501)
+  if (error && ["23503", "42501"].includes(error.code)) return { ok: false, fieldErrors: { plan: ["not_found"] } };
   if (error) throw new Error(error.message);
   return { ok: true };
 }

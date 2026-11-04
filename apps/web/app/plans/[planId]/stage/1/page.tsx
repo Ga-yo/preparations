@@ -1,11 +1,17 @@
 import { connection } from "next/server";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { BudgetCard } from "../../_components/BudgetCard";
 import { ChatPanel } from "../../_components/ChatPanel";
 import { TipPanel } from "../../_components/TipPanel";
 import { getBudgetForPlan, saveFinancialProfile } from "./actions";
 
+const LABELS: Record<string, string> = {
+  purpose: "구매 목적", timeline: "구매 희망 시기", cash_assets: "보유 현금·자기자본", annual_income: "연 소득",
+  existing_debt: "기존 대출·부채 총액", existing_debt_annual_payment: "기존 대출 연간 원리금 상환액",
+  extra_funds: "추가 가용 자금", owned_house_count: "보유 주택 수", plan: "계획(접근 권한 없음 또는 존재하지 않음)",
+};
 const MAN = (v: number | null | undefined) => (v == null ? "" : String(v / 10_000));
 
 export default async function Stage1({
@@ -17,6 +23,7 @@ export default async function Stage1({
 }) {
   await connection(); // 날짜·쿠키 기반 렌더: 프리렌더 대상에서 제외
   const { planId } = await params;
+  if (!z.uuid().safeParse(planId).success) notFound();
   const { invalid } = await searchParams;
   const supabase = await createClient();
   const [{ data: p }, { data: tips }, budget] = await Promise.all([
@@ -51,7 +58,7 @@ export default async function Stage1({
     <main className="mx-auto grid w-full max-w-5xl gap-6 p-4 md:grid-cols-2">
       <form action={save} className="space-y-4">
         <h1 className="text-xl font-semibold">1단계. 나의 구매 상황</h1>
-        {invalid && <p role="alert" className="rounded bg-red-100 p-2 text-red-800">입력값을 확인해 주세요: {invalid}</p>}
+        {invalid && <p role="alert" className="rounded bg-red-100 p-2 text-red-800">입력값을 확인해 주세요: {invalid.split(",").map((k) => LABELS[k] ?? k).join(", ")}</p>}
         <div>
           <label htmlFor="purpose" className="block font-medium">구매 목적</label>
           <select id="purpose" name="purpose" defaultValue={p?.purpose ?? ""} className="w-full rounded border px-2 py-1">
