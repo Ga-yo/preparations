@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@repo/db-types";
+import type OpenAI from "openai";
 import { z } from "zod";
 
 export type ToolContext = { supabase: SupabaseClient<Database>; planId: string; today: string };
@@ -16,12 +17,6 @@ export type Tool<S extends z.ZodObject = z.ZodObject> = {
   schema: S;
   run(args: z.input<S>, ctx: ToolContext): Promise<ToolResult>;
 };
-// openai 패키지는 오케스트레이터 작업에서 추가한다. 여기서는 ChatCompletionTool과 구조가 같은 타입만 쓴다.
-export type OpenAiTool = {
-  type: "function";
-  function: { name: string; description: string; parameters: Record<string, unknown> };
-};
-
 // 1단 스키마: optional/default/nullable을 벗긴 뒤 object이거나 원시값이 아닌 배열 원소면 거부
 function assertFlat(tool: string, key: string, field: z.core.$ZodType): void {
   const def = field._zod.def as { type: string; innerType?: z.core.$ZodType; element?: z.core.$ZodType };
@@ -38,7 +33,7 @@ export function defineTool<S extends z.ZodObject>(t: Tool<S>): Tool<S> {
   return t;
 }
 
-export function toOpenAiTools(tools: Tool[]): OpenAiTool[] {
+export function toOpenAiTools(tools: Tool[]): OpenAI.ChatCompletionTool[] {
   return tools.map((t) => ({
     type: "function",
     function: {
