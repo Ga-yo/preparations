@@ -27,10 +27,10 @@ const regions = [
   { code: "1114000000", full_name: "서울특별시 중구", is_active: true },
   { code: "2611000000", full_name: "부산광역시 중구", is_active: true },
 ];
-const mk = (asOf: string, source = "FSS", withProfile = true): ToolContext => ({
+const mk = (asOf: string, source = "FSS", withProfile = true, prof: Record<string, unknown> = profile): ToolContext => ({
   planId: "p1", today: "2026-11-04",
   supabase: fakeDb({
-    financial_profiles: withProfile ? [profile] : [],
+    financial_profiles: withProfile ? [prof] : [],
     loan_rules: [rule("ltv", 70), rule("dsr", 40), rule("stress_rate", 1.5)],
     regulated_areas: [], loan_products: [product], regions,
     data_freshness: [
@@ -79,4 +79,10 @@ test("get_budget: 면적 0은 검증 실패", async () => {
 });
 test("get_tip: slug로 조회", async () => {
   expect((await getTip.run({ slug: "ltv-dsr" }, mk("2026-11-01"))).data).toMatchObject({ tips: [{ slug: "ltv-dsr" }] });
+});
+test("get_budget: 대출 0원이면 binding 생략", async () => {
+  const r = await getBudget.run({}, mk("2026-11-01", "FSS", true, { ...profile, annual_income: null }));
+  const loan = (r.data as { loan: { amount: number } }).loan;
+  expect(loan.amount).toBe(0);
+  expect(loan).not.toHaveProperty("binding");
 });

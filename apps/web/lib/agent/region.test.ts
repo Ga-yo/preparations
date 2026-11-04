@@ -6,6 +6,9 @@ const regions = [
   { code: "1114000000", full_name: "서울특별시 중구", is_active: true },
   { code: "2611000000", full_name: "부산광역시 중구", is_active: true },
   { code: "1168000000", full_name: "서울특별시 강남구", is_active: true },
+  { code: "1147000000", full_name: "서울특별시 양천구", is_active: true },
+  { code: "1150000000", full_name: "서울특별시 강서구", is_active: true },
+  { code: "2814000000", full_name: "인천광역시 서구", is_active: true },
   { code: "1100000001", full_name: "서울특별시 옛구", is_active: false },
 ];
 
@@ -22,4 +25,10 @@ test("시도 없이 입력해도 끝부분 일치로 ok", async () => {
 test("없는 지역·비활성 지역은 not_found", async () => {
   expect(await resolveRegion(fakeDb({ regions }), "없는구")).toEqual({ status: "not_found" });
   expect(await resolveRegion(fakeDb({ regions }), "옛구")).toEqual({ status: "not_found" });
+});
+test("끝부분 일치는 단어 경계: 천구는 양천구에 걸리지 않는다", async () => {
+  expect(await resolveRegion(fakeDb({ regions }), "천구")).toEqual({ status: "not_found" });
+});
+test("서구는 강서구가 아니라 인천 서구만", async () => {
+  expect(await resolveRegion(fakeDb({ regions }), "서구")).toEqual({ status: "ok", code: "2814000000", fullName: "인천광역시 서구" });
 });

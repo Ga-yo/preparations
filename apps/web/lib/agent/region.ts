@@ -21,7 +21,7 @@ export async function resolveRegion(supabase: SupabaseClient<Database>, input: s
   if (exact.error) throw new Error(exact.error.message);
   if (exact.data.length > 0) return pick(exact.data);
 
-  const suffix = await supabase.from("regions").select("code, full_name").eq("is_active", true).ilike("full_name", `%${name}`).limit(10);
+  const suffix = await supabase.from("regions").select("code, full_name").eq("is_active", true).ilike("full_name", `% ${name}`).limit(10);
   if (suffix.error) throw new Error(suffix.error.message);
   return pick(suffix.data);
 }
