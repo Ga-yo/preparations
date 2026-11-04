@@ -14,3 +14,8 @@ uv run pytest -v
 `FSS_API_KEY`가 없을 때는 `FSS_DUMMY=1 uv run python main.py loan_products_fss`로
 `tests/fixtures/fss_mortgage_dummy.json`(가짜 은행·금리, source='DUMMY(테스트용 가짜 데이터)')을 적재한다.
 로컬 DB에서만 쓸 것. 키가 있는 실행은 `dummy:*` 행을 모두 종료(end_date)하므로 실제 데이터가 가짜를 자동 대체한다.
+
+## GitHub Secrets (수집 워크플로 `.github/workflows/collect.yml`)
+
+`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `FSS_API_KEY`(비면 대출 상품 단계 건너뜀), `DATA_GO_KR_SERVICE_KEY`(추후 작업용).
+`FSS_DUMMY`는 절대 설정하지 않는다.

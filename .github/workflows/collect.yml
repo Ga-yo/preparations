@@ -1,0 +1,42 @@
+name: collect
+on:
+  schedule:
+    - cron: '0 19 * * *' # KST 04:00
+  workflow_dispatch:
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  collect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: collector
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      FSS_API_KEY: ${{ secrets.FSS_API_KEY }}
+      DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
+      # 19:00 UTC Saturday = KST Sunday 04:00. Manual runs always refresh regions.
+      - name: regions (weekly or manual)
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(date -u +%u)" = "6" ]; then
+            uv run --frozen python main.py regions
+          else
+            echo "::notice::regions skipped (weekly, Sundays KST)"
+          fi
+      - name: regulated_areas
+        run: uv run --frozen python main.py regulated_areas
+      - name: loan_products_fss
+        run: |
+          if [ -z "$FSS_API_KEY" ]; then
+            echo "::notice::FSS_API_KEY secret is empty; skipping loan_products_fss"
+          else
+            uv run --frozen python main.py loan_products_fss
+          fi
