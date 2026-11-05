@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@repo/db-types";
 
-// 테스트용 최소 Supabase fake: from().select().eq()/ilike()/is()/in()/order()/limit()/maybeSingle() 체인, insert()는 성공만 반환
+// 테스트용 최소 Supabase fake: from().select().eq()/ilike()/is()/in()/order()/limit()/maybeSingle() 체인, insert()는 성공만 반환, rpc()는 rpcs 함수 결과
 type Row = Record<string, unknown>;
 
 class Query implements PromiseLike<{ data: Row[]; error: null }> {
@@ -25,6 +25,9 @@ class Query implements PromiseLike<{ data: Row[]; error: null }> {
   }
 }
 
-export function fakeDb(tables: Record<string, Row[]>) {
-  return { from: (t: string) => new Query([...(tables[t] ?? [])]) } as unknown as SupabaseClient<Database>;
+export function fakeDb(tables: Record<string, Row[]>, rpcs: Record<string, (args: Record<string, unknown>) => Row[]> = {}) {
+  return {
+    from: (t: string) => new Query([...(tables[t] ?? [])]),
+    rpc: (name: string, args: Record<string, unknown>) => Promise.resolve({ data: rpcs[name]?.(args) ?? [], error: null }),
+  } as unknown as SupabaseClient<Database>;
 }
