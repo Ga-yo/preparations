@@ -5,7 +5,7 @@ type Row = {
   sigungu_code: string; name: string; median_price: number; deal_count: number;
   latest_deal_date: string; low_sample: boolean; affordable?: boolean;
 };
-type Data = { regions: Row[]; criteria: { months: number } } | { error: string };
+type Data = { regions: Row[]; criteria: { months: number; area_min: number | null; area_max: number | null } } | { error: string };
 
 const ERRORS: Record<string, string> = {
   region_required: "희망 지역을 저장하면 지역별 시세가 표시됩니다.",
@@ -46,7 +46,10 @@ export function RegionPriceCard({ result }: { result: ToolResult }) {
             </tbody>
           </table>
           <p className="text-gray-600">
-            최근 {data.criteria.months}개월 수도권 아파트 매매 실거래가 기준, 해제 신고·직거래 제외. 예산 비교는 지역별 대출 규제를 반영한 참고값입니다.
+            최근 {data.criteria.months}개월 수도권 아파트 매매 실거래가 기준
+            {(data.criteria.area_min !== null || data.criteria.area_max !== null) &&
+              ` (전용 ${data.criteria.area_min ?? ""}~${data.criteria.area_max ?? ""}㎡)`}
+            , 해제 신고·직거래 제외. 예산 비교는 지역별 대출 규제를 반영한 참고값입니다.
           </p>
           {result.notices?.includes("profile_missing") && <p className="text-gray-600">1단계를 저장하면 예산과 비교해 드립니다.</p>}
         </div>

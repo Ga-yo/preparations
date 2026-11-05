@@ -30,7 +30,7 @@ const stat = (sigungu_code: string, median_price: number, deal_count = 10) => ({
   sigungu_code, sigungu_name: `이름${sigungu_code}`, median_price, deal_count, latest_deal_date: "2026-10-30",
 });
 
-function mk(o: { rows?: ReturnType<typeof stat>[]; withProfile?: boolean; saved?: string[]; txAsOf?: string } = {}) {
+function mk(o: { rows?: ReturnType<typeof stat>[]; withProfile?: boolean; saved?: string[]; savedArea?: [number, number]; txAsOf?: string } = {}) {
   const calls: Record<string, unknown>[] = [];
   const ctx: ToolContext = {
     planId: "p1", today: "2026-11-04",
@@ -39,7 +39,9 @@ function mk(o: { rows?: ReturnType<typeof stat>[]; withProfile?: boolean; saved?
         financial_profiles: o.withProfile === false ? [] : [profile],
         loan_rules: [rule("ltv", 70), rule("dsr", 40), rule("stress_rate", 1.5)],
         regulated_areas: [], loan_products: [product], regions,
-        condition_sets: o.saved ? [{ plan_id: "p1", region_codes: o.saved }] : [],
+        condition_sets: o.saved || o.savedArea
+          ? [{ plan_id: "p1", region_codes: o.saved ?? [], area_min: o.savedArea?.[0] ?? null, area_max: o.savedArea?.[1] ?? null }]
+          : [],
         data_freshness: [
           { dataset: "transactions:apartment", as_of: o.txAsOf ?? "2026-11-03", source: "MOLIT" },
           { dataset: "loan_products:bank", as_of: "2026-11-01", source: "FSS" },
@@ -123,4 +125,20 @@ test("실거래 기준일 8일 전이면 stale에 transactions:apartment", async
 });
 test("소득 원값이 결과에 없음", async () => {
   expect(JSON.stringify(await getRegionPrices.run({ region_name: "강남구" }, mk().ctx))).not.toContain("120000000");
+});
+test("면적 생략 시 저장된 희망 면적을 RPC와 criteria에 사용", async () => {
+  const { ctx, calls } = mk({ saved: ["1168000000"], savedArea: [59, 85] });
+  const r = await getRegionPrices.run({}, ctx);
+  expect(calls[0]).toMatchObject({ area_min: 59, area_max: 85 });
+  expect((r.data as { criteria: unknown }).criteria).toEqual({ months: 12, area_min: 59, area_max: 85 });
+});
+test("면적 인자가 저장값보다 우선", async () => {
+  const { ctx, calls } = mk({ savedArea: [59, 85] });
+  await getRegionPrices.run({ region_name: "강남구", area_min: 70 }, ctx);
+  expect(calls[0]).toMatchObject({ area_min: 70, area_max: 85 });
+});
+test("인자와 저장값을 합친 범위가 뒤집히면 area_range_invalid", async () => {
+  const { ctx, calls } = mk({ savedArea: [59, 85] });
+  expect((await getRegionPrices.run({ region_name: "강남구", area_min: 100 }, ctx)).data).toEqual({ error: "area_range_invalid" });
+  expect(calls).toEqual([]);
 });
