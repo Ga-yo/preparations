@@ -66,7 +66,10 @@ def fetch_all(key: str) -> dict:
     merged = {"result": {"baseList": [], "optionList": []}}
     page = 1
     while True:
-        r = requests.get(URL, params={"auth": key, "topFinGrpNo": "020000", "pageNo": page}, timeout=30)
+        try:
+            r = requests.get(URL, params={"auth": key, "topFinGrpNo": "020000", "pageNo": page}, timeout=30)
+        except requests.RequestException as e:  # 예외 메시지에 auth=키가 담긴 URL이 들어가므로 원본 예외를 버린다
+            raise RuntimeError(f"FSS API 요청 실패 ({type(e).__name__})") from None
         if not r.ok:  # raise_for_status 메시지에는 auth=키가 담긴 URL이 들어간다
             raise RuntimeError(f"FSS API HTTP {r.status_code}")
         res = r.json()["result"]

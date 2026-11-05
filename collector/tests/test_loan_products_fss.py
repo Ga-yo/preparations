@@ -78,3 +78,18 @@ def test_null_rate_options_skipped():
         if o["fin_prdt_cd"] == "DUMMY-A1" and o["lend_rate_type"] == "F":
             o["lend_rate_min"] = None
     assert "fss:9990001:DUMMY-A1:fixed" not in {r["source_key"] for r in transform(p, D)}
+
+
+def test_network_error_does_not_leak_key(monkeypatch):
+    import requests
+    from jobs import loan_products_fss
+
+    def boom(url, params, timeout):  # requests의 실제 메시지 형태: url에 쿼리스트링(auth=키) 포함
+        raise requests.ConnectionError(f"Max retries exceeded with url: /x?auth={params['auth']}&pageNo=1")
+
+    monkeypatch.setattr(loan_products_fss.requests, "get", boom)
+    with pytest.raises(RuntimeError) as e:
+        loan_products_fss.fetch_all("SECRET123")
+    assert "SECRET123" not in str(e.value)
+    assert "SECRET123" not in repr(e.value.__cause__)
+    assert e.value.__suppress_context__

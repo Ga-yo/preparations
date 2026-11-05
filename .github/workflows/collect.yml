@@ -18,16 +18,14 @@ jobs:
     defaults:
       run:
         working-directory: collector
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      FSS_API_KEY: ${{ secrets.FSS_API_KEY }}
-      DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
     steps:
-      - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10.3.3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
       # 19:00 UTC Saturday = KST Sunday 04:00. Manual runs always refresh regions.
       - name: regions (weekly or manual)
+        env: # 비밀값은 필요한 run 단계에만 (외부 액션 단계에는 노출하지 않음)
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(date -u +%u)" = "6" ]; then
             uv run --frozen python main.py regions
@@ -35,8 +33,15 @@ jobs:
             echo "::notice::regions skipped (weekly, Sundays KST)"
           fi
       - name: regulated_areas
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: uv run --frozen python main.py regulated_areas
       - name: loan_products_fss
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FSS_API_KEY: ${{ secrets.FSS_API_KEY }}
         run: |
           if [ -z "$FSS_API_KEY" ]; then
             echo "::notice::FSS_API_KEY secret is empty; skipping loan_products_fss"
