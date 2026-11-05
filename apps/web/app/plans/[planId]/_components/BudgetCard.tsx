@@ -56,7 +56,7 @@ export function BudgetCard({ result }: { result: ToolResult }) {
           </p>
           <p>자기자금: {formatWon(data.ownFunds)}</p>
           {data.products.length > 0 && (
-            <table className="w-full text-left">
+            <table className="w-full text-left [&_td]:pr-3 [&_td]:py-0.5 [&_th]:pr-3 [&_td:not(:first-child)]:whitespace-nowrap">
               <caption className="text-left font-medium">상품별 월 상환액</caption>
               <thead><tr><th>상품</th><th>대출액</th><th>월 상환액</th></tr></thead>
               <tbody>

@@ -12,6 +12,9 @@ const LABELS: Record<string, string> = {
   existing_debt: "기존 대출·부채 총액", existing_debt_annual_payment: "기존 대출 연간 원리금 상환액",
   extra_funds: "추가 가용 자금", owned_house_count: "보유 주택 수", plan: "계획(접근 권한 없음 또는 존재하지 않음)",
 };
+// 요청마다 쿠키·DB로 렌더하는 페이지: cacheComponents 프리렌더 대신 요청 시 렌더
+export const instant = false;
+
 const MAN = (v: number | null | undefined) => (v == null ? "" : String(v / 10_000));
 
 export default async function Stage1({
