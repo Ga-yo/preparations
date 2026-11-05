@@ -328,11 +328,30 @@ isOneToOne: false
                 }
           }
           Views: {
-            [_ in never]: never
+            "capital_sigungu": {
+                  Row: {
+                    "full_name": string,"sido": string,"sigungu_code": string | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                           "full_name"?: string | null,"sido"?: string | null,"sigungu_code"?: never
+                         }
+                        Update: {
+                           "full_name"?: string | null,"sido"?: string | null,"sigungu_code"?: never
+                         }
+                        Relationships: [
+                    
+                  ]
+                }
           }
           Functions: {
             "bump_chat_usage":
 { Args: Record<PropertyKey, never>; Returns: number
+                           },
+"region_price_stats":
+{ Args: { "area_max"?: number,"area_min"?: number,"housing_type": string,"months": number,"sigungu_prefix": string }; Returns: {
+              "deal_count": number,"latest_deal_date": string,"median_price": number,"sigungu_code": string,"sigungu_name": string
+            }[]
                            }
           }
           Enums: {
