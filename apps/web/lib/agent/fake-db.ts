@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@repo/db-types";
 
-// 테스트용 최소 Supabase fake: from().select().eq()/ilike()/is()/in()/order()/limit()/maybeSingle() 체인
+// 테스트용 최소 Supabase fake: from().select().eq()/ilike()/is()/in()/order()/limit()/maybeSingle() 체인, insert()는 성공만 반환
 type Row = Record<string, unknown>;
 
 class Query implements PromiseLike<{ data: Row[]; error: null }> {
@@ -18,6 +18,7 @@ class Query implements PromiseLike<{ data: Row[]; error: null }> {
     return this;
   }
   limit(n: number) { this.max = n; return this; }
+  insert() { return Promise.resolve({ error: null }); }
   maybeSingle() { return Promise.resolve({ data: this.rows[0] ?? null, error: null }); }
   then<A, B>(ok?: ((v: { data: Row[]; error: null }) => A | PromiseLike<A>) | null, err?: ((e: unknown) => B | PromiseLike<B>) | null) {
     return Promise.resolve({ data: this.rows.slice(0, this.max), error: null }).then(ok, err);

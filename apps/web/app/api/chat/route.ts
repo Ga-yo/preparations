@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 
 const Body = z.object({ plan_id: z.uuid(), message: z.string().min(1).max(2000) });
 const HISTORY_LIMIT = 20;
+// DeepSeek은 선불 잔액에서 차감되므로 익명 사용자 한 명이 잔액을 소진하지 못하게 막는다
+export const DAILY_CHAT_LIMIT = 30;
 
 export async function POST(req: Request) {
   const body = Body.safeParse(await req.json().catch(() => null));
@@ -17,6 +19,10 @@ export async function POST(req: Request) {
 
   const { data: plan } = await supabase.from("plans").select("id, current_stage").eq("id", plan_id).maybeSingle();
   if (!plan) return Response.json({ error: "plan_not_found" }, { status: 404 });
+
+  const { data: used, error: usageErr } = await supabase.rpc("bump_chat_usage");
+  if (usageErr) return Response.json({ error: "db_error" }, { status: 500 });
+  if (used > DAILY_CHAT_LIMIT) return Response.json({ error: "rate_limited", limit: DAILY_CHAT_LIMIT }, { status: 429 });
 
   // 재생은 user/assistant 텍스트만: tool 행은 tool_call_id 짝이 필요해 제외한다(저장은 감사용으로 유지)
   const { data: rows, error: histErr } = await supabase

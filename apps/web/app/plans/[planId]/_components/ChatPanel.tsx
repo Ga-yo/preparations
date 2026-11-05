@@ -19,6 +19,7 @@ export function ChatPanel({ planId }: { planId: string }) {
         body: JSON.stringify({ plan_id: planId, message: q }),
       });
       if (res.ok) a = ((await res.json()) as { reply: string }).reply;
+      else if (res.status === 429) a = "오늘 질문 횟수를 모두 사용했습니다. 내일 다시 이용해 주세요.";
       else if (res.status === 502) a = "AI 응답을 받을 수 없습니다. 잠시 후 다시 시도해 주세요.";
       else a = "요청을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요.";
     } catch {

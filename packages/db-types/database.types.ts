@@ -69,6 +69,20 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"chat_usage": {
+                  Row: {
+                    "count": number,"day": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "count"?: number,"day": string,"user_id"?: string
+                  }
+                  Update: {
+                    "count"?: number,"day"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    
+                  ]
                 },"complexes": {
                   Row: {
                     "approval_date": string | null,"builder": string | null,"building_count": number | null,"building_coverage_ratio": number | null,"data_as_of": string,"floor_area_ratio": number | null,"heating_type": string | null,"household_count": number | null,"housing_type": string,"id": number,"jibun_address": string | null,"kapt_code": string | null,"location": unknown,"max_floor": number | null,"mgmt_fee_per_m2": number | null,"name": string,"parking_count": number | null,"region_code": string,"road_address": string | null,"site_area_m2": number | null,"source": string,"total_floor_area_m2": number | null
@@ -317,7 +331,9 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
-            [_ in never]: never
+            "bump_chat_usage":
+{ Args: Record<PropertyKey, never>; Returns: number
+                           }
           }
           Enums: {
             [_ in never]: never
