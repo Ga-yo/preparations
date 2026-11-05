@@ -1,0 +1,27 @@
+# OS
+.DS_Store
+
+# node
+node_modules/
+.pnpm-store/
+*.tsbuildinfo
+.next/
+.turbo/
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# env — 템플릿만 커밋
+.env*
+!.env.example
+
+# vercel
+.vercel
+
+# supabase local
+supabase/.branches
+supabase/.temp
