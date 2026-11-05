@@ -34,6 +34,14 @@ AI가 구매 가능 예산을 분석하고 주택을 추천하며, 비교 과정
 8. 비밀값 규칙:
    - SUPABASE_SERVICE_ROLE_KEY는 collector와 서버 전용. NEXT_PUBLIC_ 접두사 금지, 클라이언트 코드에서 import 금지.
    - 실제 키 값은 커밋하지 않는다. .env.example만 커밋한다.
+   - 저장소는 공개(public)다. 키가 들어간 커밋은 지워도 유출로 보고 즉시 폐기·재발급한다.
+   - GitHub Actions: secrets는 job 전체 env가 아니라 그 값을 쓰는 run 단계의 env에만 넣는다. 외부 액션은 태그가 아니라 커밋 SHA로 고정한다(`uses: owner/action@<sha> # vX.Y.Z`). pull_request_target 트리거는 쓰지 않는다.
+   - 키가 URL 쿼리에 들어가는 API(금감원 auth= 등)는 예외·로그에 URL이 남지 않게 한다. 원본 예외는 `from None`으로 버리고 상태코드·예외 이름만 남긴다.
+   - SUPABASE_SERVICE_ROLE_KEY는 RLS를 무시하는 최고 권한 키다. 웹(Vercel)에는 넣지 않는다.
+11. 무료 요금제 안에서 운영한다.
+   - Supabase Free: DB 500MB/프로젝트, 1주 비활성 시 일시정지. 새 데이터셋(특히 실거래가)은 적재 전에 행 수×행 크기로 용량을 추정해 계획에 적고, 지역·기간·컬럼을 필요한 만큼만 저장한다. 원본 응답 전체(raw JSON)는 저장하지 않는다. 합계가 400MB를 넘을 것 같으면 먼저 알린다.
+   - DeepSeek: 무료 요금제 없음(선불 충전). 충전 잔액이 비용 상한이다. 기본은 deepseek-v4-flash, /api/chat은 사용자별 호출 제한을 둔다.
+   - GitHub Actions 예약 실행은 저장소 60일 무활동 시 자동 중지되므로 수집이 멈췄는지 data_freshness로 확인한다.
 9. LLM에 보내는 데이터에는 이름·연락처 등 식별 정보를 넣지 않는다. 소득·자산은 계산 결과 위주로 전달한다.
 10. 시중 대출상품 현황을 매번 조회해서 추천해줘.
 
