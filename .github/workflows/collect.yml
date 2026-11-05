@@ -25,7 +25,7 @@ jobs:
       DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
     steps:
       - uses: actions/checkout@v7
-      - uses: astral-sh/setup-uv@v10
+      - uses: astral-sh/setup-uv@v10.3.3
       # 19:00 UTC Saturday = KST Sunday 04:00. Manual runs always refresh regions.
       - name: regions (weekly or manual)
         run: |
