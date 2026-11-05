@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
@@ -91,6 +92,7 @@ export default async function Stage1({
         {checkbox("is_newlywed", "신혼부부입니다", p?.is_newlywed)}
         {checkbox("has_newborn", "2년 내 출산(예정) 가구입니다", p?.has_newborn)}
         <button type="submit" className="rounded bg-foreground px-4 py-2 text-background">저장하고 예산 계산</button>
+        <p><Link href={`/plans/${planId}/stage/2`} className="text-blue-700">다음: 2단계 희망 주거 환경 →</Link></p>
       </form>
       <div className="space-y-6">
         <BudgetCard result={budget} />
