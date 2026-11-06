@@ -145,8 +145,8 @@ def run() -> None:
             except RuntimeError as e:
                 failures.append(str(e))
                 continue
-            except ValueError:
-                failures.append(f"{sgg} {ym}: ValueError")
+            except (ValueError, TypeError) as e:  # 형식 변경·필수 값 누락: 이 시군구·월만 실패로 남긴다
+                failures.append(f"{sgg} {ym}: {type(e).__name__}")
                 continue
             n += db.upsert_rows("transactions", rows, on_conflict="source_key")
             for k in skipped:

@@ -143,3 +143,13 @@ def test_real_fixture_transforms():
     assert rows and all(len(r["region_code"]) == 10 and r["deal_amount"] > 0 for r in rows)
     cancelled = [r for r in rows if r["cancel_date"]]
     assert all(r["cancel_date"] >= r["deal_date"] for r in cancelled)
+
+
+def test_malformed_row_fails_only_that_month(monkeypatch, fake_run):
+    # 필수 값(거래금액)이 빠진 행 하나가 나머지 시군구 수집을 멈추면 안 된다
+    monkeypatch.setattr(transactions, "sigungu_codes", lambda: ["11590", "11680"])
+    monkeypatch.setattr(FakeApi, "get_data", lambda self, *a, **k: frame({"dealAmount": ""}) if a[2] == "11590" else frame({}))
+    with pytest.raises(RuntimeError) as e:
+        transactions.run()
+    assert "11590" in str(e.value) and "TypeError" in str(e.value)
+    assert len(fake_run["upsert"]) == 1 and fake_run["fresh"] == []
