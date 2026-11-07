@@ -18,7 +18,7 @@ permissions:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 120 # 24개월 초기 적재 = 시군구 80 × 24회 호출
+    timeout-minutes: 360 # 24개월 초기 적재 = 시군구 80 × 24회 호출, Actions에서 호출당 약 9초라 약 5시간
     defaults:
       run:
         working-directory: collector
@@ -60,6 +60,7 @@ jobs:
           DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
           # 입력값은 run에 직접 보간하지 않고 env로만 넘긴다(검증은 parse_months)
           TRANSACTIONS_MONTHS: ${{ inputs.transactions_months || '2' }}
+          PYTHONUNBUFFERED: '1' # 시군구별 진행 로그가 끝날 때 한꺼번에가 아니라 바로 보이게
         run: |
           if [ -z "$DATA_GO_KR_SERVICE_KEY" ]; then
             echo "::notice::DATA_GO_KR_SERVICE_KEY secret is empty; skipping transactions"
