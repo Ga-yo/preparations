@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { BudgetCard } from "../../_components/BudgetCard";
 import { ChatPanel } from "../../_components/ChatPanel";
+import { StageForm } from "../../_components/StageForm";
 import { TipPanel } from "../../_components/TipPanel";
 import { getBudgetForPlan, saveFinancialProfile } from "./actions";
 
@@ -20,15 +21,12 @@ const MAN = (v: number | null | undefined) => (v == null ? "" : String(v / 10_00
 
 export default async function Stage1({
   params,
-  searchParams,
 }: {
   params: Promise<{ planId: string }>;
-  searchParams: Promise<{ invalid?: string }>;
 }) {
   await connection(); // 날짜·쿠키 기반 렌더: 프리렌더 대상에서 제외
   const { planId } = await params;
   if (!z.uuid().safeParse(planId).success) notFound();
-  const { invalid } = await searchParams;
   const supabase = await createClient();
   const [{ data: p }, { data: tips }, budget] = await Promise.all([
     supabase.from("financial_profiles").select("*").eq("plan_id", planId).maybeSingle(),
@@ -37,10 +35,10 @@ export default async function Stage1({
   ]);
   const t = tips ?? [];
 
-  async function save(form: FormData) {
+  async function save(form: FormData): Promise<string[]> {
     "use server";
     const r = await saveFinancialProfile(planId, form);
-    if (!r.ok) redirect(`/plans/${planId}/stage/1?invalid=${Object.keys(r.fieldErrors).join(",")}`);
+    if (!r.ok) return Object.keys(r.fieldErrors);
     redirect(`/plans/${planId}/stage/1`);
   }
 
@@ -60,9 +58,7 @@ export default async function Stage1({
 
   return (
     <main className="mx-auto grid w-full max-w-5xl gap-6 p-4 md:grid-cols-2">
-      <form action={save} className="space-y-4">
-        <h1 className="text-xl font-semibold">1단계. 나의 구매 상황</h1>
-        {invalid && <p role="alert" className="rounded bg-red-100 p-2 text-red-800">입력값을 확인해 주세요: {invalid.split(",").map((k) => LABELS[k] ?? k).join(", ")}</p>}
+      <StageForm title="1단계. 나의 구매 상황" labels={LABELS} action={save}>
         <div>
           <label htmlFor="purpose" className="block font-medium">구매 목적</label>
           <select id="purpose" name="purpose" defaultValue={p?.purpose ?? ""} className="w-full rounded border px-2 py-1">
@@ -93,7 +89,7 @@ export default async function Stage1({
         {checkbox("has_newborn", "2년 내 출산(예정) 가구입니다", p?.has_newborn)}
         <button type="submit" className="rounded bg-foreground px-4 py-2 text-background">저장하고 예산 계산</button>
         <p><Link href={`/plans/${planId}/stage/2`} className="text-blue-700">다음: 2단계 희망 주거 환경 →</Link></p>
-      </form>
+      </StageForm>
       <div className="space-y-6">
         <BudgetCard result={budget} />
         <ChatPanel planId={planId} />

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { ChatPanel } from "../../_components/ChatPanel";
 import { RegionPriceCard } from "../../_components/RegionPriceCard";
+import { StageForm } from "../../_components/StageForm";
 import { TipPanel } from "../../_components/TipPanel";
 import { getRegionPricesForPlan, saveStage2Conditions } from "./actions";
 
@@ -21,15 +22,12 @@ export const instant = false;
 
 export default async function Stage2({
   params,
-  searchParams,
 }: {
   params: Promise<{ planId: string }>;
-  searchParams: Promise<{ invalid?: string }>;
 }) {
   await connection();
   const { planId } = await params;
   if (!z.uuid().safeParse(planId).success) notFound();
-  const { invalid } = await searchParams;
   const supabase = await createClient();
   const [{ data: sigungu }, { data: c }, { data: tips }, prices] = await Promise.all([
     supabase.from("capital_sigungu").select("sigungu_code, sido, full_name").order("sigungu_code"),
@@ -48,10 +46,10 @@ export default async function Stage2({
   const nameOf = (code: string) => named?.find((r) => r.code === code)?.full_name ?? "";
   const bySido = Map.groupBy(sigungu ?? [], (s) => s.sido);
 
-  async function save(form: FormData) {
+  async function save(form: FormData): Promise<string[]> {
     "use server";
     const r = await saveStage2Conditions(planId, form);
-    if (!r.ok) redirect(`/plans/${planId}/stage/2?invalid=${Object.keys(r.fieldErrors).join(",")}`);
+    if (!r.ok) return Object.keys(r.fieldErrors);
     redirect(`/plans/${planId}/stage/2`);
   }
 
@@ -80,10 +78,11 @@ export default async function Stage2({
 
   return (
     <main className="mx-auto grid w-full max-w-5xl gap-6 p-4 md:grid-cols-2">
-      <form action={save} className="space-y-4">
-        <Link href={`/plans/${planId}/stage/1`} className="text-sm text-blue-700">← 1단계 나의 구매 상황</Link>
-        <h1 className="text-xl font-semibold">2단계. 희망하는 주거 환경</h1>
-        {invalid && <p role="alert" className="rounded bg-red-100 p-2 text-red-800">입력값을 확인해 주세요: {invalid.split(",").map((k) => LABELS[k] ?? k).join(", ")}</p>}
+      <StageForm
+        key={c?.id ?? "new"} // 저장되면 새 condition_set으로 다시 마운트해 정규화된 지역명을 보여 준다
+        title="2단계. 희망하는 주거 환경" labels={LABELS} action={save}
+        back={<Link href={`/plans/${planId}/stage/1`} className="text-sm text-blue-700">← 1단계 나의 구매 상황</Link>}
+      >
 
         <h2 className="font-semibold">① 희망 지역</h2>
         <fieldset>
@@ -133,7 +132,7 @@ export default async function Stage2({
           ))}
         </fieldset>
         <button type="submit" className="rounded bg-foreground px-4 py-2 text-background">저장하고 지역 시세 보기</button>
-      </form>
+      </StageForm>
       <div className="space-y-6">
         <RegionPriceCard result={prices} />
         <ChatPanel planId={planId} />
