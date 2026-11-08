@@ -94,3 +94,16 @@ def test_run_stops_before_writing_when_too_few_rows(monkeypatch):
 
 def test_codes_missing_from_api_are_retired():
     assert regions.codes_to_retire({"a", "b", "c"}, {"a", "d"}) == {"b", "c"}
+
+
+def test_fetch_all_retries_page_after_timeout(monkeypatch):
+    # Actions(해외)에서 첫 호출이 ReadTimeout으로 실패했다 (run 42479856651)
+    calls = []
+
+    def get(url, params, timeout):
+        calls.append(params["pageNo"])
+        if len(calls) == 1:
+            raise requests.ReadTimeout("x")
+        return Res(page([{"region_cd": "1"}], 1))
+    monkeypatch.setattr(regions.requests, "get", get)
+    assert len(regions.fetch_all("k")) == 1 and calls == [1, 1]

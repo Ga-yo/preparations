@@ -39,7 +39,10 @@ def fetch_all(key: str) -> list[dict]:
         # 포털 키는 이미 %인코딩돼 있어 그대로 params에 넣으면 이중 인코딩돼 "등록되지 않은 서비스키"가 된다
         params = {"ServiceKey": unquote(key), "type": "json", "pageNo": page, "numOfRows": PAGE_SIZE}
         try:
-            r = requests.get(URL, params=params, timeout=30)
+            try:
+                r = requests.get(URL, params=params, timeout=30)
+            except (requests.ConnectionError, requests.Timeout):  # Actions(해외)에서 가끔 응답이 끊긴다
+                r = requests.get(URL, params=params, timeout=60)
         except requests.RequestException as e:  # 예외 메시지에 서비스키가 든 URL이 들어간다
             raise RuntimeError(f"StanReginCd 요청 실패 ({type(e).__name__})") from None
         if not r.ok:
