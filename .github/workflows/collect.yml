@@ -33,6 +33,7 @@ jobs:
         env: # 비밀값은 필요한 run 단계에만 (외부 액션 단계에는 노출하지 않음)
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }} # 행정안전부 법정동코드 API
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(date -u +%u)" = "6" ]; then
             uv run --frozen python main.py regions
