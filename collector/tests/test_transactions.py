@@ -192,3 +192,18 @@ def test_library_requests_time_out(monkeypatch):
     with pytest.raises(requests.Timeout):
         molit.requests.get(f"http://127.0.0.1:{srv.getsockname()[1]}/")
     assert time.monotonic() - start < 3
+
+
+def test_parse_sigungu():
+    assert transactions.parse_sigungu(None) is None and transactions.parse_sigungu(" ") is None
+    assert transactions.parse_sigungu("41591, 28125") == ["41591", "28125"]
+    for bad in ("4159", "41591,abc", "41591;rm"):
+        with pytest.raises(ValueError):
+            transactions.parse_sigungu(bad)
+
+
+def test_run_only_given_sigungu(monkeypatch, fake_run):
+    monkeypatch.setenv("TRANSACTIONS_SGG", "11680")
+    monkeypatch.setattr(transactions, "sigungu_codes", lambda: pytest.fail("전체 목록을 읽으면 안 된다"))
+    transactions.run()
+    assert len(fake_run["upsert"]) == 1

@@ -68,6 +68,16 @@ def parse_months(raw: str | None) -> int:
     return int(raw)
 
 
+def parse_sigungu(raw: str | None) -> list[str] | None:
+    # 빠진 시군구만 다시 받을 때 쓴다. 비어 있으면 전체.
+    if raw is None or not raw.strip():
+        return None
+    codes = [c.strip() for c in raw.split(",")]
+    if not all(re.fullmatch(r"\d{5}", c) for c in codes):
+        raise ValueError("TRANSACTIONS_SGG must be comma-separated 5-digit codes")
+    return codes
+
+
 def year_months(today: date, n: int) -> list[str]:
     i = today.year * 12 + today.month - 1
     return [f"{k // 12}{k % 12 + 1:02d}" for k in range(i - n + 1, i + 1)]
@@ -157,7 +167,7 @@ def run() -> None:
     # shortcut: 최근 months개월만 재수집하므로 그보다 오래된 거래의 해제 신고는 반영 안 됨, 필요하면 주 1회 12개월 재수집 추가
     yms = year_months(today, months)
     total, skipped, failures, dates = 0, {"unknown_region": 0, "duplicate": 0}, [], []
-    for sgg in sigungu_codes():
+    for sgg in parse_sigungu(os.environ.get("TRANSACTIONS_SGG")) or sigungu_codes():
         valid, n = region_codes(sgg), 0
         for ym in yms:
             try:
