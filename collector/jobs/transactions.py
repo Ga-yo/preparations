@@ -9,13 +9,13 @@ PublicDataReader TransactionPrice.get_data("아파트", "매매", 시군구5자�
 import hashlib
 import os
 import re
-import socket
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 import PublicDataReader as pdr
 import requests
+from PublicDataReader.PublicDataPortal import molit
 
 from lib import db
 
@@ -27,6 +27,19 @@ KEY_FIELDS = ("sggCd", "umdCd", "jibun", "aptSeq", "aptNm", "aptDong", "excluUse
 # PublicDataReader는 requests.get을 timeout 없이 불러, 끊긴 연결 하나가 약 16분 멈춘다(백필이 6시간 제한에 걸린 원인)
 FETCH_TIMEOUT_S = 30
 CANCEL_DAY = re.compile(r"^(\d{2})\.(\d{2})\.(\d{2})$")
+
+
+class _TimeoutRequests:
+    # requests는 timeout을 안 주면 소켓 기본값도 무시하고 무한 대기한다. 라이브러리가 쓰는 requests.get에만 timeout을 끼운다.
+    def __getattr__(self, name):
+        return getattr(requests, name)
+
+    @staticmethod
+    def get(*args, **kwargs):
+        return requests.get(*args, timeout=FETCH_TIMEOUT_S, **kwargs)
+
+
+molit.requests = _TimeoutRequests()
 
 
 class HttpStatusError(Exception):
@@ -138,7 +151,6 @@ def delete_before(cutoff: date) -> None:
 
 
 def run() -> None:
-    socket.setdefaulttimeout(FETCH_TIMEOUT_S)
     api = _Api(os.environ["DATA_GO_KR_SERVICE_KEY"])
     months = parse_months(os.environ.get("TRANSACTIONS_MONTHS"))
     today = kst_today()

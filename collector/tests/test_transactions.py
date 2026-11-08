@@ -179,10 +179,16 @@ def test_fetch_gives_up_after_second_network_error():
     assert api.calls == 2
 
 
-def test_run_sets_socket_timeout(monkeypatch, fake_run):
-    # PublicDataReader의 requests.get에는 timeout이 없어 끊긴 연결이 약 16분 멈췄다
-    import socket
-    monkeypatch.setattr(transactions, "sigungu_codes", lambda: [])
-    monkeypatch.setattr(socket, "setdefaulttimeout", lambda s: fake_run.setdefault("timeout", s))
-    transactions.run()
-    assert fake_run["timeout"] == transactions.FETCH_TIMEOUT_S
+def test_library_requests_time_out(monkeypatch):
+    # 응답 없는 서버: timeout이 없으면 영원히 기다린다(Actions에서 호출 하나가 약 16분 멈춘 원인)
+    import socket, threading, time
+    from PublicDataReader.PublicDataPortal import molit
+    srv = socket.socket()
+    srv.bind(("127.0.0.1", 0))
+    srv.listen()
+    threading.Thread(target=lambda: (srv.accept(), time.sleep(10)), daemon=True).start()
+    monkeypatch.setattr(transactions, "FETCH_TIMEOUT_S", 0.5)
+    start = time.monotonic()
+    with pytest.raises(requests.Timeout):
+        molit.requests.get(f"http://127.0.0.1:{srv.getsockname()[1]}/")
+    assert time.monotonic() - start < 3
