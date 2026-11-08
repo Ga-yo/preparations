@@ -85,14 +85,14 @@ isOneToOne: false
                   ]
                 },"complexes": {
                   Row: {
-                    "approval_date": string | null,"builder": string | null,"building_count": number | null,"building_coverage_ratio": number | null,"data_as_of": string,"floor_area_ratio": number | null,"heating_type": string | null,"household_count": number | null,"housing_type": string,"id": number,"jibun_address": string | null,"kapt_code": string | null,"location": unknown,"max_floor": number | null,"mgmt_fee_per_m2": number | null,"name": string,"parking_count": number | null,"region_code": string,"road_address": string | null,"site_area_m2": number | null,"source": string,"total_floor_area_m2": number | null
+                    "approval_date": string | null,"bldrgst_pk": string | null,"builder": string | null,"building_count": number | null,"building_coverage_ratio": number | null,"data_as_of": string,"floor_area_ratio": number | null,"heating_type": string | null,"household_count": number | null,"housing_type": string,"id": number,"jibun": string | null,"jibun_address": string | null,"kapt_code": string | null,"location": unknown,"max_floor": number | null,"mgmt_fee_per_m2": number | null,"name": string,"parking_count": number | null,"region_code": string,"road_address": string | null,"site_area_m2": number | null,"source": string,"total_floor_area_m2": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "approval_date"?: string | null,"builder"?: string | null,"building_count"?: number | null,"building_coverage_ratio"?: number | null,"data_as_of": string,"floor_area_ratio"?: number | null,"heating_type"?: string | null,"household_count"?: number | null,"housing_type"?: string,"id"?: never,"jibun_address"?: string | null,"kapt_code"?: string | null,"location"?: unknown,"max_floor"?: number | null,"mgmt_fee_per_m2"?: number | null,"name": string,"parking_count"?: number | null,"region_code": string,"road_address"?: string | null,"site_area_m2"?: number | null,"source": string,"total_floor_area_m2"?: number | null
+                    "approval_date"?: string | null,"bldrgst_pk"?: string | null,"builder"?: string | null,"building_count"?: number | null,"building_coverage_ratio"?: number | null,"data_as_of": string,"floor_area_ratio"?: number | null,"heating_type"?: string | null,"household_count"?: number | null,"housing_type"?: string,"id"?: never,"jibun"?: string | null,"jibun_address"?: string | null,"kapt_code"?: string | null,"location"?: unknown,"max_floor"?: number | null,"mgmt_fee_per_m2"?: number | null,"name": string,"parking_count"?: number | null,"region_code": string,"road_address"?: string | null,"site_area_m2"?: number | null,"source": string,"total_floor_area_m2"?: number | null
                   }
                   Update: {
-                    "approval_date"?: string | null,"builder"?: string | null,"building_count"?: number | null,"building_coverage_ratio"?: number | null,"data_as_of"?: string,"floor_area_ratio"?: number | null,"heating_type"?: string | null,"household_count"?: number | null,"housing_type"?: string,"id"?: never,"jibun_address"?: string | null,"kapt_code"?: string | null,"location"?: unknown,"max_floor"?: number | null,"mgmt_fee_per_m2"?: number | null,"name"?: string,"parking_count"?: number | null,"region_code"?: string,"road_address"?: string | null,"site_area_m2"?: number | null,"source"?: string,"total_floor_area_m2"?: number | null
+                    "approval_date"?: string | null,"bldrgst_pk"?: string | null,"builder"?: string | null,"building_count"?: number | null,"building_coverage_ratio"?: number | null,"data_as_of"?: string,"floor_area_ratio"?: number | null,"heating_type"?: string | null,"household_count"?: number | null,"housing_type"?: string,"id"?: never,"jibun"?: string | null,"jibun_address"?: string | null,"kapt_code"?: string | null,"location"?: unknown,"max_floor"?: number | null,"mgmt_fee_per_m2"?: number | null,"name"?: string,"parking_count"?: number | null,"region_code"?: string,"road_address"?: string | null,"site_area_m2"?: number | null,"source"?: string,"total_floor_area_m2"?: number | null
                   }
                   Relationships: [
                     {
@@ -348,10 +348,23 @@ isOneToOne: false
             "bump_chat_usage":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"complexes_for_conditions":
+{ Args: { "area_max"?: number,"area_min"?: number,"months"?: number,"region_codes": (string)[] }; Returns: {
+              "approval_year": number,"building_coverage_ratio": number,"complex_id": number,"deal_count": number,"floor_area_ratio": number,"household_count": number,"land_share_m2": number,"median_price": number,"name": string,"parking_per_household": number,"region_code": string
+            }[]
+                           },
+"link_transactions_to_complexes":
+{ Args: Record<PropertyKey, never>; Returns: {
+              "ambiguous": number,"linked": number
+            }[]
+                           },
 "region_price_stats":
 { Args: { "area_max"?: number,"area_min"?: number,"housing_type": string,"months": number,"sigungu_prefix": string }; Returns: {
               "deal_count": number,"latest_deal_date": string,"median_price": number,"sigungu_code": string,"sigungu_name": string
             }[]
+                           },
+"transaction_dongs":
+{ Args: Record<PropertyKey, never>; Returns: string[]
                            }
           }
           Enums: {
