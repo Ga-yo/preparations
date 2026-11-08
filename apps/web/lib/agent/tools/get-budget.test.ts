@@ -50,9 +50,9 @@ test("runTool: 잘못된 인자는 error 결과", async () => {
   expect(await runTool(getTip, '{"slug":1}', mk("2026-11-01"))).toHaveProperty("error");
   expect(await runTool(getTip, "{bad", mk("2026-11-01"))).toHaveProperty("error");
 });
-test("toolsForStage는 세 툴, OpenAI 형식 변환", () => {
+test("toolsForStage는 네 툴, OpenAI 형식 변환", () => {
   const o = toOpenAiTools(toolsForStage(1));
-  expect(o.map((t) => (t as { function: { name: string } }).function.name)).toEqual(["resolve_region", "get_budget", "get_tip"]);
+  expect(o.map((t) => (t as { function: { name: string } }).function.name)).toEqual(["resolve_region", "get_budget", "get_region_prices", "get_tip"]);
 });
 test("get_budget: as_of 포함, 소득 원값 미포함", async () => {
   const r = await getBudget.run({}, mk("2026-11-01"));

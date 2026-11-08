@@ -3,6 +3,13 @@ on:
   schedule:
     - cron: '0 19 * * *' # KST 04:00
   workflow_dispatch:
+    inputs:
+      transactions_months:
+        description: '실거래가 재수집 개월 수 (1~24, 초기 적재는 24)'
+        default: '2'
+      transactions_sgg:
+        description: '이 시군구만 수집 (쉼표로 구분한 5자리 코드, 비우면 전체)'
+        default: ''
 
 concurrency:
   group: collect
@@ -14,7 +21,7 @@ permissions:
 jobs:
   collect:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 360 # 24개월 초기 적재 = 시군구 80 × 24회 호출, Actions에서 호출당 약 9초라 약 5시간
     defaults:
       run:
         working-directory: collector
@@ -26,6 +33,7 @@ jobs:
         env: # 비밀값은 필요한 run 단계에만 (외부 액션 단계에는 노출하지 않음)
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }} # 행정안전부 법정동코드 API
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || [ "$(date -u +%u)" = "6" ]; then
             uv run --frozen python main.py regions
@@ -47,4 +55,20 @@ jobs:
             echo "::notice::FSS_API_KEY secret is empty; skipping loan_products_fss"
           else
             uv run --frozen python main.py loan_products_fss
+          fi
+      - name: transactions
+        if: ${{ !cancelled() }} # 앞 단계(대출상품 등) 실패와 무관하게 수집
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }}
+          # 입력값은 run에 직접 보간하지 않고 env로만 넘긴다(검증은 parse_months)
+          TRANSACTIONS_MONTHS: ${{ inputs.transactions_months || '2' }}
+          TRANSACTIONS_SGG: ${{ inputs.transactions_sgg }}
+          PYTHONUNBUFFERED: '1' # 시군구별 진행 로그가 끝날 때 한꺼번에가 아니라 바로 보이게
+        run: |
+          if [ -z "$DATA_GO_KR_SERVICE_KEY" ]; then
+            echo "::notice::DATA_GO_KR_SERVICE_KEY secret is empty; skipping transactions"
+          else
+            uv run --frozen python main.py transactions
           fi
