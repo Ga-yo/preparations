@@ -9,11 +9,13 @@ PublicDataReader TransactionPrice.get_data("아파트", "매매", 시군구5자�
 import hashlib
 import os
 import re
+import socket
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
 import pandas as pd
 import PublicDataReader as pdr
+import requests
 
 from lib import db
 
@@ -22,6 +24,8 @@ RETENTION_MONTHS = 24
 SOURCE = "국토교통부 아파트 매매 실거래가 상세 (PublicDataReader TransactionPrice)"
 KEY_FIELDS = ("sggCd", "umdCd", "jibun", "aptSeq", "aptNm", "aptDong", "excluUseAr", "floor",
               "dealYear", "dealMonth", "dealDay", "dealAmount")  # 해제·거래유형·등기일은 재수집 때 바뀌므로 제외
+# PublicDataReader는 requests.get을 timeout 없이 불러, 끊긴 연결 하나가 약 16분 멈춘다(백필이 6시간 제한에 걸린 원인)
+FETCH_TIMEOUT_S = 30
 CANCEL_DAY = re.compile(r"^(\d{2})\.(\d{2})\.(\d{2})$")
 
 
@@ -111,7 +115,10 @@ def transform(df: pd.DataFrame, valid_codes: set[str]) -> tuple[list[dict], dict
 
 def fetch(api, sgg: str, ym: str) -> pd.DataFrame:
     try:
-        return api.get_data("아파트", "매매", sgg, year_month=ym, translate=False)
+        try:
+            return api.get_data("아파트", "매매", sgg, year_month=ym, translate=False)
+        except (requests.ConnectionError, requests.Timeout):  # 일시적 끊김은 한 번만 다시 시도
+            return api.get_data("아파트", "매매", sgg, year_month=ym, translate=False)
     except HttpStatusError as e:
         raise RuntimeError(f"{sgg} {ym}: HTTP {e.status}") from None
     except Exception as e:
@@ -131,6 +138,7 @@ def delete_before(cutoff: date) -> None:
 
 
 def run() -> None:
+    socket.setdefaulttimeout(FETCH_TIMEOUT_S)
     api = _Api(os.environ["DATA_GO_KR_SERVICE_KEY"])
     months = parse_months(os.environ.get("TRANSACTIONS_MONTHS"))
     today = kst_today()

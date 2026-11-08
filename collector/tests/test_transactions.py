@@ -153,3 +153,36 @@ def test_malformed_row_fails_only_that_month(monkeypatch, fake_run):
         transactions.run()
     assert "11590" in str(e.value) and "TypeError" in str(e.value)
     assert len(fake_run["upsert"]) == 1 and fake_run["fresh"] == []
+
+
+class FlakyApi:
+    def __init__(self, errors):
+        self.errors, self.calls = list(errors), 0
+
+    def get_data(self, *a, **k):
+        self.calls += 1
+        if self.errors:
+            raise self.errors.pop(0)
+        return frame({})
+
+
+@pytest.mark.parametrize("err", [requests.ConnectionError("x"), requests.Timeout("x")])
+def test_fetch_retries_once_on_network_error(err):
+    api = FlakyApi([err])
+    assert len(transactions.fetch(api, "41480", "202611")) == 1 and api.calls == 2
+
+
+def test_fetch_gives_up_after_second_network_error():
+    api = FlakyApi([requests.ConnectionError("serviceKey=SECRET")] * 2)
+    with pytest.raises(RuntimeError, match=r"^41480 202611: ConnectionError$"):
+        transactions.fetch(api, "41480", "202611")
+    assert api.calls == 2
+
+
+def test_run_sets_socket_timeout(monkeypatch, fake_run):
+    # PublicDataReader의 requests.get에는 timeout이 없어 끊긴 연결이 약 16분 멈췄다
+    import socket
+    monkeypatch.setattr(transactions, "sigungu_codes", lambda: [])
+    monkeypatch.setattr(socket, "setdefaulttimeout", lambda s: fake_run.setdefault("timeout", s))
+    transactions.run()
+    assert fake_run["timeout"] == transactions.FETCH_TIMEOUT_S
