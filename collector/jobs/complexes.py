@@ -9,6 +9,7 @@ etcPurps는 '공동주택(아파트)'·'주거시설 근린생활시설'·빈 �
 서비스키가 URL 쿼리(serviceKey=)에 실리므로 예외는 법정동·예외 이름만 남긴다.
 """
 import os
+import time
 import urllib.parse
 from datetime import date
 
@@ -26,6 +27,8 @@ BASE = "https://apis.data.go.kr/1613000/BldRgstHubService/"
 RECAP_EP, TITLE_EP = "getBrRecapTitleInfo", "getBrTitleInfo"
 PAGE = 100  # 서버 상한
 FETCH_TIMEOUT_S = 30
+ATTEMPTS = 3
+RETRY_WAIT_S = 1
 SKIPS = ("not_housing", "no_transaction", "annex", "has_recap", "multi_title", "duplicate")
 
 
@@ -116,17 +119,22 @@ def fetch(key: str, ep: str, **params) -> pd.DataFrame:
     try:
         while True:
             q = {"serviceKey": urllib.parse.unquote(key), "numOfRows": PAGE, "pageNo": page, **params}
-            for attempt in (1, 2):  # 일시적 끊김·5xx(실측 503)는 한 번만 다시 시도
+            # 일시적 오류는 다시 시도: 끊김·5xx(실측 503)·200인데 빈 본문(실측 약 5~15%)
+            for attempt in range(1, ATTEMPTS + 1):
+                if attempt > 1:
+                    time.sleep(RETRY_WAIT_S)
                 try:
                     res = requests.get(BASE + ep, params=q, timeout=FETCH_TIMEOUT_S)
                 except (requests.ConnectionError, requests.Timeout):
-                    if attempt == 2:
+                    if attempt == ATTEMPTS:
                         raise
                     continue
-                if res.status_code < 500 or attempt == 2:
+                if res.status_code < 500 and res.text.strip():
                     break
             if res.status_code != 200:
                 raise RuntimeError(f"{where}: HTTP {res.status_code}")
+            if not res.text.strip():
+                raise RuntimeError(f"{where}: empty response")
             body = xmltodict.parse(res.text).get("response", {})
             if body.get("header", {}).get("resultCode") != "00":
                 raise RuntimeError(f"{where}: resultCode {body.get('header', {}).get('resultCode')}")

@@ -142,6 +142,7 @@ def test_fetch_error_hides_key(monkeypatch):
 def test_fetch_retries_once_on_5xx(monkeypatch):
     ok = '<response><header><resultCode>00</resultCode></header><body><items><item><mgmBldrgstPk>1</mgmBldrgstPk></item></items><totalCount>1</totalCount></body></response>'
     res = iter([(503, ""), (200, ok)])
+    monkeypatch.setattr(complexes.time, "sleep", lambda s: None)
     monkeypatch.setattr(complexes.requests, "get", lambda *a, **k: type("R", (), dict(zip(("status_code", "text"), next(res))))())
     assert len(complexes.fetch("K", complexes.TITLE_EP, sigunguCd="11680", bjdongCd="10500")) == 1
 
@@ -172,3 +173,20 @@ def test_link_runs_per_sigungu(monkeypatch, fake_run):
     monkeypatch.setattr(complexes, "link", lambda sgg: seen.append(sgg) or (1, 0))
     complexes.run()
     assert seen == ["11680", "41111"]
+
+
+def test_fetch_retries_on_empty_200(monkeypatch):
+    # 실측: 서버가 가끔 200 + 빈 본문을 준다(Actions에서 136회 중 7회 ExpatError)
+    ok = '<response><header><resultCode>00</resultCode></header><body><items><item><mgmBldrgstPk>1</mgmBldrgstPk></item></items><totalCount>1</totalCount></body></response>'
+    res = iter([(200, ""), (200, " "), (200, ok)])
+    monkeypatch.setattr(complexes.time, "sleep", lambda s: None)
+    monkeypatch.setattr(complexes.requests, "get", lambda *a, **k: type("R", (), dict(zip(("status_code", "text"), next(res))))())
+    assert len(complexes.fetch("K", complexes.RECAP_EP, sigunguCd="11680", bjdongCd="10100")) == 1
+
+
+def test_fetch_gives_up_after_three_empty(monkeypatch):
+    monkeypatch.setattr(complexes.time, "sleep", lambda s: None)
+    monkeypatch.setattr(complexes.requests, "get", lambda *a, **k: type("R", (), {"status_code": 200, "text": ""})())
+    with pytest.raises(RuntimeError) as e:
+        complexes.fetch("K", complexes.RECAP_EP, sigunguCd="11680", bjdongCd="10100")
+    assert "empty response" in str(e.value)
