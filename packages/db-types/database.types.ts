@@ -354,7 +354,7 @@ isOneToOne: false
             }[]
                            },
 "link_transactions_to_complexes":
-{ Args: Record<PropertyKey, never>; Returns: {
+{ Args: { "sgg": string }; Returns: {
               "ambiguous": number,"linked": number
             }[]
                            },

@@ -1,5 +1,5 @@
 begin;
-select plan(12);
+select plan(14);
 
 delete from public.transactions;
 delete from public.complexes;
@@ -27,10 +27,11 @@ from (values
   ('x1', '999', 84.0, 900000000)
 ) v (k, j, ar, amt);
 
-select results_eq($$select linked, ambiguous from public.link_transactions_to_complexes()$$,
+select results_eq($$select linked, ambiguous from public.link_transactions_to_complexes('11650')$$, $$values (0, 0)$$, '다른 시군구만 연결하면 이 시군구는 그대로');
+select results_eq($$select linked, ambiguous from public.link_transactions_to_complexes('11680')$$,
   $$values (5, 1)$$, '정확히 한 단지와 맞는 지번만 연결, 같은 지번 2단지는 ambiguous');
 select is((select count(*)::int from public.transactions where complex_id is null), 2, '모호 1건·불일치 1건은 null');
-select results_eq($$select linked from public.link_transactions_to_complexes()$$, $$values (0)$$, '멱등');
+select results_eq($$select linked from public.link_transactions_to_complexes('11680')$$, $$values (0)$$, '멱등');
 select results_eq($$select region_code, jibun, linked from public.transaction_lots('11680') where jibun in ('12-3','77','999')$$,
   $$values ('1168010300'::text, '12-3'::text, true), ('1168010300', '77', false), ('1168010300', '999', false)$$, '시군구 실거래 지번과 연결 여부');
 select is((select approval_year::int from public.complexes_for_conditions(array['1168010300']) where name = 'D'), 2001, '대장 승인일 그대로');
@@ -44,7 +45,8 @@ select throws_ok($$select * from public.complexes_for_conditions(array[]::text[]
 select throws_ok($$select * from public.complexes_for_conditions(array_fill('1168000000'::text, array[16]))$$, '22023', null, '16개');
 
 set local role anon;
-select throws_ok($$select * from public.link_transactions_to_complexes()$$, '42501', null, 'anon은 연결 함수 실행 불가');
+select throws_ok($$select * from public.link_transactions_to_complexes('11680')$$, '42501', null, 'anon은 연결 함수 실행 불가');
+select throws_ok($$select * from public.transaction_lots('11680')$$, '42501', null, 'anon은 수집 대상 조회 불가');
 reset role;
 
 select * from finish();

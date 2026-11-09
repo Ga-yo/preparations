@@ -16,31 +16,37 @@ $$;
 revoke execute on function public.transaction_lots(text) from public, anon, authenticated;
 grant execute on function public.transaction_lots(text) to service_role;
 
--- 지번이 정확히 한 단지와 맞을 때만 연결한다(같은 지번에 단지가 둘이면 엉뚱한 단지에 붙이지 않음)
-create function public.link_transactions_to_complexes() returns table (linked int, ambiguous int)
+-- 지번이 정확히 한 단지와 맞을 때만 연결한다(같은 지번에 단지가 둘이면 엉뚱한 단지에 붙이지 않음).
+-- 시군구 단위로 부른다: 49만 행을 한 문장으로 갱신하면 행·인덱스 새 버전이 한꺼번에 쌓여 무료 DB 용량과 타임아웃에 걸린다
+create function public.link_transactions_to_complexes(sgg text) returns table (linked int, ambiguous int)
 language plpgsql security definer set search_path = '' as $$
-declare n_linked int; n_amb int;
+declare n_linked int; n_amb int; lo text; hi text;
 begin
+  if sgg is null or sgg !~ '^[0-9]{5}$' then
+    raise exception 'sgg must be 5 digits' using errcode = '22023';
+  end if;
+  lo := rpad(sgg, 10, '0'); hi := rpad(sgg, 10, '9');
   with cand as (
     select region_code, jibun, min(id) as complex_id, count(*) as n
-    from public.complexes where jibun is not null group by region_code, jibun
+    from public.complexes where jibun is not null and region_code between lo and hi group by region_code, jibun
   ), upd as (
     update public.transactions t set complex_id = c.complex_id
     from cand c
     where t.complex_id is null and c.n = 1 and t.region_code = c.region_code and t.jibun = c.jibun
+      and t.region_code between lo and hi
     returning 1
   )
   select count(*) into n_linked from upd;
   select count(*) into n_amb
   from public.transactions t
-  join (select region_code, jibun from public.complexes where jibun is not null
+  join (select region_code, jibun from public.complexes where jibun is not null and region_code between lo and hi
         group by region_code, jibun having count(*) > 1) c
     on t.region_code = c.region_code and t.jibun = c.jibun
-  where t.complex_id is null;
+  where t.complex_id is null and t.region_code between lo and hi;
   return query select n_linked, n_amb;
 end $$;
-revoke execute on function public.link_transactions_to_complexes() from public, anon, authenticated;
-grant execute on function public.link_transactions_to_complexes() to service_role;
+revoke execute on function public.link_transactions_to_complexes(text) from public, anon, authenticated;
+grant execute on function public.link_transactions_to_complexes(text) to service_role;
 
 create function public.complexes_for_conditions(
   region_codes text[],

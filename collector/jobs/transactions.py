@@ -156,8 +156,8 @@ def region_codes(sgg: str) -> set[str]:
     return {r["code"] for r in db.client().table("regions").select("code").like("code", f"{sgg}%").execute().data}
 
 
-def link_complexes() -> tuple[int, int]:
-    r = db.client().rpc("link_transactions_to_complexes", {}).execute().data[0]
+def link_complexes(sgg: str) -> tuple[int, int]:
+    r = db.client().rpc("link_transactions_to_complexes", {"sgg": sgg}).execute().data[0]
     return r["linked"], r["ambiguous"]
 
 
@@ -189,12 +189,12 @@ def run() -> None:
             dates += [r["deal_date"] for r in rows]
         total += n
         print(f"{sgg}: {n} rows")
+        try:  # 새 거래를 단지에 연결. 부가 작업이라 실패해도 실거래 적재는 성공으로 둔다
+            print("  linked=%d ambiguous=%d" % link_complexes(sgg))
+        except Exception as e:
+            print(f"::warning::link_transactions_to_complexes {sgg} failed: {type(e).__name__}")
     first = year_months(today, RETENTION_MONTHS)[0]
     delete_before(date(int(first[:4]), int(first[4:]), 1))
-    try:  # 새 거래를 단지에 연결. 부가 작업이라 실패해도 실거래 적재는 성공으로 둔다
-        print("linked=%d ambiguous=%d" % link_complexes())
-    except Exception as e:
-        print(f"::warning::link_transactions_to_complexes failed: {type(e).__name__}")
     if failures:  # freshness를 갱신하지 않아 stale로 드러난다
         raise RuntimeError(f"transactions failed ({len(failures)}): " + ", ".join(failures[:10]))
     db.mark_freshness(DATASET, today, SOURCE,

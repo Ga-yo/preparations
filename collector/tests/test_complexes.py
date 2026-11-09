@@ -97,7 +97,7 @@ def fake_run(monkeypatch):
         return RECAP if ep == complexes.RECAP_EP else TITLE
 
     monkeypatch.setattr(complexes, "fetch", fetch)
-    monkeypatch.setattr(complexes, "link", lambda: calls.__setitem__("link", calls["link"] + 1) or (5, 0))
+    monkeypatch.setattr(complexes, "link", lambda sgg: calls.__setitem__("link", calls["link"] + 1) or (5, 0))
     monkeypatch.setattr(complexes.db, "upsert_rows", lambda t, rows, on_conflict: calls["upsert"].append((t, rows, on_conflict)) or len(rows))
     monkeypatch.setattr(complexes.db, "mark_freshness", lambda *a, **k: calls["fresh"].append(a))
     return calls
@@ -127,7 +127,7 @@ def test_run_continues_and_skips_freshness_on_failure(monkeypatch, fake_run):
         complexes.run()
     assert "11650" in str(e.value) and "SECRET" not in str(e.value)
     assert fake_run["upsert"] and fake_run["fresh"] == []
-    assert fake_run["link"] == 1  # 성공한 시군구는 연결까지 한다
+    assert fake_run["link"] == 2  # 시군구마다 연결(실패한 시군구의 남은 행도)
 
 
 def test_fetch_error_hides_key(monkeypatch):
@@ -144,3 +144,31 @@ def test_fetch_retries_once_on_5xx(monkeypatch):
     res = iter([(503, ""), (200, ok)])
     monkeypatch.setattr(complexes.requests, "get", lambda *a, **k: type("R", (), dict(zip(("status_code", "text"), next(res))))())
     assert len(complexes.fetch("K", complexes.TITLE_EP, sigunguCd="11680", bjdongCd="10500")) == 1
+
+
+def test_multi_main_buildings_without_recap_skipped():
+    # 총괄표제부 없이 주건축물이 여럿이면 동마다 단지 행이 생겨 지번이 영구히 모호해진다
+    title = pd.concat([TITLE.iloc[[4]], TITLE.iloc[[4]].assign(mgmBldrgstPk="other")])
+    rows, skips = complexes.transform(RECAP.iloc[0:0], title, {(D, "1165")}, TODAY)
+    assert rows == [] and skips["multi_title"] == 2
+
+
+def test_run_skips_title_when_recap_fails(monkeypatch, fake_run):
+    monkeypatch.setattr(complexes, "sigungu_codes", lambda: ["11680"])
+    def fetch(key, ep, **p):
+        fake_run["fetch"].append((ep, p))
+        if ep == complexes.RECAP_EP:
+            raise RuntimeError("11680 10300: HTTP 503")
+        return TITLE
+    monkeypatch.setattr(complexes, "fetch", fetch)
+    with pytest.raises(RuntimeError):
+        complexes.run()
+    assert [ep for ep, _ in fake_run["fetch"]] == [complexes.RECAP_EP]
+
+
+def test_link_runs_per_sigungu(monkeypatch, fake_run):
+    monkeypatch.setattr(complexes, "sigungu_codes", lambda: ["11680", "41111"])
+    seen = []
+    monkeypatch.setattr(complexes, "link", lambda sgg: seen.append(sgg) or (1, 0))
+    complexes.run()
+    assert seen == ["11680", "41111"]

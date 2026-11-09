@@ -26,7 +26,7 @@ BASE = "https://apis.data.go.kr/1613000/BldRgstHubService/"
 RECAP_EP, TITLE_EP = "getBrRecapTitleInfo", "getBrTitleInfo"
 PAGE = 100  # 서버 상한
 FETCH_TIMEOUT_S = 30
-SKIPS = ("not_housing", "no_transaction", "annex", "has_recap", "duplicate")
+SKIPS = ("not_housing", "no_transaction", "annex", "has_recap", "multi_title", "duplicate")
 
 
 def normalize_jibun(bun: str | None, ji: str | None) -> str | None:
@@ -83,6 +83,10 @@ def transform(recap: pd.DataFrame, title: pd.DataFrame, lots: set[tuple[str, str
     rows: dict[str, dict] = {}
     skips = dict.fromkeys(SKIPS, 0)
     recap_lots: set[tuple[str, str]] = set()
+    # 총괄 없이 주건축물이 여럿인 지번은 동마다 단지 행이 생겨 영구히 모호해지므로 받지 않는다
+    mains = title[title.get("mainAtchGbCd", pd.Series(dtype=str)) == "0"] if len(title) else title
+    title_count = pd.Series([(f"{_s(x.get('sigunguCd'))}{_s(x.get('bjdongCd'))}", normalize_jibun(x.get("bun"), x.get("ji")))
+                             for x in mains.to_dict("records")]).value_counts().to_dict() if len(mains) else {}
     for is_title, df in ((False, recap), (True, title)):
         for x in df.to_dict("records"):
             region = f"{_s(x.get('sigunguCd'))}{_s(x.get('bjdongCd'))}"
@@ -95,6 +99,8 @@ def transform(recap: pd.DataFrame, title: pd.DataFrame, lots: set[tuple[str, str
                 skips["annex"] += 1
             elif is_title and (region, jibun) in recap_lots:
                 skips["has_recap"] += 1  # 총괄표제부가 있는 대지의 표제부는 같은 단지의 동
+            elif is_title and title_count.get((region, jibun), 0) > 1:
+                skips["multi_title"] += 1
             elif _s(x["mgmBldrgstPk"]) in rows:
                 skips["duplicate"] += 1
             else:
@@ -148,23 +154,25 @@ def transaction_lots(sgg: str) -> list[dict]:
 def run() -> None:
     key = os.environ["DATA_GO_KR_SERVICE_KEY"]
     today = kst_today()
-    total, calls, skipped, failures = 0, 0, dict.fromkeys(SKIPS, 0), []
+    total, calls, skipped, failures, linked, ambiguous = 0, 0, dict.fromkeys(SKIPS, 0), [], 0, 0
     for sgg in parse_sigungu(os.environ.get("COMPLEXES_SGG")) or sigungu_codes():
         lots = transaction_lots(sgg)
         lot_set = {(r["region_code"], r["jibun"]) for r in lots}
-        recaps = []
+        recaps, failed_dongs = [], set()
         for dong in sorted({r["region_code"] for r in lots}):
             try:
                 recaps.append(fetch(key, RECAP_EP, sigunguCd=dong[:5], bjdongCd=dong[5:]))
                 calls += 1
             except RuntimeError as e:
                 failures.append(str(e))
+                failed_dongs.add(dong)  # 총괄 없이 표제부만 받으면 단지가 동별로 쪼개진다
         recap = pd.concat(recaps, ignore_index=True) if recaps else pd.DataFrame()
         covered = {(r["region_code"], r["jibun"]) for r in transform(recap, pd.DataFrame(), lot_set, today)[0]}
         titles = []
         # 이미 연결된 지번은 다시 묻지 않는다: 다음 실행부터는 남은 지번만 조회(증분)
         for r in lots:
-            if r["linked"] or (r["region_code"], r["jibun"]) in covered or not (bj := split_jibun(r["jibun"])):
+            if (r["linked"] or r["region_code"] in failed_dongs or (r["region_code"], r["jibun"]) in covered
+                    or not (bj := split_jibun(r["jibun"]))):
                 continue
             try:
                 titles.append(fetch(key, TITLE_EP, sigunguCd=r["region_code"][:5], bjdongCd=r["region_code"][5:],
@@ -178,8 +186,11 @@ def run() -> None:
         total += n
         for k in skipped:
             skipped[k] += s[k]
-        print(f"{sgg}: {n} complexes, {len(lots)} lots")
-    linked, ambiguous = link()
+        # 시군구마다 연결: 실행이 중간에 끊겨도 다음 실행은 연결된 지번을 건너뛴다(백필이 누적된다)
+        l, a = link(sgg)
+        linked += l
+        ambiguous += a
+        print(f"{sgg}: {n} complexes, {len(lots)} lots, linked={l}, ambiguous={a}")
     print(f"complexes: {total} rows, {calls} calls, linked={linked}, ambiguous={ambiguous}")
     if failures:  # freshness를 갱신하지 않아 stale로 드러난다
         raise RuntimeError(f"complexes failed ({len(failures)}): " + ", ".join(failures[:10]))
