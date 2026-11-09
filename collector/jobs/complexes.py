@@ -27,8 +27,8 @@ BASE = "https://apis.data.go.kr/1613000/BldRgstHubService/"
 RECAP_EP, TITLE_EP = "getBrRecapTitleInfo", "getBrTitleInfo"
 PAGE = 100  # 서버 상한
 FETCH_TIMEOUT_S = 30
-ATTEMPTS = 3
-RETRY_WAIT_S = 1
+ATTEMPTS = 4  # 대기 1·2·4초
+MAX_FAIL_RATIO = 0.01
 SKIPS = ("not_housing", "no_transaction", "annex", "has_recap", "multi_title", "duplicate")
 
 
@@ -122,7 +122,7 @@ def fetch(key: str, ep: str, **params) -> pd.DataFrame:
             # 일시적 오류는 다시 시도: 끊김·5xx(실측 503)·200인데 빈 본문(실측 약 5~15%)
             for attempt in range(1, ATTEMPTS + 1):
                 if attempt > 1:
-                    time.sleep(RETRY_WAIT_S)
+                    time.sleep(2 ** (attempt - 2))
                 try:
                     res = requests.get(BASE + ep, params=q, timeout=FETCH_TIMEOUT_S)
                 except (requests.ConnectionError, requests.Timeout):
@@ -200,7 +200,11 @@ def run() -> None:
         ambiguous += a
         print(f"{sgg}: {n} complexes, {len(lots)} lots, linked={l}, ambiguous={a}")
     print(f"complexes: {total} rows, {calls} calls, linked={linked}, ambiguous={ambiguous}")
-    if failures:  # freshness를 갱신하지 않아 stale로 드러난다
-        raise RuntimeError(f"complexes failed ({len(failures)}): " + ", ".join(failures[:10]))
+    msg = f"complexes failed ({len(failures)}): " + ", ".join(failures[:10])
+    # 산발적 503은 실패 지번이 미연결로 남아 다음 실행에서 다시 조회된다. 1%를 넘으면 장애로 보고 freshness를 갱신하지 않는다
+    if len(failures) > MAX_FAIL_RATIO * (calls + len(failures)):
+        raise RuntimeError(msg)
+    if failures:
+        print(f"::warning::{msg}")
     db.mark_freshness(DATASET, today, SOURCE,
-                      f"{total} rows, {calls} calls, linked={linked}, ambiguous={ambiguous}, skipped={skipped}")
+                      f"{total} rows, {calls} calls, failed={len(failures)}, linked={linked}, ambiguous={ambiguous}, skipped={skipped}")

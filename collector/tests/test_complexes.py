@@ -191,3 +191,27 @@ def test_fetch_gives_up_after_three_empty(monkeypatch):
     with pytest.raises(RuntimeError) as e:
         complexes.fetch("K", complexes.RECAP_EP, sigunguCd="11680", bjdongCd="10100")
     assert "empty response" in str(e.value)
+
+
+def test_sparse_failures_warn_and_mark_freshness(monkeypatch, fake_run):
+    # 대량 백필의 산발적 503(1% 이하)은 다음 실행이 미연결 지번으로 다시 조회하므로 job을 실패시키지 않는다
+    monkeypatch.setattr(complexes, "sigungu_codes", lambda: ["11680"])
+    lots = [{"region_code": D, "jibun": str(1000 + i), "linked": False} for i in range(150)]
+    monkeypatch.setattr(complexes, "transaction_lots", lambda sgg: lots)
+    def fetch(key, ep, **p):
+        fake_run["fetch"].append((ep, p))
+        if p.get("bun") == "1000":
+            raise RuntimeError("11680 10300 1000 0000: HTTP 503")
+        return RECAP if ep == complexes.RECAP_EP else TITLE.iloc[0:0]
+    monkeypatch.setattr(complexes, "fetch", fetch)
+    complexes.run()
+    assert len(fake_run["fresh"]) == 1 and "failed=1" in fake_run["fresh"][0][3]
+
+
+def test_backoff_waits_grow(monkeypatch):
+    waits = []
+    monkeypatch.setattr(complexes.time, "sleep", waits.append)
+    monkeypatch.setattr(complexes.requests, "get", lambda *a, **k: type("R", (), {"status_code": 503, "text": "x"})())
+    with pytest.raises(RuntimeError):
+        complexes.fetch("K", complexes.TITLE_EP, sigunguCd="11680", bjdongCd="10300")
+    assert waits == [1, 2, 4]
