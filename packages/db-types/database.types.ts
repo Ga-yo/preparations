@@ -363,8 +363,10 @@ isOneToOne: false
               "deal_count": number,"latest_deal_date": string,"median_price": number,"sigungu_code": string,"sigungu_name": string
             }[]
                            },
-"transaction_dongs":
-{ Args: Record<PropertyKey, never>; Returns: string[]
+"transaction_lots":
+{ Args: { "sgg": string }; Returns: {
+              "jibun": string,"linked": boolean,"region_code": string
+            }[]
                            }
           }
           Enums: {

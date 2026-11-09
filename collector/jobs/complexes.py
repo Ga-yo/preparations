@@ -1,0 +1,189 @@
+"""국토교통부 건축물대장(건축HUB) 총괄표제부·표제부 → complexes. 실거래가 있는 지번의 공동주택만 적재한다.
+
+API: https://apis.data.go.kr/1613000/BldRgstHubService/getBrRecapTitleInfo (총괄표제부, 법정동 단위)
+     https://apis.data.go.kr/1613000/BldRgstHubService/getBrTitleInfo (표제부, 총괄이 없는 지번만 bun/ji 지정)
+PublicDataReader BuildingLedger는 timeout이 없고 페이지마다 30초를 기다리며(서버가 numOfRows를 100으로 자름)
+실제로 빈 결과를 돌려줘서 requests로 직접 부른다. 응답은 XML(xmltodict). 2026-11-09 fixture로 확인한 형식:
+bun/ji 4자리 0채움, useAprDay YYYYMMDD 또는 빈 값, 오래된 단지는 vlRat·bcRat·platArea·totPkngCnt가 0,
+etcPurps는 '공동주택(아파트)'·'주거시설 근린생활시설'·빈 값 등 제각각이라 아파트 판별은 실거래 지번 일치로 한다.
+서비스키가 URL 쿼리(serviceKey=)에 실리므로 예외는 법정동·예외 이름만 남긴다.
+"""
+import os
+import urllib.parse
+from datetime import date
+
+import pandas as pd
+import requests
+import xmltodict
+
+from jobs.transactions import _int, _s, kst_today, parse_sigungu, sigungu_codes
+from lib import db
+
+DATASET = "complexes:building_ledger"
+SOURCE = "국토교통부 건축물대장 총괄표제부·표제부 (건축HUB BldRgstHubService)"
+BASE = "https://apis.data.go.kr/1613000/BldRgstHubService/"
+RECAP_EP, TITLE_EP = "getBrRecapTitleInfo", "getBrTitleInfo"
+PAGE = 100  # 서버 상한
+FETCH_TIMEOUT_S = 30
+SKIPS = ("not_housing", "no_transaction", "annex", "has_recap", "duplicate")
+
+
+def normalize_jibun(bun: str | None, ji: str | None) -> str | None:
+    b, j = _int(bun), _int(ji) or 0
+    if not b:
+        return None
+    return f"{b}-{j}" if j else str(b)
+
+
+def split_jibun(jibun: str) -> tuple[str, str] | None:
+    parts = jibun.split("-")
+    if not all(p.isdigit() for p in parts) or len(parts) > 2:
+        return None  # '산12' 같은 비대지 지번
+    return parts[0].zfill(4), (parts[1] if len(parts) == 2 else "0").zfill(4)
+
+
+def _num(v) -> float | None:
+    # 대장의 0은 '값 없음'(오래된 단지)이라 0으로 저장하면 용적률 0%·대지지분 0으로 보인다
+    s = _s(v)
+    return float(s) if s and float(s) != 0 else None
+
+
+def _count(v) -> int | None:
+    n = _int(v)
+    return n or None
+
+
+def _date(v) -> str | None:
+    s = _s(v)
+    return f"{s[:4]}-{s[4:6]}-{s[6:8]}" if s and len(s) == 8 and s.isdigit() else None
+
+
+def _row(x: dict, region: str, jibun: str, today: date, title: bool) -> dict:
+    if title:
+        parking = sum(_int(x.get(k)) or 0 for k in ("indrAutoUtcnt", "oudrAutoUtcnt", "indrMechUtcnt", "oudrMechUtcnt"))
+    else:
+        parking = _int(x.get("totPkngCnt")) or 0
+    return {
+        "bldrgst_pk": _s(x["mgmBldrgstPk"]),
+        "name": _s(x.get("bldNm")) or _s(x.get("newPlatPlc")) or _s(x.get("platPlc")) or jibun,
+        "housing_type": "apartment", "region_code": region, "jibun": jibun,
+        "jibun_address": _s(x.get("platPlc")), "road_address": _s(x.get("newPlatPlc")),
+        "approval_date": _date(x.get("useAprDay")),
+        "household_count": _count(x.get("hhldCnt")),
+        "building_count": 1 if title else _count(x.get("mainBldCnt")),
+        "parking_count": parking or None,
+        "site_area_m2": _num(x.get("platArea")), "total_floor_area_m2": _num(x.get("totArea")),
+        "floor_area_ratio": _num(x.get("vlRat")), "building_coverage_ratio": _num(x.get("bcRat")),
+        "data_as_of": today.isoformat(), "source": SOURCE,
+    }
+
+
+def transform(recap: pd.DataFrame, title: pd.DataFrame, lots: set[tuple[str, str]], today: date) -> tuple[list[dict], dict[str, int]]:
+    rows: dict[str, dict] = {}
+    skips = dict.fromkeys(SKIPS, 0)
+    recap_lots: set[tuple[str, str]] = set()
+    for is_title, df in ((False, recap), (True, title)):
+        for x in df.to_dict("records"):
+            region = f"{_s(x.get('sigunguCd'))}{_s(x.get('bjdongCd'))}"
+            jibun = normalize_jibun(x.get("bun"), x.get("ji")) if _s(x.get("platGbCd")) == "0" else None
+            if _s(x.get("mainPurpsCdNm")) != "공동주택":
+                skips["not_housing"] += 1
+            elif (region, jibun) not in lots:  # 실거래(아파트)가 있는 지번만: 연립·다세대·거래 없는 단지 제외
+                skips["no_transaction"] += 1
+            elif is_title and _s(x.get("mainAtchGbCd")) != "0":
+                skips["annex"] += 1
+            elif is_title and (region, jibun) in recap_lots:
+                skips["has_recap"] += 1  # 총괄표제부가 있는 대지의 표제부는 같은 단지의 동
+            elif _s(x["mgmBldrgstPk"]) in rows:
+                skips["duplicate"] += 1
+            else:
+                if not is_title:
+                    recap_lots.add((region, jibun))
+                rows[_s(x["mgmBldrgstPk"])] = _row(x, region, jibun, today, is_title)
+    return list(rows.values()), skips
+
+
+def fetch(key: str, ep: str, **params) -> pd.DataFrame:
+    where = " ".join(params.get(k, "") for k in ("sigunguCd", "bjdongCd", "bun", "ji")).strip()
+    items, page = [], 1
+    try:
+        while True:
+            q = {"serviceKey": urllib.parse.unquote(key), "numOfRows": PAGE, "pageNo": page, **params}
+            for attempt in (1, 2):  # 일시적 끊김은 한 번만 다시 시도
+                try:
+                    res = requests.get(BASE + ep, params=q, timeout=FETCH_TIMEOUT_S)
+                    break
+                except (requests.ConnectionError, requests.Timeout):
+                    if attempt == 2:
+                        raise
+            if res.status_code != 200:
+                raise RuntimeError(f"{where}: HTTP {res.status_code}")
+            body = xmltodict.parse(res.text).get("response", {})
+            if body.get("header", {}).get("resultCode") != "00":
+                raise RuntimeError(f"{where}: resultCode {body.get('header', {}).get('resultCode')}")
+            it = ((body.get("body") or {}).get("items") or {}).get("item") or []
+            items += it if isinstance(it, list) else [it]
+            if page * PAGE >= int(body["body"]["totalCount"]):
+                return pd.DataFrame(items)
+            page += 1
+    except RuntimeError:
+        raise
+    except Exception as e:
+        raise RuntimeError(f"{where}: {type(e).__name__}") from None  # 원본 메시지에 서비스키가 든 URL이 있을 수 있다
+
+
+def transaction_lots(sgg: str) -> list[dict]:
+    out, start = [], 0
+    while True:  # PostgREST 행 상한(기본 1000) 때문에 나눠 받는다
+        page = db.client().rpc("transaction_lots", {"sgg": sgg}).range(start, start + 999).execute().data
+        out += page
+        if len(page) < 1000:
+            return out
+        start += 1000
+
+
+def link() -> tuple[int, int]:
+    r = db.client().rpc("link_transactions_to_complexes", {}).execute().data[0]
+    return r["linked"], r["ambiguous"]
+
+
+def run() -> None:
+    key = os.environ["DATA_GO_KR_SERVICE_KEY"]
+    today = kst_today()
+    total, calls, skipped, failures = 0, 0, dict.fromkeys(SKIPS, 0), []
+    for sgg in parse_sigungu(os.environ.get("COMPLEXES_SGG")) or sigungu_codes():
+        lots = transaction_lots(sgg)
+        lot_set = {(r["region_code"], r["jibun"]) for r in lots}
+        recaps = []
+        for dong in sorted({r["region_code"] for r in lots}):
+            try:
+                recaps.append(fetch(key, RECAP_EP, sigunguCd=dong[:5], bjdongCd=dong[5:]))
+                calls += 1
+            except RuntimeError as e:
+                failures.append(str(e))
+        recap = pd.concat(recaps, ignore_index=True) if recaps else pd.DataFrame()
+        covered = {(r["region_code"], r["jibun"]) for r in transform(recap, pd.DataFrame(), lot_set, today)[0]}
+        titles = []
+        # 이미 연결된 지번은 다시 묻지 않는다: 다음 실행부터는 남은 지번만 조회(증분)
+        for r in lots:
+            if r["linked"] or (r["region_code"], r["jibun"]) in covered or not (bj := split_jibun(r["jibun"])):
+                continue
+            try:
+                titles.append(fetch(key, TITLE_EP, sigunguCd=r["region_code"][:5], bjdongCd=r["region_code"][5:],
+                                    platGbCd="0", bun=bj[0], ji=bj[1]))
+                calls += 1
+            except RuntimeError as e:
+                failures.append(str(e))
+        title = pd.concat(titles, ignore_index=True) if titles else pd.DataFrame()
+        rows, s = transform(recap, title, lot_set, today)
+        n = db.upsert_rows("complexes", rows, on_conflict="bldrgst_pk")
+        total += n
+        for k in skipped:
+            skipped[k] += s[k]
+        print(f"{sgg}: {n} complexes, {len(lots)} lots")
+    linked, ambiguous = link()
+    print(f"complexes: {total} rows, {calls} calls, linked={linked}, ambiguous={ambiguous}")
+    if failures:  # freshness를 갱신하지 않아 stale로 드러난다
+        raise RuntimeError(f"complexes failed ({len(failures)}): " + ", ".join(failures[:10]))
+    db.mark_freshness(DATASET, today, SOURCE,
+                      f"{total} rows, {calls} calls, linked={linked}, ambiguous={ambiguous}, skipped={skipped}")

@@ -1,5 +1,5 @@
 begin;
-select plan(10);
+select plan(12);
 
 delete from public.transactions;
 delete from public.complexes;
@@ -14,12 +14,12 @@ insert into public.complexes (bldrgst_pk, name, region_code, jibun, approval_dat
   site_area_m2, floor_area_ratio, building_coverage_ratio, data_as_of, source)
 values
   ('pkA', 'A', '1168010300', '12-3', '1983-05-12', 1000, 800, 50000, 180, 15, current_date, 't'),
-  ('pkB', 'B', '1168010300', '45', '2015-01-01', 300, 450, 12000, 250, 20, current_date, 't'),
+  ('pkB', 'B', '1168010300', '45', null, 300, 450, 12000, 250, 20, current_date, 't'),
   ('pkC', 'C', '1168010300', '77', '2000-01-01', 100, null, 5000, 200, 20, current_date, 't'),
   ('pkD', 'D', '1168010300', '77', '2001-01-01', null, null, 4000, 210, 20, current_date, 't');
 
-insert into public.transactions (source_key, property_type, region_code, building_name, jibun, exclusive_area, deal_amount, deal_date, deal_type)
-select k, 'apartment', '1168010300', 'x', j, ar, amt, (now() at time zone 'Asia/Seoul')::date - 10, '중개거래'
+insert into public.transactions (source_key, property_type, region_code, building_name, jibun, exclusive_area, deal_amount, deal_date, deal_type, build_year)
+select k, 'apartment', '1168010300', 'x', j, ar, amt, (now() at time zone 'Asia/Seoul')::date - 10, '중개거래', 2015
 from (values
   ('a1', '12-3', 84.0, 1000000000), ('a2', '12-3', 84.0, 1200000000), ('a3', '12-3', 59.0, 800000000),
   ('b1', '45', 84.0, 1500000000), ('b2', '45', 84.0, 1700000000),
@@ -31,7 +31,10 @@ select results_eq($$select linked, ambiguous from public.link_transactions_to_co
   $$values (5, 1)$$, '정확히 한 단지와 맞는 지번만 연결, 같은 지번 2단지는 ambiguous');
 select is((select count(*)::int from public.transactions where complex_id is null), 2, '모호 1건·불일치 1건은 null');
 select results_eq($$select linked from public.link_transactions_to_complexes()$$, $$values (0)$$, '멱등');
-select set_eq($$select * from public.transaction_dongs()$$, array['1168010300'], '거래 있는 법정동');
+select results_eq($$select region_code, jibun, linked from public.transaction_lots('11680') where jibun in ('12-3','77','999')$$,
+  $$values ('1168010300'::text, '12-3'::text, true), ('1168010300', '77', false), ('1168010300', '999', false)$$, '시군구 실거래 지번과 연결 여부');
+select is((select approval_year::int from public.complexes_for_conditions(array['1168010300']) where name = 'D'), 2001, '대장 승인일 그대로');
+select is((select approval_year::int from public.complexes_for_conditions(array['1168010300']) where name = 'B'), 2015, '대장 승인일이 없으면 실거래 건축년도');
 
 select is((select count(*)::int from public.complexes_for_conditions(array['1168000000'])), 4, '시군구 코드는 시군구 전체');
 select results_eq($$select median_price, deal_count, land_share_m2, approval_year::int from public.complexes_for_conditions(array['1168010300']) where name = 'A'$$,

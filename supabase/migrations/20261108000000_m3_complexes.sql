@@ -5,13 +5,16 @@ alter table public.complexes
   add column jibun text;              -- '본번-부번' 정규화, 대지(platGbCd=0)만. 실거래 jibun과 같은 표기
 create index complexes_region_jibun_idx on public.complexes (region_code, jibun) where jibun is not null;
 
--- collector가 50만 행을 내려받지 않고 수집 대상 법정동만 얻는다
-create function public.transaction_dongs() returns setof text
+-- collector 수집 대상: 시군구별 실거래 지번과 연결 여부. PostgREST 행 상한(1000) 때문에 시군구 단위로 부른다
+create function public.transaction_lots(sgg text) returns table (region_code text, jibun text, linked boolean)
 language sql stable security definer set search_path = '' as $$
-  select distinct region_code::text from public.transactions
+  select t.region_code::text, t.jibun, bool_or(t.complex_id is not null)
+  from public.transactions t
+  where t.region_code between rpad(sgg, 10, '0') and rpad(sgg, 10, '9') and t.jibun is not null
+  group by 1, 2 order by 1, 2
 $$;
-revoke execute on function public.transaction_dongs() from public, anon, authenticated;
-grant execute on function public.transaction_dongs() to service_role;
+revoke execute on function public.transaction_lots(text) from public, anon, authenticated;
+grant execute on function public.transaction_lots(text) to service_role;
 
 -- 지번이 정확히 한 단지와 맞을 때만 연결한다(같은 지번에 단지가 둘이면 엉뚱한 단지에 붙이지 않음)
 create function public.link_transactions_to_complexes() returns table (linked int, ambiguous int)
@@ -59,7 +62,10 @@ begin
     raise exception 'months must be between 1 and 24' using errcode = '22023';
   end if;
   return query
-  select c.id, c.name, c.region_code::text, extract(year from c.approval_date)::smallint, c.household_count,
+  select c.id, c.name, c.region_code::text,
+    -- 오래된 단지는 대장에 사용승인일이 비어 있어 실거래 건축년도로 채운다
+    coalesce(extract(year from c.approval_date)::smallint, (select max(t2.build_year) from public.transactions t2 where t2.complex_id = c.id)),
+    c.household_count,
     round(c.parking_count::numeric / nullif(c.household_count, 0), 2),
     c.floor_area_ratio, c.building_coverage_ratio,
     round(c.site_area_m2 / nullif(c.household_count, 0), 2),
