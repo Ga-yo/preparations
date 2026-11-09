@@ -133,6 +133,7 @@ def test_run_continues_and_skips_freshness_on_failure(monkeypatch, fake_run):
 def test_fetch_error_hides_key(monkeypatch):
     def boom(*a, **k):
         raise complexes.requests.ConnectionError("https://x/?serviceKey=SECRET")
+    monkeypatch.setattr(complexes.time, "sleep", lambda s: None)
     monkeypatch.setattr(complexes.requests, "get", boom)
     with pytest.raises(RuntimeError) as e:
         complexes.fetch("SECRET", complexes.RECAP_EP, sigunguCd="11680", bjdongCd="10300")
