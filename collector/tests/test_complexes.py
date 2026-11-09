@@ -225,3 +225,70 @@ def test_implausible_ratios_to_null():
     ok = RECAP[RECAP["mgmBldrgstPk"] == "1000000000000005593932"].assign(bcRat="100", vlRat="9999.99")
     rows, _ = complexes.transform(ok, TITLE.iloc[0:0], {(D, "1284")}, TODAY)
     assert rows[0]["building_coverage_ratio"] == 100 and rows[0]["floor_area_ratio"] == 9999.99
+
+
+def test_transaction_lots_fallback_on_statement_timeout(monkeypatch):
+    class RpcQuery:
+        def range(self, *_):
+            return self
+
+        def execute(self):
+            raise RuntimeError("canceling statement due to statement timeout")
+
+    class TableQuery:
+        def __init__(self, rows):
+            self.rows = rows
+            self.last_id = 0
+            self.limit_n = None
+
+        def select(self, *_):
+            return self
+
+        def eq(self, *_):
+            return self
+
+        def gte(self, *_):
+            return self
+
+        def lte(self, *_):
+            return self
+
+        def order(self, *_):
+            return self
+
+        def limit(self, n):
+            self.limit_n = n
+            return self
+
+        def gt(self, _, last_id):
+            self.last_id = last_id
+            return self
+
+        def execute(self):
+            page = [r for r in self.rows if r["id"] > self.last_id]
+            if self.limit_n is not None:
+                page = page[:self.limit_n]
+            return type("R", (), {"data": page})()
+
+    class FakeDbClient:
+        def __init__(self, rows):
+            self.rows = rows
+
+        def rpc(self, *_):
+            return RpcQuery()
+
+        def table(self, name):
+            assert name == "transactions"
+            return TableQuery(self.rows)
+
+    rows = [
+        {"id": 1, "region_code": D, "jibun": "1284", "complex_id": None},
+        {"id": 2, "region_code": D, "jibun": "1284", "complex_id": 1},
+        {"id": 3, "region_code": D, "jibun": None, "complex_id": 1},
+        {"id": 4, "region_code": D, "jibun": "1165", "complex_id": None},
+    ]
+    monkeypatch.setattr(complexes.db, "client", lambda: FakeDbClient(rows))
+    assert complexes.transaction_lots("11680") == [
+        {"region_code": D, "jibun": "1165", "linked": False},
+        {"region_code": D, "jibun": "1284", "linked": True},
+    ]

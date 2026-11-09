@@ -30,6 +30,7 @@ FETCH_TIMEOUT_S = 30
 ATTEMPTS = 4  # 대기 1·2·4초
 MAX_FAIL_RATIO = 0.01
 SKIPS = ("not_housing", "no_transaction", "annex", "has_recap", "multi_title", "duplicate")
+TX_FALLBACK_PAGE = 5000
 
 
 def normalize_jibun(bun: str | None, ji: str | None) -> str | None:
@@ -155,14 +156,41 @@ def fetch(key: str, ep: str, **params) -> pd.DataFrame:
         raise RuntimeError(f"{where}: {type(e).__name__}") from None  # 원본 메시지에 서비스키가 든 URL이 있을 수 있다
 
 
+def _transaction_lots_fallback(sgg: str) -> list[dict]:
+    lo, hi, last_id = f"{sgg}00000", f"{sgg}99999", 0
+    lots: dict[tuple[str, str], bool] = {}
+    while True:
+        q = (db.client().table("transactions").select("id,region_code,jibun,complex_id")
+             .eq("property_type", "apartment")
+             .gte("region_code", lo).lte("region_code", hi)
+             .order("id").limit(TX_FALLBACK_PAGE))
+        if last_id:
+            q = q.gt("id", last_id)
+        page = q.execute().data
+        if not page:
+            return [{"region_code": r, "jibun": j, "linked": linked} for (r, j), linked in sorted(lots.items())]
+        for row in page:
+            if not (jibun := row.get("jibun")):
+                continue
+            key = (row["region_code"], jibun)
+            lots[key] = lots.get(key, False) or row["complex_id"] is not None
+        last_id = page[-1]["id"]
+
+
 def transaction_lots(sgg: str) -> list[dict]:
     out, start = [], 0
-    while True:  # PostgREST 행 상한(기본 1000) 때문에 나눠 받는다
-        page = db.client().rpc("transaction_lots", {"sgg": sgg}).range(start, start + 999).execute().data
-        out += page
-        if len(page) < 1000:
-            return out
-        start += 1000
+    try:
+        while True:  # PostgREST 행 상한(기본 1000) 때문에 나눠 받는다
+            page = db.client().rpc("transaction_lots", {"sgg": sgg}).range(start, start + 999).execute().data
+            out += page
+            if len(page) < 1000:
+                return out
+            start += 1000
+    except Exception as e:
+        if "statement timeout" not in str(e):
+            raise
+        print(f"::warning::transaction_lots timeout for {sgg}; fallback to direct transactions scan")
+        return _transaction_lots_fallback(sgg)
 
 
 def run() -> None:
