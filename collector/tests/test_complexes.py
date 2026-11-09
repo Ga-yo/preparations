@@ -215,3 +215,13 @@ def test_backoff_waits_grow(monkeypatch):
     with pytest.raises(RuntimeError):
         complexes.fetch("K", complexes.TITLE_EP, sigunguCd="11680", bjdongCd="10300")
     assert waits == [1, 2, 4]
+
+
+def test_implausible_ratios_to_null():
+    # 실측: 대장 원본에 건폐율 1000% 이상 오기가 있어 numeric(5,2) overflow로 upsert 전체가 실패했다
+    recap = RECAP[RECAP["mgmBldrgstPk"] == "1000000000000005593932"].assign(bcRat="1234.5", vlRat="12345")
+    rows, _ = complexes.transform(recap, TITLE.iloc[0:0], {(D, "1284")}, TODAY)
+    assert rows[0]["building_coverage_ratio"] is None and rows[0]["floor_area_ratio"] is None
+    ok = RECAP[RECAP["mgmBldrgstPk"] == "1000000000000005593932"].assign(bcRat="100", vlRat="9999.99")
+    rows, _ = complexes.transform(ok, TITLE.iloc[0:0], {(D, "1284")}, TODAY)
+    assert rows[0]["building_coverage_ratio"] == 100 and rows[0]["floor_area_ratio"] == 9999.99

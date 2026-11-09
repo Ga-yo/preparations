@@ -52,6 +52,12 @@ def _num(v) -> float | None:
     return float(s) if s and float(s) != 0 else None
 
 
+def _ratio(v, max_pct: float) -> float | None:
+    # 대장 원본에 오기(건폐율 1000% 이상 등)가 있다: 정의상 불가능한 값은 버린다(컬럼 numeric 한도 초과로 배치 전체가 실패함)
+    n = _num(v)
+    return n if n is not None and 0 < n <= max_pct else None
+
+
 def _count(v) -> int | None:
     n = _int(v)
     return n or None
@@ -77,7 +83,7 @@ def _row(x: dict, region: str, jibun: str, today: date, title: bool) -> dict:
         "building_count": 1 if title else _count(x.get("mainBldCnt")),
         "parking_count": parking or None,
         "site_area_m2": _num(x.get("platArea")), "total_floor_area_m2": _num(x.get("totArea")),
-        "floor_area_ratio": _num(x.get("vlRat")), "building_coverage_ratio": _num(x.get("bcRat")),
+        "floor_area_ratio": _ratio(x.get("vlRat"), 9999.99), "building_coverage_ratio": _ratio(x.get("bcRat"), 100),
         "data_as_of": today.isoformat(), "source": SOURCE,
     }
 
