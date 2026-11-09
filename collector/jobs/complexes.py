@@ -17,6 +17,7 @@ import requests
 import xmltodict
 
 from jobs.transactions import _int, _s, kst_today, parse_sigungu, sigungu_codes
+from jobs.transactions import link_complexes as link
 from lib import db
 
 DATASET = "complexes:building_ledger"
@@ -109,13 +110,15 @@ def fetch(key: str, ep: str, **params) -> pd.DataFrame:
     try:
         while True:
             q = {"serviceKey": urllib.parse.unquote(key), "numOfRows": PAGE, "pageNo": page, **params}
-            for attempt in (1, 2):  # 일시적 끊김은 한 번만 다시 시도
+            for attempt in (1, 2):  # 일시적 끊김·5xx(실측 503)는 한 번만 다시 시도
                 try:
                     res = requests.get(BASE + ep, params=q, timeout=FETCH_TIMEOUT_S)
-                    break
                 except (requests.ConnectionError, requests.Timeout):
                     if attempt == 2:
                         raise
+                    continue
+                if res.status_code < 500 or attempt == 2:
+                    break
             if res.status_code != 200:
                 raise RuntimeError(f"{where}: HTTP {res.status_code}")
             body = xmltodict.parse(res.text).get("response", {})
@@ -140,11 +143,6 @@ def transaction_lots(sgg: str) -> list[dict]:
         if len(page) < 1000:
             return out
         start += 1000
-
-
-def link() -> tuple[int, int]:
-    r = db.client().rpc("link_transactions_to_complexes", {}).execute().data[0]
-    return r["linked"], r["ambiguous"]
 
 
 def run() -> None:

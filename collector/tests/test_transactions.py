@@ -207,3 +207,21 @@ def test_run_only_given_sigungu(monkeypatch, fake_run):
     monkeypatch.setattr(transactions, "sigungu_codes", lambda: pytest.fail("전체 목록을 읽으면 안 된다"))
     transactions.run()
     assert len(fake_run["upsert"]) == 1
+
+
+def test_run_links_new_deals_to_complexes(monkeypatch, fake_run):
+    monkeypatch.setattr(transactions, "sigungu_codes", lambda: ["11680"])
+    linked = []
+    monkeypatch.setattr(transactions, "link_complexes", lambda: linked.append(1) or (3, 0))
+    transactions.run()
+    assert linked == [1]
+
+
+def test_link_failure_does_not_fail_transactions(monkeypatch, fake_run):
+    # 단지 연결은 부가 작업: 실패해도 실거래 적재·freshness는 성공으로 남긴다
+    monkeypatch.setattr(transactions, "sigungu_codes", lambda: ["11680"])
+    def boom():
+        raise RuntimeError("rpc down")
+    monkeypatch.setattr(transactions, "link_complexes", boom)
+    transactions.run()
+    assert len(fake_run["fresh"]) == 1

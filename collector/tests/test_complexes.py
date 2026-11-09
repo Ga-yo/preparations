@@ -137,3 +137,10 @@ def test_fetch_error_hides_key(monkeypatch):
     with pytest.raises(RuntimeError) as e:
         complexes.fetch("SECRET", complexes.RECAP_EP, sigunguCd="11680", bjdongCd="10300")
     assert "SECRET" not in str(e.value) and "ConnectionError" in str(e.value)
+
+
+def test_fetch_retries_once_on_5xx(monkeypatch):
+    ok = '<response><header><resultCode>00</resultCode></header><body><items><item><mgmBldrgstPk>1</mgmBldrgstPk></item></items><totalCount>1</totalCount></body></response>'
+    res = iter([(503, ""), (200, ok)])
+    monkeypatch.setattr(complexes.requests, "get", lambda *a, **k: type("R", (), dict(zip(("status_code", "text"), next(res))))())
+    assert len(complexes.fetch("K", complexes.TITLE_EP, sigunguCd="11680", bjdongCd="10500")) == 1
