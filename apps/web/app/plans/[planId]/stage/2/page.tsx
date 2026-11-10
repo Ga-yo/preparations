@@ -135,6 +135,7 @@ export default async function Stage2({
       </StageForm>
       <div className="space-y-6">
         <RegionPriceCard result={prices} />
+        <p><Link href={`/plans/${planId}/stage/3`} className="text-blue-700">다음: 3단계 주택 선택 기준 →</Link></p>
         <ChatPanel planId={planId} />
       </div>
     </main>

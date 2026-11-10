@@ -10,6 +10,13 @@ on:
       transactions_sgg:
         description: '이 시군구만 수집 (쉼표로 구분한 5자리 코드, 비우면 전체)'
         default: ''
+      run_complexes:
+        description: '건축물대장 단지 수집도 실행 (예약 실행은 일요일만)'
+        type: boolean
+        default: false
+      complexes_sgg:
+        description: '단지 수집 시군구 (쉼표로 구분한 5자리 코드, 비우면 전체)'
+        default: ''
 
 concurrency:
   group: collect
@@ -71,4 +78,22 @@ jobs:
             echo "::notice::DATA_GO_KR_SERVICE_KEY secret is empty; skipping transactions"
           else
             uv run --frozen python main.py transactions
+          fi
+      # 단지 대장은 자주 안 바뀌어 주 1회(regions와 같은 요일). 수동 실행은 run_complexes를 켰을 때만(1,000회 이상 호출)
+      - name: complexes (weekly or manual opt-in)
+        if: ${{ !cancelled() }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DATA_GO_KR_SERVICE_KEY: ${{ secrets.DATA_GO_KR_SERVICE_KEY }} # 건축HUB 건축물대장 활용신청 필요
+          RUN_COMPLEXES: ${{ inputs.run_complexes }}
+          COMPLEXES_SGG: ${{ inputs.complexes_sgg }}
+          PYTHONUNBUFFERED: '1'
+        run: |
+          if [ -z "$DATA_GO_KR_SERVICE_KEY" ]; then
+            echo "::notice::DATA_GO_KR_SERVICE_KEY secret is empty; skipping complexes"
+          elif [ "$RUN_COMPLEXES" = "true" ] || { [ "${{ github.event_name }}" = "schedule" ] && [ "$(date -u +%u)" = "6" ]; }; then
+            uv run --frozen python main.py complexes
+          else
+            echo "::notice::complexes skipped (weekly, Sundays KST)"
           fi

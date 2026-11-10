@@ -156,6 +156,11 @@ def region_codes(sgg: str) -> set[str]:
     return {r["code"] for r in db.client().table("regions").select("code").like("code", f"{sgg}%").execute().data}
 
 
+def link_complexes(sgg: str) -> tuple[int, int]:
+    r = db.client().rpc("link_transactions_to_complexes", {"sgg": sgg}).execute().data[0]
+    return r["linked"], r["ambiguous"]
+
+
 def delete_before(cutoff: date) -> None:
     db.client().table("transactions").delete().eq("property_type", "apartment").lt("deal_date", cutoff.isoformat()).execute()
 
@@ -184,6 +189,10 @@ def run() -> None:
             dates += [r["deal_date"] for r in rows]
         total += n
         print(f"{sgg}: {n} rows")
+        try:  # 새 거래를 단지에 연결. 부가 작업이라 실패해도 실거래 적재는 성공으로 둔다
+            print("  linked=%d ambiguous=%d" % link_complexes(sgg))
+        except Exception as e:
+            print(f"::warning::link_transactions_to_complexes {sgg} failed: {type(e).__name__}")
     first = year_months(today, RETENTION_MONTHS)[0]
     delete_before(date(int(first[:4]), int(first[4:]), 1))
     if failures:  # freshness를 갱신하지 않아 stale로 드러난다
