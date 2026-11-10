@@ -1,5 +1,5 @@
 begin;
-select plan(14);
+select plan(15);
 
 delete from public.transactions;
 delete from public.complexes;
@@ -28,6 +28,7 @@ from (values
 ) v (k, j, ar, amt);
 
 select results_eq($$select linked, ambiguous from public.link_transactions_to_complexes('11650')$$, $$values (0, 0)$$, '다른 시군구만 연결하면 이 시군구는 그대로');
+select results_eq($$select linked, ambiguous from public.link_transactions_to_complexes('1168010400')$$, $$values (0, 0)$$, '다른 법정동만 연결하면 이 동은 그대로');
 select results_eq($$select linked, ambiguous from public.link_transactions_to_complexes('11680')$$,
   $$values (5, 1)$$, '정확히 한 단지와 맞는 지번만 연결, 같은 지번 2단지는 ambiguous');
 select is((select count(*)::int from public.transactions where complex_id is null), 2, '모호 1건·불일치 1건은 null');

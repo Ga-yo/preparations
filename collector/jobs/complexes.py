@@ -228,8 +228,11 @@ def run() -> None:
         total += n
         for k in skipped:
             skipped[k] += s[k]
-        # 시군구마다 연결: 실행이 중간에 끊겨도 다음 실행은 연결된 지번을 건너뛴다(백필이 누적된다)
-        l, a = link(sgg)
+        # 법정동마다 연결: 한 문장 UPDATE를 작게(무료 DB statement timeout), 실행이 끊겨도 연결분은 누적된다
+        l = a = 0
+        for dong in sorted({r["region_code"] for r in lots}):
+            dl, da = link(dong)
+            l, a = l + dl, a + da
         linked += l
         ambiguous += a
         print(f"{sgg}: {n} complexes, {len(lots)} lots, linked={l}, ambiguous={a}")

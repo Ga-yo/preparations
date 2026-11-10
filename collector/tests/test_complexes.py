@@ -127,7 +127,7 @@ def test_run_continues_and_skips_freshness_on_failure(monkeypatch, fake_run):
         complexes.run()
     assert "11650" in str(e.value) and "SECRET" not in str(e.value)
     assert fake_run["upsert"] and fake_run["fresh"] == []
-    assert fake_run["link"] == 2  # 시군구마다 연결(실패한 시군구의 남은 행도)
+    assert fake_run["link"] == 2  # 법정동마다 연결(실패한 동의 남은 행도)
 
 
 def test_fetch_error_hides_key(monkeypatch):
@@ -168,12 +168,14 @@ def test_run_skips_title_when_recap_fails(monkeypatch, fake_run):
     assert [ep for ep, _ in fake_run["fetch"]] == [complexes.RECAP_EP]
 
 
-def test_link_runs_per_sigungu(monkeypatch, fake_run):
-    monkeypatch.setattr(complexes, "sigungu_codes", lambda: ["11680", "41111"])
+def test_link_runs_per_dong(monkeypatch, fake_run):
+    # 한 문장 UPDATE가 크면 무료 DB에서 statement timeout(실측: 광주시 6천 행): 법정동 단위로 나눈다
+    monkeypatch.setattr(complexes, "sigungu_codes", lambda: ["11680", "11650"])
+    monkeypatch.setattr(complexes, "fetch", lambda key, ep, **p: RECAP if ep == complexes.RECAP_EP else TITLE)
     seen = []
-    monkeypatch.setattr(complexes, "link", lambda sgg: seen.append(sgg) or (1, 0))
+    monkeypatch.setattr(complexes, "link", lambda code: seen.append(code) or (1, 0))
     complexes.run()
-    assert seen == ["11680", "41111"]
+    assert seen == [D, "1165010100"]
 
 
 def test_fetch_retries_on_empty_200(monkeypatch):
