@@ -38,6 +38,7 @@ export const getComplexDetail = defineTool({
     if (fresh?.error) throw new Error(fresh.error.message);
 
     const own = ok ? l.rows.find((r) => r.complex_id === c.id) : undefined;
+    const ownRow = own ?? ((nb.data ?? []) as ComplexRow[]).find((r) => r.complex_id === c.id); // 사용자 지역 밖 단지는 같은 동 행으로 보충
     const fit = ok && own ? fitScore(l.conditions, own, maxBudgetFor(l.budgets, own)) : null;
     const tradeRows = trades.data ?? [];
     const as_of = ok ? l.as_of : Object.fromEntries((fresh?.data ?? []).map((f) => [f.dataset, f.as_of]));
@@ -46,7 +47,7 @@ export const getComplexDetail = defineTool({
       data: {
         complex: {
           id: c.id, name: c.name, region_code: c.region_code, jibun_address: c.jibun_address, road_address: c.road_address,
-          approval_year: c.approval_date ? Number(c.approval_date.slice(0, 4)) : own?.approval_year ?? null,
+          approval_year: c.approval_date ? Number(c.approval_date.slice(0, 4)) : ownRow?.approval_year ?? null,
           household_count: c.household_count, building_count: c.building_count,
           parking_per_household: c.parking_count !== null && c.household_count ? round2(c.parking_count / c.household_count) : null,
           floor_area_ratio: c.floor_area_ratio, building_coverage_ratio: c.building_coverage_ratio,

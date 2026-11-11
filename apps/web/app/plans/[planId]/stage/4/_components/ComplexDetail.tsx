@@ -1,6 +1,7 @@
 import type { ToolResult } from "@/lib/agent/tool";
 import type { Fit, NeighborStats } from "@/lib/calc/fit";
 import { TipPanel, type Tip } from "../../../_components/TipPanel";
+import { DATASETS } from "../../../_components/ConditionCheckCard";
 import { formatWon } from "../../../_components/format";
 
 type Data = {
@@ -10,7 +11,7 @@ type Data = {
     floor_area_ratio: number | null; building_coverage_ratio: number | null; land_share_m2: number | null;
   };
   fit: Fit | null;
-  trades: { deal_date: string; deal_amount: number; exclusive_area: number; floor: number }[];
+  trades: { deal_date: string; deal_amount: number; exclusive_area: number; floor: number | null }[];
   monthly: { month: string; median_price: number; deal_count: number }[];
   neighbors: NeighborStats;
   criteria: { area_min: number | null; area_max: number | null; months: number };
@@ -22,7 +23,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
     return <section className="rounded border p-4 text-sm">선택한 단지를 찾을 수 없습니다.</section>;
   }
   const { complex: c, fit, trades, monthly, neighbors: n, criteria } = result.data as Data;
-  const asOf = Object.entries(result.as_of);
+  const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
     : `전용 ${criteria.area_min ?? ""}~${criteria.area_max ?? ""}㎡`;
   return (
@@ -30,7 +31,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
       <h2 className="text-base font-semibold">{c.name}</h2>
       <p className="text-gray-700">{c.road_address ?? c.jibun_address ?? "주소 정보 없음"}</p>
       <ul className="grid grid-cols-2 gap-x-4">
-        <li>승인연도 {dash(c.approval_year, "년")}</li>
+        <li>승인연도 {`${c.approval_year ?? "-"}년`}</li>
         <li>세대수 {dash(c.household_count, "세대")}</li>
         <li>동 수 {dash(c.building_count, "개")}</li>
         <li>세대당 주차 {dash(c.parking_per_household, "대")}</li>
@@ -45,7 +46,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
         <table className="w-full text-left [&_td]:py-0.5 [&_td]:pr-2">
           <thead><tr><th>계약일</th><th>금액</th><th>전용면적</th><th>층</th></tr></thead>
           <tbody>{trades.map((t, i) => (
-            <tr key={i}><td>{t.deal_date}</td><td>{formatWon(t.deal_amount)}</td><td>{t.exclusive_area}㎡</td><td>{t.floor}층</td></tr>
+            <tr key={i}><td>{t.deal_date}</td><td>{formatWon(t.deal_amount)}</td><td>{t.exclusive_area}㎡</td><td>{t.floor ?? "-"}층</td></tr>
           ))}</tbody>
         </table>
       ) : <p className="text-gray-600">최근 거래 없음</p>}
@@ -66,7 +67,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
       <p>
         {n.rank === null || n.dong_median === null
           ? `같은 동 ${n.count}개 단지 중 이 단지의 최근 12개월 거래가 없어 순위를 매기지 못했습니다.`
-          : `같은 동 ${n.count}개 단지 중 중위가 낮은 순 ${n.rank}위, 동 중위값 ${formatWon(n.dong_median)}`}
+          : `같은 동 가격이 있는 ${n.priced}개 단지 중 중위가 낮은 순 ${n.rank}위, 동 중위값 ${formatWon(n.dong_median)}`}
         {" "}(같은 법정동 기준, 거리 기준 아님)
       </p>
       <TipPanel tips={tips} fieldKey="neighbors" />
@@ -74,7 +75,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
       <p className="text-gray-600">교통·학교·생활 인프라: 데이터 준비 중</p>
       <p className="text-gray-600">정비사업 진행 상황: 데이터 준비 중</p>
       <TipPanel tips={tips} fieldKey="redevelopment" />
-      {asOf.length > 0 && <p className="text-xs text-gray-600">데이터 기준일: {asOf.map(([k, v]) => `${k} ${v}`).join(" · ")}</p>}
+      {asOf.length > 0 && <p className="text-xs text-gray-600">데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}</p>}
     </section>
   );
 }

@@ -23,6 +23,11 @@ test("search_complexes returns blocking when no candidates", async () => {
   expect(d.blocking).toEqual(["household_count_min"]);
 });
 
+test("passes through no_complex_data notice", async () => {
+  const { ctx } = mk({ rows: [] });
+  expect((await searchComplexes.run({ limit: 20 }, ctx)).notices).toContain("no_complex_data");
+});
+
 test("includes no_location_data notice", async () => {
   const { ctx } = mk();
   expect((await searchComplexes.run({ limit: 20 }, ctx)).notices).toContain("no_location_data");

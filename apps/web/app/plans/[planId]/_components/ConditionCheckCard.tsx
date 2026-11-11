@@ -16,14 +16,15 @@ export const ERRORS: Record<string, string> = {
   region_required: "2단계에서 희망 지역을 저장하면 조건을 점검해 드립니다.",
   conditions_required: "주택 조건을 저장하면 예산·시세·단지 데이터와 비교해 드립니다.",
 };
-const NOTICES: Record<string, string> = {
+export const NOTICES: Record<string, string> = {
   no_data_for_type: "오피스텔·연립·다세대는 아직 데이터가 없어 아파트만 점검했습니다.",
   "data_unavailable:mgmt_fee": "관리비 조건은 아직 점검할 데이터가 없습니다.",
   unit_level_condition: "방·욕실 수, 층, 향은 세대마다 달라 단지 단위로 점검하지 않습니다.",
   no_complex_data: "희망 지역에 단지 데이터가 아직 없습니다.",
+  no_location_data: "교통·학교·생활 인프라 데이터는 아직 없습니다.",
   truncated: "단지가 많아 3,000개까지만 점검했습니다. 지역을 좁혀 보세요.",
 };
-const DATASETS: Record<string, string> = {
+export const DATASETS: Record<string, string> = {
   "complexes:building_ledger": "건축물대장 단지", "transactions:apartment": "아파트 실거래가",
   "loan_products:bank": "시중은행 상품", regulated_areas: "규제지역", loan_rules: "대출 규제", tax_rates: "세율", policy_loans: "정책대출",
 };

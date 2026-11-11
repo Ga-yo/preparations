@@ -73,7 +73,7 @@ describe("rankComplexes", () => {
 describe("neighborStats", () => {
   const rows = [3, 5, 4, null].map((m, i) => X(i + 1, { median_price: m === null ? null : m * 100_000_000 }));
   it("ranks target", () => {
-    expect(neighborStats(2, rows)).toEqual({ count: 4, dong_median: 400_000_000, rank: 3 });
+    expect(neighborStats(2, rows)).toEqual({ count: 4, priced: 3, dong_median: 400_000_000, rank: 3 });
   });
   it("null target has no rank", () => expect(neighborStats(4, rows).rank).toBeNull());
 });

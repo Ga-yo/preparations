@@ -10,12 +10,12 @@ const BUDGET = (b: boolean | null) =>
 const label = (k: string) => CONDITION_LABELS[k] ?? k;
 
 type Props = {
-  planId: string; candidates: RankedComplex[]; favorites: number[]; selected: number | null;
+  planId: string; candidates: RankedComplex[]; favorites: { complex_id: number; name: string }[]; selected: number | null;
   toggle: (form: FormData) => Promise<void>;
 };
 
 function Row({ x, rank, fav, selected, planId, toggle }: {
-  x: RankedComplex; rank: number; fav: boolean; selected: boolean; planId: string; toggle: Props["toggle"];
+  x: RankedComplex; rank: number | null; fav: boolean; selected: boolean; planId: string; toggle: Props["toggle"];
 }) {
   const b = BUDGET(x.fit.within_budget);
   const unmet = x.fit.unmet.filter((k) => !x.fit.missing.includes(k));
@@ -23,7 +23,7 @@ function Row({ x, rank, fav, selected, planId, toggle }: {
     <li className={`rounded border p-2 text-sm ${selected ? "border-blue-600 bg-blue-50" : ""}`}>
       <div className="flex items-start justify-between gap-2">
         <Link href={`/plans/${planId}/stage/4?complex=${x.complex_id}`} className="font-medium text-blue-800" aria-current={selected || undefined}>
-          {rank}. {x.name} <span className="font-normal text-gray-600">· 적합도 {x.fit.score}점</span>
+          {rank === null ? "" : `${rank}. `}{x.name} <span className="font-normal text-gray-600">· 적합도 {x.fit.score}점</span>
         </Link>
         <form action={toggle}>
           <input type="hidden" name="complex_id" value={x.complex_id} />
@@ -48,18 +48,37 @@ function Row({ x, rank, fav, selected, planId, toggle }: {
 }
 
 export function CandidateList({ planId, candidates, favorites, selected, toggle }: Props) {
+  const favIds = new Set(favorites.map((f) => f.complex_id));
   const ranked = candidates.map((x, i) => ({ x, rank: i + 1 }));
-  const favs = ranked.filter(({ x }) => favorites.includes(x.complex_id));
-  const rest = ranked.filter(({ x }) => !favorites.includes(x.complex_id));
+  const favs = ranked.filter(({ x }) => favIds.has(x.complex_id));
+  const rest = ranked.filter(({ x }) => !favIds.has(x.complex_id));
+  // 현재 후보 20개 밖의 관심 단지도 보여야 해제할 수 있다
+  const outside = favorites.filter((f) => !candidates.some((x) => x.complex_id === f.complex_id));
   const row = ({ x, rank }: (typeof ranked)[number]) => (
-    <Row key={x.complex_id} x={x} rank={rank} fav={favorites.includes(x.complex_id)} selected={x.complex_id === selected} planId={planId} toggle={toggle} />
+    <Row key={x.complex_id} x={x} rank={rank} fav={favIds.has(x.complex_id)} selected={x.complex_id === selected} planId={planId} toggle={toggle} />
   );
   return (
     <div className="space-y-3">
-      {favs.length > 0 && (
+      {(favs.length > 0 || outside.length > 0) && (
         <section aria-label="관심 단지">
           <h3 className="mb-1 text-sm font-semibold">★ 관심 단지</h3>
-          <ul className="space-y-2">{favs.map(row)}</ul>
+          <ul className="space-y-2">
+            {favs.map(({ x }) => <Row key={x.complex_id} x={x} rank={null} fav selected={x.complex_id === selected} planId={planId} toggle={toggle} />)}
+            {outside.map((f) => (
+              <li key={f.complex_id} className={`rounded border p-2 text-sm ${f.complex_id === selected ? "border-blue-600 bg-blue-50" : ""}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <Link href={`/plans/${planId}/stage/4?complex=${f.complex_id}`} className="font-medium text-blue-800" aria-current={f.complex_id === selected || undefined}>
+                    {f.name} <span className="font-normal text-gray-600">· 현재 조건의 후보 목록 밖</span>
+                  </Link>
+                  <form action={toggle}>
+                    <input type="hidden" name="complex_id" value={f.complex_id} />
+                    <input type="hidden" name="favorite" value="0" />
+                    <button type="submit" aria-pressed aria-label={`${f.name} 관심 해제`}>★</button>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
         </section>
       )}
       <ul className="space-y-2">{rest.map(row)}</ul>

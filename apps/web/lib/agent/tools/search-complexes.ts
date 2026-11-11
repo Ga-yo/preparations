@@ -4,7 +4,7 @@ import { rankComplexes } from "@/lib/calc/fit";
 import { defineTool, type ToolContext, type ToolResult } from "../tool";
 import { loadConditionContext, MONTHS } from "./condition-context";
 
-const PASSTHROUGH = ["no_data_for_type", "truncated", "land_share_is_average"];
+const PASSTHROUGH = ["no_data_for_type", "no_complex_data", "truncated", "land_share_is_average"];
 
 export const searchComplexes = defineTool({
   name: "search_complexes",

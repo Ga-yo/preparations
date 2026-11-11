@@ -7,7 +7,7 @@ export interface Fit {
   within_budget: boolean | null;
 }
 export type RankedComplex = ComplexRow & { fit: Fit };
-export interface NeighborStats { count: number; dong_median: number | null; rank: number | null }
+export interface NeighborStats { count: number; priced: number; dong_median: number | null; rank: number | null }
 
 // 값 자체가 null이라 판단 못 한 조건. area는 거래 0건이 unmet일 뿐 missing이 아니다
 const VALUE: Record<Exclude<ConditionKey, "area">, keyof ComplexRow> = {
@@ -49,5 +49,5 @@ export function neighborStats(targetId: number, rows: ComplexRow[]): NeighborSta
   const mid = prices.length >> 1;
   const dong_median = !prices.length ? null : prices.length % 2 ? prices[mid] : Math.round((prices[mid - 1] + prices[mid]) / 2);
   const t = rows.find((r) => r.complex_id === targetId)?.median_price ?? null;
-  return { count: rows.length, dong_median, rank: t === null ? null : 1 + prices.filter((p) => p < t).length };
+  return { count: rows.length, priced: prices.length, dong_median, rank: t === null ? null : 1 + prices.filter((p) => p < t).length };
 }

@@ -25,7 +25,7 @@ vi.mock("@/lib/supabase/server", () => ({
 const loadConditionContext = vi.fn();
 vi.mock("@/lib/agent/tools/condition-context", () => ({ loadConditionContext: (...a: unknown[]) => loadConditionContext(...a), MONTHS: 12 }));
 
-const { setFavorite } = await import("./actions");
+const { setFavorite, favoriteComplexIds } = await import("./actions");
 
 const row = { complex_id: 7, name: "a", region_code: "11680", approval_year: 2000, household_count: 500,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 30, median_price: 5e8, deal_count: 3 };
@@ -86,5 +86,14 @@ describe("setFavorite", () => {
     expect(u.args).toEqual([{ is_favorite: false }]);
     expect(u.chain).toContainEqual(["in", ["condition_set_id", ["s1", "s2"]]]);
     expect(u.chain).toContainEqual(["eq", ["complex_id", 7]]);
+  });
+});
+
+describe("favoriteComplexIds", () => {
+  test("returns deduped ids with names", async () => {
+    results["candidates.select"] = { data: [
+      { complex_id: 7, complexes: { name: "가" } }, { complex_id: 7, complexes: { name: "가" } }, { complex_id: 9, complexes: null },
+    ] };
+    expect(await favoriteComplexIds(PLAN)).toEqual([{ complex_id: 7, name: "가" }, { complex_id: 9, name: "단지 9" }]);
   });
 });

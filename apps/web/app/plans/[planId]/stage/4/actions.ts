@@ -48,12 +48,13 @@ export async function setFavorite(planId: string, complexId: number, favorite: b
   return { ok: true };
 }
 
-export async function favoriteComplexIds(planId: string): Promise<number[]> {
+export async function favoriteComplexIds(planId: string): Promise<{ complex_id: number; name: string }[]> {
   const supabase = await client();
-  const { data, error } = await supabase.from("candidates").select("complex_id, condition_sets!inner(plan_id)")
+  const { data, error } = await supabase.from("candidates").select("complex_id, complexes(name), condition_sets!inner(plan_id)")
     .eq("condition_sets.plan_id", planId).eq("is_favorite", true);
   if (error) throw new Error(error.message);
-  return [...new Set((data ?? []).map((r) => r.complex_id))];
+  const byId = new Map((data ?? []).map((r) => [r.complex_id, r.complexes?.name ?? `단지 ${r.complex_id}`]));
+  return [...byId].map(([complex_id, name]) => ({ complex_id, name }));
 }
 
 export async function searchForPlan(planId: string): Promise<ToolResult> {

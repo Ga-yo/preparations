@@ -10,7 +10,7 @@ type Data = { regions: Row[]; criteria: { months: number; area_min: number | nul
 const ERRORS: Record<string, string> = {
   region_required: "희망 지역을 저장하면 지역별 시세가 표시됩니다.",
 };
-const DATASETS: Record<string, string> = {
+export const DATASETS: Record<string, string> = {
   "transactions:apartment": "아파트 실거래가", "loan_products:bank": "시중은행 상품", regulated_areas: "규제지역",
   loan_rules: "대출 규제", tax_rates: "세율", policy_loans: "정책대출",
 };
