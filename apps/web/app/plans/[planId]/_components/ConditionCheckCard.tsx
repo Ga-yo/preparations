@@ -12,7 +12,7 @@ export const CONDITION_LABELS: Record<string, string> = {
   price_max: "희망 최고가", area: "희망 면적", approval_year_min: "준공 연도", household_count_min: "세대수",
   parking_per_household_min: "세대당 주차", floor_area_ratio_max: "용적률 상한",
 };
-const ERRORS: Record<string, string> = {
+export const ERRORS: Record<string, string> = {
   region_required: "2단계에서 희망 지역을 저장하면 조건을 점검해 드립니다.",
   conditions_required: "주택 조건을 저장하면 예산·시세·단지 데이터와 비교해 드립니다.",
 };
