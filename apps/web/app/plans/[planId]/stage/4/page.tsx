@@ -33,7 +33,7 @@ export default async function Stage4({
   const { planId } = await params;
   if (!z.uuid().safeParse(planId).success) notFound();
   const { complex, fav_error } = await searchParams;
-  const favError = typeof fav_error === "string" ? FAV_ERRORS[fav_error] : undefined;
+  const favError = typeof fav_error === "string" && Object.hasOwn(FAV_ERRORS, fav_error) ? FAV_ERRORS[fav_error] : undefined;
   const parsed = z.coerce.number().int().positive().safeParse(complex);
   const selected = parsed.success ? parsed.data : null;
 
