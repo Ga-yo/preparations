@@ -29,11 +29,14 @@ export function fitScore(c: Conditions, x: ComplexRow, maxBudget: number | null)
 
 const budgetOrder = (b: boolean | null) => (b === true ? 0 : b === null ? 1 : 2);
 
+export const maxBudgetFor = (budgets: RegionBudget[], x: ComplexRow) =>
+  budgets.find((b) => b.sigungu_code === x.region_code.slice(0, 5))?.max_budget ?? null;
+
 export function rankComplexes(c: Conditions, rows: ComplexRow[], budgets: RegionBudget[], limit: number): RankedComplex[] {
   const musts = activeKeys(c).filter((k) => priorityOf(c, k) === "must");
   return rows
     .filter((x) => musts.every((k) => meets(c, k, x)))
-    .map((x) => ({ ...x, fit: fitScore(c, x, budgets.find((b) => b.sigungu_code === x.region_code.slice(0, 5))?.max_budget ?? null) }))
+    .map((x) => ({ ...x, fit: fitScore(c, x, maxBudgetFor(budgets, x)) }))
     .sort((a, b) => b.fit.score - a.fit.score
       || budgetOrder(a.fit.within_budget) - budgetOrder(b.fit.within_budget)
       || (a.median_price ?? Infinity) - (b.median_price ?? Infinity)

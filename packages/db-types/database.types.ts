@@ -348,6 +348,16 @@ isOneToOne: false
             "bump_chat_usage":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"complex_monthly_prices":
+{ Args: { "area_max"?: number,"area_min"?: number,"months"?: number,"p_complex_id": number }; Returns: {
+              "deal_count": number,"median_price": number,"month": string
+            }[]
+                           },
+"complex_trades":
+{ Args: { "area_max"?: number,"area_min"?: number,"lim"?: number,"p_complex_id": number }; Returns: {
+              "deal_amount": number,"deal_date": string,"exclusive_area": number,"floor": number
+            }[]
+                           },
 "complexes_for_conditions":
 { Args: { "area_max"?: number,"area_min"?: number,"months"?: number,"region_codes": (string)[] }; Returns: {
               "approval_year": number,"building_coverage_ratio": number,"complex_id": number,"deal_count": number,"floor_area_ratio": number,"household_count": number,"land_share_m2": number,"median_price": number,"name": string,"parking_per_household": number,"region_code": string
