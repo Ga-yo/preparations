@@ -17,6 +17,20 @@ on:
       complexes_sgg:
         description: '단지 수집 시군구 (쉼표로 구분한 5자리 코드, 비우면 전체)'
         default: ''
+      run_geocode:
+        description: '단지 좌표 수집도 실행 (예약 실행은 일요일만)'
+        type: boolean
+        default: false
+      geocode_sgg:
+        description: '좌표 수집 시군구 (쉼표로 구분한 5자리 코드, 비우면 전체)'
+        default: ''
+      geocode_max_calls:
+        description: '좌표 수집 최대 호출 수 (기본 3000)'
+        default: '3000'
+      run_pois:
+        description: '역·학교 CSV 적재 실행 (CSV를 바꾼 뒤에만)'
+        type: boolean
+        default: false
 
 concurrency:
   group: collect
@@ -97,3 +111,29 @@ jobs:
           else
             echo "::notice::complexes skipped (weekly, Sundays KST)"
           fi
+      # 단지 좌표(VWorld). 주 1회 증분, 수동 실행은 run_geocode를 켰을 때만
+      - name: geocode (weekly or manual opt-in)
+        if: ${{ !cancelled() }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          VWORLD_OPENAPI_KEY: ${{ secrets.VWORLD_OPENAPI_KEY }}
+          GEOCODE_SGG: ${{ inputs.geocode_sgg }}
+          GEOCODE_MAX_CALLS: ${{ inputs.geocode_max_calls || '3000' }}
+          RUN_GEOCODE: ${{ inputs.run_geocode }}
+          PYTHONUNBUFFERED: '1'
+        run: |
+          if [ -z "$VWORLD_OPENAPI_KEY" ]; then
+            echo "::warning::VWORLD_OPENAPI_KEY secret is empty; skipping geocode"
+          elif [ "$RUN_GEOCODE" = "true" ] || { [ "${{ github.event_name }}" = "schedule" ] && [ "$(date -u +%u)" = "6" ]; }; then
+            uv run --frozen python main.py geocode
+          else
+            echo "::notice::geocode skipped (weekly, Sundays KST)"
+          fi
+      # 역·학교 적재는 수동 실행 전용(커밋된 CSV를 바꾼 뒤에만)
+      - name: pois (manual only)
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.run_pois }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: uv run --frozen python main.py pois
