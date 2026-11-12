@@ -1,5 +1,5 @@
 begin;
-select plan(16);
+select plan(20);
 
 delete from public.candidates; -- 앱을 써 본 로컬 DB에서도 FK에 막히지 않게(rollback되므로 남지 않음)
 delete from public.transactions;
@@ -41,13 +41,17 @@ select throws_ok($$select * from public.complex_nearby_pois(1, 50)$$, '22023', n
 
 select results_eq($$select id from public.complexes_missing_location('11680')$$,
   $$select id from public.complexes where name = 'B'$$, '좌표 없는 단지만');
+select is(public.mark_geocode_missed(array[(select id from public.complexes where name = 'B')]), 1, '미발견 표시 1행');
+select is((select count(*)::int from public.complexes_missing_location('11680')), 0, '미발견 표시된 단지는 제외');
 select is(public.set_complex_locations(array[(select id from public.complexes where name = 'B')], array[127.001::float8], array[37.5::float8]), 1, '좌표 갱신 1행');
+select is((select geocode_missed_on from public.complexes where name = 'B'), null, '좌표가 들어가면 미발견 표시 해제');
 select ok((select nearest_station_m is not null from public.complexes_for_conditions(array['1168010300']) where name = 'B'), '갱신 후 B 거리 채워짐');
 select throws_ok($$select public.set_complex_locations(array[1::bigint], array[127.0::float8, 127.1], array[37.5::float8])$$, '22023', null, '길이 불일치');
 
 set local role anon;
 select throws_ok($$select public.set_complex_locations(array[1::bigint], array[127.0::float8], array[37.5::float8])$$, '42501', null, 'anon은 좌표 갱신 불가');
 select throws_ok($$select * from public.complexes_missing_location('11680')$$, '42501', null, 'anon은 좌표 없는 단지 조회 불가');
+select throws_ok($$select public.mark_geocode_missed(array[1::bigint])$$, '42501', null, 'anon은 미발견 표시 불가');
 reset role;
 
 select throws_ok($$insert into public.condition_sets (plan_id, user_id, station_distance_max_m) values (gen_random_uuid(), gen_random_uuid(), 50)$$,

@@ -34,6 +34,14 @@ def test_rejects_out_of_korea():
     assert geocode.parse_point(bad, DONG) is None
 
 
+def test_malformed_ok_returns_none():
+    no_refined = {"response": {"status": "OK", "result": {"point": {"x": "127", "y": "37"}}}}
+    bad_num = json.loads(json.dumps(OK))
+    bad_num["response"]["result"]["point"]["x"] = "abc"
+    assert geocode.parse_point(no_refined, DONG) is None
+    assert geocode.parse_point(bad_num, DONG) is None
+
+
 def test_not_found_returns_none():
     assert geocode.parse_point(NOT_FOUND, DONG) is None
 
@@ -51,11 +59,14 @@ class FakeRpc:
 
 class FakeClient:
     def __init__(self, rows):
-        self.rows, self.sets = rows, []
+        self.rows, self.sets, self.missed = rows, [], []
 
     def rpc(self, name, args):
         if name == "complexes_missing_location":
             return FakeRpc(self.rows)
+        if name == "mark_geocode_missed":
+            self.missed += args["ids"]
+            return FakeRpc(len(args["ids"]))
         self.sets.append(args)
         return FakeRpc(len(args["ids"]))
 
@@ -117,3 +128,28 @@ def test_batches_updates(env):
     geocode.run()
     assert [len(s["ids"]) for s in c.sets] == [200, 200, 50]
     assert len(env.fresh) == 1
+
+
+def test_marks_not_found_as_missed(env):
+    c = env(3, lambda *a, **k: Resp(NOT_FOUND))
+    geocode.run()
+    assert c.missed == [1, 2, 3] and c.sets == []
+
+
+def test_request_errors_are_not_marked(env):
+    def boom(url, **k):
+        raise requests.ConnectionError("x")
+
+    c = env(3, boom)
+    with pytest.raises(SystemExit):
+        geocode.run()
+    assert c.missed == []
+
+
+def test_call_cap_cut_is_not_marked(env, monkeypatch, capsys):
+    monkeypatch.setenv("GEOCODE_MAX_CALLS", "3")
+    c = env(2, lambda *a, **k: Resp(NOT_FOUND))
+    c.rows[1]["road_address"] = "서울특별시 강남구 논현로 1"
+    c.rows[0]["road_address"] = "서울특별시 강남구 논현로 2"
+    geocode.run()  # 1번 단지 2회, 2번 단지 1회 후 상한: 2번은 도로명 시도 전에 끊김
+    assert c.missed == [1] and "remaining=1" in capsys.readouterr().out

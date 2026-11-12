@@ -93,12 +93,16 @@ end $$;
 revoke execute on function public.complex_nearby_pois(bigint, int) from public;
 grant execute on function public.complex_nearby_pois(bigint, int) to anon, authenticated;
 
+-- 지오코더가 찾지 못한 단지는 30일간 다시 묻지 않는다(미발견 단지가 호출 상한을 계속 차지하는 것을 막음)
+alter table public.complexes add column geocode_missed_on date;
+
 create function public.complexes_missing_location(sgg text)
 returns table (id bigint, region_code text, jibun_address text, road_address text)
 language sql stable security definer set search_path = '' as $$
   select c.id, c.region_code::text, c.jibun_address, c.road_address
   from public.complexes c
   where c.location is null and left(c.region_code, 5) = sgg
+    and (c.geocode_missed_on is null or c.geocode_missed_on < (now() at time zone 'Asia/Seoul')::date - 30)
   order by c.id
 $$;
 revoke execute on function public.complexes_missing_location(text) from public, anon, authenticated;
@@ -113,7 +117,8 @@ begin
     raise exception 'ids, lons, lats must have the same length' using errcode = '22023';
   end if;
   update public.complexes c
-  set location = extensions.st_setsrid(extensions.st_makepoint(v.lon, v.lat), 4326)::extensions.geography
+  set location = extensions.st_setsrid(extensions.st_makepoint(v.lon, v.lat), 4326)::extensions.geography,
+      geocode_missed_on = null
   from unnest(ids, lons, lats) as v (id, lon, lat)
   where c.id = v.id;
   get diagnostics n = row_count;
@@ -121,3 +126,15 @@ begin
 end $$;
 revoke execute on function public.set_complex_locations(bigint[], float8[], float8[]) from public, anon, authenticated;
 grant execute on function public.set_complex_locations(bigint[], float8[], float8[]) to service_role;
+
+create function public.mark_geocode_missed(ids bigint[])
+returns int
+language plpgsql security definer set search_path = '' as $$
+declare n int;
+begin
+  update public.complexes set geocode_missed_on = (now() at time zone 'Asia/Seoul')::date where id = any(ids);
+  get diagnostics n = row_count;
+  return n;
+end $$;
+revoke execute on function public.mark_geocode_missed(bigint[]) from public, anon, authenticated;
+grant execute on function public.mark_geocode_missed(bigint[]) to service_role;

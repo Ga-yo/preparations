@@ -28,13 +28,16 @@ def to_query(row: dict) -> list[tuple[str, str]]:
 
 
 def parse_point(resp: dict, region_code: str) -> tuple[float, float] | None:
-    r = resp["response"]
-    if r["status"] != "OK":
-        return None
-    # 동명 지번·정제 실패로 엉뚱한 동 좌표가 오는 것을 막는다
-    if r["refined"]["structure"]["level4LC"][:10] != region_code[:10]:
-        return None
-    x, y = float(r["result"]["point"]["x"]), float(r["result"]["point"]["y"])
+    try:
+        r = resp["response"]
+        if r["status"] != "OK":
+            return None
+        # 동명 지번·정제 실패로 엉뚱한 동 좌표가 오는 것을 막는다
+        if r["refined"]["structure"]["level4LC"][:10] != region_code[:10]:
+            return None
+        x, y = float(r["result"]["point"]["x"]), float(r["result"]["point"]["y"])
+    except (KeyError, TypeError, ValueError):
+        return None  # 깨진 OK 응답 하나로 실행 전체를 잃지 않는다
     return (x, y) if 124 <= x <= 132 and 33 <= y <= 39 else None
 
 
@@ -75,6 +78,12 @@ def missing(sgg: str) -> list[dict]:
         start += 1000
 
 
+def flush_missed(missed: list[int]) -> None:
+    if missed:
+        db.client().rpc("mark_geocode_missed", {"ids": missed}).execute()
+        missed.clear()
+
+
 def flush(found: list[tuple[int, float, float]]) -> None:
     if found:
         db.client().rpc("set_complex_locations", {"ids": [f[0] for f in found], "lons": [f[1] for f in found],
@@ -88,32 +97,44 @@ def run() -> None:
     today = kst_today()
     calls, targets, saved, not_found, failures, remaining = 0, 0, 0, 0, [], 0
     for sgg in parse_sigungu(os.environ.get("GEOCODE_SGG")) or sigungu_codes():
-        todo, found = missing(sgg), []
+        todo, found, missed = missing(sgg), [], []
         for i, row in enumerate(todo):
             if calls >= max_calls:
                 remaining += len(todo) - i
                 break
             targets += 1
-            hit = False
+            hit, errored, cut = False, False, False
             for typ, addr in to_query(row):
                 if calls >= max_calls:
+                    cut = True
                     break
                 calls += 1
                 try:
                     point = parse_point(geocode(key, typ, addr), row["region_code"])
                 except RuntimeError as e:
                     failures.append(f"complex {row['id']}: {e}")
+                    errored = True
                     continue
                 if point:
                     found.append((row["id"], *point))
                     hit = True
                     break
-            not_found += not hit
+            if cut:  # 상한에 걸려 시도를 다 못 했으면 표시하지 않고 다음 실행에 맡긴다
+                targets -= 1
+                remaining += len(todo) - i
+                break
+            if not hit:
+                not_found += 1
+                if not errored:  # 요청 오류는 일시적일 수 있어 표시하지 않는다
+                    missed.append(row["id"])
             if len(found) >= BATCH:
                 saved += len(found)
                 flush(found)
+            if len(missed) >= BATCH:
+                flush_missed(missed)
         saved += len(found)
         flush(found)
+        flush_missed(missed)
         print(f"{sgg}: {len(todo)} targets")
     note = f"saved={saved}, not_found={not_found}, calls={calls}, failed={len(failures)}, remaining={remaining}"
     print(f"geocode: {note}")
