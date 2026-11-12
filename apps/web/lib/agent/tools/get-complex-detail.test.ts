@@ -1,7 +1,11 @@
-import { expect, test } from "vitest";
+import { expect, test, vi } from "vitest";
 import { runTool } from "../tool";
 import { getComplexDetail } from "./get-complex-detail";
 import { complex, mk, saved } from "./test-fixtures";
+
+const fee = { status: "ok", kapt_code: "A10024564", kapt_name: "개포래미안포레스트", month: "2026-09", common: 400, individual: null, total: 400, per_m2: 2, partial: true, fetched_at: "2026-11-12T10:00:00.000Z" };
+const getMgmtFee = vi.fn<(...a: unknown[]) => Promise<typeof fee>>(async () => fee);
+vi.mock("@/lib/kapt/mgmt-fee", () => ({ getMgmtFee: (...a: unknown[]) => getMgmtFee(...a) }));
 
 const row = (id: number, o: Record<string, unknown> = {}) => ({
   id, name: `단지${id}`, region_code: "1168010300", jibun_address: "개포동 1", road_address: null,
@@ -96,4 +100,12 @@ test("returns nearby and drops no_location_data when located", async () => {
 test("no_location_data still emitted for an unlocated complex", async () => {
   const { ctx } = setup();
   expect((await getComplexDetail.run({ complex_id: 1 }, ctx)).notices).toContain("no_location_data");
+});
+
+test("includes mgmt_fee", async () => {
+  const { ctx } = setup();
+  const r = await getComplexDetail.run({ complex_id: 1 }, ctx);
+  expect((r.data as { mgmt_fee: unknown }).mgmt_fee).toEqual(fee);
+  expect(r.as_of).toMatchObject({ mgmt_fee: "2026-09" });
+  expect(getMgmtFee).toHaveBeenCalledWith(expect.objectContaining({ id: 1, name: "단지1", region_code: "1168010300", jibun_address: "개포동 1" }), ctx.today);
 });

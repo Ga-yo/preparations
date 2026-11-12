@@ -1,5 +1,6 @@
 import type { ToolResult } from "@/lib/agent/tool";
 import type { Fit, NeighborStats } from "@/lib/calc/fit";
+import type { MgmtFeeResult } from "@/lib/kapt/mgmt-fee";
 import { TipPanel, type Tip } from "../../../_components/TipPanel";
 import { DATASETS } from "../../../_components/ConditionCheckCard";
 import { formatWon } from "../../../_components/format";
@@ -11,6 +12,7 @@ type Data = {
     floor_area_ratio: number | null; building_coverage_ratio: number | null; land_share_m2: number | null;
   };
   fit: Fit | null;
+  mgmt_fee: MgmtFeeResult;
   nearby: { category: string; name: string; lines: string[] | null; distance_m: number }[];
   trades: { deal_date: string; deal_amount: number; exclusive_area: number; floor: number | null }[];
   monthly: { month: string; median_price: number; deal_count: number }[];
@@ -18,13 +20,15 @@ type Data = {
   criteria: { area_min: number | null; area_max: number | null; months: number };
 };
 const CATEGORY: Record<string, string> = { subway_station: "지하철역", elementary_school: "초등학교", middle_school: "중학교", high_school: "고등학교" };
+const FEE_REASON = { no_kapt_match: "K-apt에서 이 단지를 찾지 못했습니다.", no_recent_fee: "최근 2개월 부과 내역이 없습니다." };
+const kstTime = (iso: string) => new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "short", timeStyle: "short" });
 const dash = (v: number | null, unit = "") => (v === null ? "-" : `${v.toLocaleString("ko-KR")}${unit}`);
 
 export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[] }) {
   if ("error" in (result.data as object)) {
     return <section className="rounded border p-4 text-sm">선택한 단지를 찾을 수 없습니다.</section>;
   }
-  const { complex: c, fit, nearby, trades, monthly, neighbors: n, criteria } = result.data as Data;
+  const { complex: c, fit, mgmt_fee: fee, nearby, trades, monthly, neighbors: n, criteria } = result.data as Data;
   const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 좌표·인근 시설 유무로 정한다
   const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
@@ -45,6 +49,19 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
         <li>대지지분 {c.land_share_m2 === null ? "-" : `약 ${c.land_share_m2}㎡(단지 평균)`}</li>
       </ul>
       {fit && <p>조건 적합도 {fit.score}점</p>}
+
+      <h3 className="font-semibold">관리비 (K-apt{fee.status === "ok" ? `, ${fee.month} 부과분` : ""})</h3>
+      {fee.status === "ok" ? (
+        <div>
+          <p>{fee.partial ? "공용관리비 합계 (개별사용료 미포함)" : "관리비 합계"} {formatWon(fee.total)} <span className="text-gray-600">(단지 전체 월 부과 합계)</span></p>
+          {fee.per_m2 !== null && <p>관리비 부과면적 ㎡당 {fee.per_m2.toLocaleString("ko-KR")}원</p>}
+          <p>공용관리비 {formatWon(fee.common)} · 개별사용료 {fee.individual === null ? "조회 불가" : formatWon(fee.individual)}</p>
+          {fee.partial && <p className="text-xs text-gray-600">개별사용료(난방·전기·수도 등)는 아직 조회할 수 없습니다.</p>}
+          <p className="text-xs text-gray-600">조회 시각 {kstTime(fee.fetched_at)}</p>
+        </div>
+      ) : (
+        <p className="text-gray-600">관리비 정보를 찾지 못했습니다. {fee.status === "not_found" ? FEE_REASON[fee.reason] : "K-apt 조회 중 오류가 났습니다. 잠시 후 다시 열어 보세요."}</p>
+      )}
 
       <h3 className="font-semibold">최근 실거래 사례 ({area})</h3>
       {trades.length ? (
