@@ -93,6 +93,10 @@ export default async function Stage4({
             <CandidateList planId={planId} candidates={data.candidates} favorites={favorites} selected={selected} toggle={toggle} />
           </>
         )}
+        {/* 후보가 없거나 불러오지 못해도 저장한 관심 단지는 열고 해제할 수 있어야 한다 */}
+        {!(data && !("error" in data) && data.candidates.length) && favorites.length > 0 && (
+          <CandidateList planId={planId} candidates={[]} favorites={favorites} selected={selected} toggle={toggle} />
+        )}
       </section>
       <div className="space-y-6">
         {detail === null && <p role="alert" className="rounded border p-3 text-sm">단지 상세를 불러오지 못했습니다.</p>}

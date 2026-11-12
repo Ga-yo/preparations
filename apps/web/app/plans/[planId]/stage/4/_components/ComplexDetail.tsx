@@ -25,9 +25,11 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
   const { complex: c, fit, trades, monthly, neighbors: n, criteria } = result.data as Data;
   const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
-    : `전용 ${criteria.area_min ?? ""}~${criteria.area_max ?? ""}㎡`;
+    : criteria.area_max === null ? `전용 ${criteria.area_min}㎡ 이상`
+    : criteria.area_min === null ? `전용 ${criteria.area_max}㎡ 이하`
+    : `전용 ${criteria.area_min}~${criteria.area_max}㎡`;
   return (
-    <section className="space-y-3 rounded border p-4 text-sm" aria-label="단지 상세">
+    <section id="complex-detail" className="space-y-3 rounded border p-4 text-sm" aria-label="단지 상세">
       <h2 className="text-base font-semibold">{c.name}</h2>
       <p className="text-gray-700">{c.road_address ?? c.jibun_address ?? "주소 정보 없음"}</p>
       <ul className="grid grid-cols-2 gap-x-4">

@@ -1,6 +1,7 @@
 begin;
 select plan(9);
 
+delete from public.candidates; -- 앱을 써 본 로컬 DB에서도 FK에 막히지 않게(rollback되므로 남지 않음)
 delete from public.transactions;
 delete from public.complexes;
 insert into public.regions (code, sido, sigungu, eupmyeondong, full_name) values

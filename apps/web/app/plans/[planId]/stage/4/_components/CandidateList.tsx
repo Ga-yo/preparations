@@ -22,7 +22,7 @@ function Row({ x, rank, fav, selected, planId, toggle }: {
   return (
     <li className={`rounded border p-2 text-sm ${selected ? "border-blue-600 bg-blue-50" : ""}`}>
       <div className="flex items-start justify-between gap-2">
-        <Link href={`/plans/${planId}/stage/4?complex=${x.complex_id}`} className="font-medium text-blue-800" aria-current={selected || undefined}>
+        <Link href={`/plans/${planId}/stage/4?complex=${x.complex_id}#complex-detail`} className="font-medium text-blue-800" aria-current={selected || undefined}>
           {rank === null ? "" : `${rank}. `}{x.name} <span className="font-normal text-gray-600">· 적합도 {x.fit.score}점</span>
         </Link>
         <form action={toggle}>
@@ -67,8 +67,8 @@ export function CandidateList({ planId, candidates, favorites, selected, toggle 
             {outside.map((f) => (
               <li key={f.complex_id} className={`rounded border p-2 text-sm ${f.complex_id === selected ? "border-blue-600 bg-blue-50" : ""}`}>
                 <div className="flex items-start justify-between gap-2">
-                  <Link href={`/plans/${planId}/stage/4?complex=${f.complex_id}`} className="font-medium text-blue-800" aria-current={f.complex_id === selected || undefined}>
-                    {f.name} <span className="font-normal text-gray-600">· 현재 조건의 후보 목록 밖</span>
+                  <Link href={`/plans/${planId}/stage/4?complex=${f.complex_id}#complex-detail`} className="font-medium text-blue-800" aria-current={f.complex_id === selected || undefined}>
+                    {f.name} <span className="font-normal text-gray-600">· 현재 후보 목록(필수 조건·상위 20개) 밖</span>
                   </Link>
                   <form action={toggle}>
                     <input type="hidden" name="complex_id" value={f.complex_id} />
