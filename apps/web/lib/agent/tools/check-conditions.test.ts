@@ -1,49 +1,7 @@
 import { expect, test } from "vitest";
-import { fakeDb } from "../fake-db";
-import type { ToolContext } from "../tool";
 import { checkConditions } from "./check-conditions";
-import { product, profile, rule } from "./test-fixtures";
+import { complex, mk, saved } from "./test-fixtures";
 
-const saved = (o: Record<string, unknown> = {}) => ({
-  plan_id: "p1", region_codes: ["1168000000"], area_min: 80, area_max: 90,
-  housing_types: ["apartment"], price_min: null, price_max: 900_000_000, approval_year_min: null,
-  household_count_min: 1000, parking_per_household_min: null, floor_area_ratio_max: null,
-  mgmt_fee_per_m2_max: null, rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null,
-  priorities: { household_count_min: "must" }, ...o,
-});
-const complex = (complex_id: number, household_count = 1500) => ({
-  complex_id, name: `단지${complex_id}`, region_code: "1168010300", approval_year: 2000, household_count,
-  parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 40,
-  median_price: 800_000_000, deal_count: 3,
-});
-
-function mk(o: { rows?: unknown[]; sets?: unknown[]; ledgerAsOf?: string | null } = {}) {
-  const calls: Record<string, unknown>[] = [];
-  const ctx: ToolContext = {
-    planId: "p1", today: "2026-11-08",
-    supabase: fakeDb(
-      {
-        financial_profiles: [profile],
-        loan_rules: [rule("ltv", 70), rule("dsr", 40), rule("stress_rate", 1.5)],
-        regulated_areas: [], loan_products: [product],
-        regions: [{ code: "1168000000", full_name: "서울특별시 강남구", is_active: true }],
-        condition_sets: (o.sets ?? [saved()]) as Record<string, unknown>[],
-        data_freshness: [
-          { dataset: "transactions:apartment", as_of: "2026-11-07", source: "MOLIT" },
-          ...(o.ledgerAsOf === null ? [] : [{ dataset: "complexes:building_ledger", as_of: o.ledgerAsOf ?? "2026-11-02", source: "MOLIT" }]),
-        ],
-      },
-      {
-        region_price_stats: () => [{ sigungu_code: "11680", sigungu_name: "서울특별시 강남구", median_price: 700_000_000, deal_count: 10, latest_deal_date: "2026-11-01" }],
-        complexes_for_conditions: (args) => {
-          calls.push(args);
-          return (o.rows ?? [complex(1), complex(2, 300)]) as Record<string, unknown>[];
-        },
-      },
-    ),
-  };
-  return { ctx, calls };
-}
 type Data = { conflicts: { code: string }[]; notices: string[]; counts: { total: number; must: number }; matches: { complex_id: number }[] };
 
 test("저장된 지역·면적으로 RPC 호출, must 필터 결과와 as_of", async () => {
@@ -83,6 +41,6 @@ test("지역 미저장 → region_required", async () => {
 });
 
 test("3단계 미저장 → conditions_required", async () => {
-  const { ctx } = mk({ sets: [saved({ price_max: null, household_count_min: null, housing_types: [] })] });
+  const { ctx } = mk({ sets: [saved({ price_max: null, household_count_min: null, housing_types: [], area_min: null, area_max: null })] });
   expect((await checkConditions.run({}, ctx)).data).toEqual({ error: "conditions_required" });
 });

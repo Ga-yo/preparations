@@ -8,7 +8,11 @@ class Query implements PromiseLike<{ data: Row[]; error: null }> {
   private max = Infinity;
   constructor(private rows: Row[]) {}
   select() { return this; }
-  order() { return this; }
+  order(c: string, o?: { ascending?: boolean }) {
+    const s = o?.ascending === false ? -1 : 1;
+    this.rows = [...this.rows].sort((a, b) => (a[c] === b[c] ? 0 : (a[c] as string) < (b[c] as string) ? -s : s));
+    return this;
+  }
   eq(c: string, v: unknown) { this.rows = this.rows.filter((r) => r[c] === v); return this; }
   is(c: string, v: unknown) { return this.eq(c, v); }
   in(c: string, vs: unknown[]) { this.rows = this.rows.filter((r) => vs.includes(r[c])); return this; }

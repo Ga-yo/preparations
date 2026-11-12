@@ -129,6 +129,7 @@ export default async function Stage3({
       </StageForm>
       <div className="space-y-6">
         <ConditionCheckCard result={check} tips={t} />
+        <Link href={`/plans/${planId}/stage/4`} className="block text-sm text-blue-700">→ 4단계 후보 단지 보기</Link>
         <ChatPanel planId={planId} />
       </div>
     </main>

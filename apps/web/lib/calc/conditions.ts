@@ -32,11 +32,14 @@ const KEYS: ConditionKey[] = ["price_max", "area", "approval_year_min", "househo
 const MAX_MATCHES = 20;
 const FEW = 4;
 
+export const activeKeys = (c: Conditions) => KEYS.filter((k) => isSet(c, k));
+export const priorityOf = (c: Conditions, k: ConditionKey): Priority => c.priorities[k] ?? "prefer";
+
 const isSet = (c: Conditions, k: ConditionKey) =>
   k === "area" ? c.area_min !== null || c.area_max !== null : c[k] !== null;
 
 // 단지 값이 없으면(null) 충족 여부를 알 수 없으므로 미충족으로 센다
-function meets(c: Conditions, k: ConditionKey, x: ComplexRow): boolean {
+export function meets(c: Conditions, k: ConditionKey, x: ComplexRow): boolean {
   const ge = (v: number | null, min: number | null) => v !== null && v >= min!;
   switch (k) {
     case "price_max": return x.median_price !== null && x.median_price <= c.price_max!;
@@ -53,10 +56,9 @@ export function findConflicts(c: Conditions, budgets: RegionBudget[], complexes:
   counts: { total: number; must: number; prefer: Record<string, number> };
   matches: ComplexRow[];
 } {
-  const active = KEYS.filter((k) => isSet(c, k));
-  const priorityOf = (k: ConditionKey): Priority => c.priorities[k] ?? "prefer";
-  const musts = active.filter((k) => priorityOf(k) === "must");
-  const prefers = active.filter((k) => priorityOf(k) === "prefer");
+  const active = activeKeys(c);
+  const musts = active.filter((k) => priorityOf(c, k) === "must");
+  const prefers = active.filter((k) => priorityOf(c, k) === "prefer");
   const passes = (keys: ConditionKey[]) => complexes.filter((x) => keys.every((k) => meets(c, k, x)));
 
   const conflicts: Conflict[] = [];
