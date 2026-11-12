@@ -38,3 +38,26 @@ def test_run_deletes_missing():
     old = [{"category": "subway_station", "source_id": "a"}, {"category": "subway_station", "source_id": "b"}]
     new = [{"category": "subway_station", "source_id": "a"}]
     assert pois.keys_to_delete(old, new) == [("subway_station", "b")]
+
+
+def test_station_name_normalised():
+    assert [r["name"] for r in pois.station_rows([st(station_id="a", name="선릉역"), st(station_id="b", name="서울", line="x"),
+                                                  st(station_id="c", name=" 강남  구청역 ", line="y")])] == ["선릉", "서울역", "강남 구청"]
+
+
+def test_line_labels_canonical():
+    lines = ["서울 도시철도 9호선", "수도권  도시철도 9호선", "도시철도 7호선", "7호선", "수도권 광역철도 8호선", "인천지하철 1호선",
+             "인천지하철 2호선", "분당선"]
+    rows = pois.station_rows([st(station_id=str(i), line=ln, name=str(i)) for i, ln in enumerate(lines)])
+    assert [r["attrs"]["line"] for r in rows] == ["9호선", "9호선", "7호선", "7호선", "8호선", "인천1호선", "인천2호선", "분당선"]
+
+
+def test_normalised_duplicates_dropped():
+    rows = pois.station_rows([st(station_id="a", name="선릉역"), st(station_id="b", name="선릉")])
+    assert [r["source_id"] for r in rows] == ["a"]
+
+
+def test_invalid_date_falls_back_to_max_valid():
+    rows = pois.station_rows([st(station_id="a", data_date=""), st(station_id="b", name="x", data_date="2025-01-02"),
+                              st(station_id="c", name="y", data_date="2024-01-02")])
+    assert [r["data_as_of"] for r in rows] == ["2025-01-02"] * 2 + ["2024-01-02"]

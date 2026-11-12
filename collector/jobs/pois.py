@@ -20,10 +20,50 @@ def point(r: dict) -> str | None:
     return f"SRID=4326;POINT({r['lon'].strip()} {r['lat'].strip()})" if 124 <= lon <= 132 and 33 <= lat <= 39 else None
 
 
+LINE_ALIASES = [("9호선", "9호선"), ("7호선", "7호선"), ("8호선", "8호선"), ("인천지하철 1호선", "인천1호선"),
+                ("인천지하철 2호선", "인천2호선")]
+NAME_ALIASES = {"서울": "서울역"}  # 역 접미사를 떼면 서울역만 의미가 사라진다
+
+
+def squash(s: str) -> str:
+    return " ".join(s.split())
+
+
+def station_name(s: str) -> str:
+    s = squash(s)
+    s = s.removesuffix("역")
+    return NAME_ALIASES.get(s, s)
+
+
+def line_label(s: str) -> str:
+    s = squash(s)
+    # "1호선"은 경부선 등 다른 1호선 표기와 겹치지 않도록 단독 라벨은 그대로 둔다
+    return next((to for key, to in LINE_ALIASES if key in s), s)
+
+
+def valid_date(s: str) -> bool:
+    try:
+        date.fromisoformat(s)
+        return True
+    except ValueError:
+        return False
+
+
 def station_rows(rows: list[dict]) -> list[dict]:
-    return [{"category": "subway_station", "name": r["name"], "location": loc,
-             "attrs": {"line": r["line"], "operator": r["operator"]}, "data_as_of": r["data_date"],
-             "source": STATION_SRC, "source_id": r["station_id"]} for r in rows if (loc := point(r))]
+    # 환승역이 이름·노선 표기 차이로 갈라지지 않도록 정규화하고, 같아진 행은 하나만 둔다
+    ok = [d for r in rows if valid_date(d := r["data_date"])]
+    fallback = max(ok) if ok else None  # 기준일이 비었거나 잘못된 행은 파일 안 최신 유효 기준일로 채운다
+    out, seen = [], set()
+    for r in rows:
+        loc, name, line = point(r), station_name(r["name"]), line_label(r["line"])
+        if not loc or (name, line) in seen or not (valid_date(r["data_date"]) or fallback):
+            continue
+        seen.add((name, line))
+        out.append({"category": "subway_station", "name": name, "location": loc,
+                    "attrs": {"line": line, "operator": squash(r["operator"]).removeprefix("서울특별시 ")},
+                    "data_as_of": r["data_date"] if valid_date(r["data_date"]) else fallback,
+                    "source": STATION_SRC, "source_id": r["station_id"]})
+    return out
 
 
 def school_rows(rows: list[dict]) -> list[dict]:
@@ -54,7 +94,7 @@ def load(dataset: str, src: str, csv_name: str, build) -> None:
     gone = keys_to_delete(existing, rows)
     for cat, sid in gone:
         c.table("pois").delete().eq("source", src).eq("category", cat).eq("source_id", sid).execute()
-    as_of = max(date.fromisoformat(r["data_date"]) for r in raw)
+    as_of = max(date.fromisoformat(r["data_date"]) for r in raw if valid_date(r["data_date"]))
     db.mark_freshness(dataset, as_of, f"collector/data/{csv_name} ({src})", f"{n} rows")
     print(f"{dataset}: {n} rows, skipped {len(raw) - len(rows)}, deleted {len(gone)}")
 
