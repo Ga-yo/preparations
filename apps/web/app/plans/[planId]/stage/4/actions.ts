@@ -4,6 +4,7 @@ import type { ToolResult } from "@/lib/agent/tool";
 import { getComplexDetail } from "@/lib/agent/tools/get-complex-detail";
 import { loadConditionContext } from "@/lib/agent/tools/condition-context";
 import { searchComplexes } from "@/lib/agent/tools/search-complexes";
+import { activeKeys } from "@/lib/calc/conditions";
 import { fitScore, maxBudgetFor } from "@/lib/calc/fit";
 
 type Result = { ok: true } | { ok: false; error: "invalid" | "not_found" | "conditions_required" };
@@ -36,7 +37,7 @@ export async function setFavorite(planId: string, complexId: number, favorite: b
     return { ok: false, error: plan ? "conditions_required" : "not_found" };
   }
   const x = l.rows.find((r) => r.complex_id === complexId);
-  const fit = x ? fitScore(l.conditions, x, maxBudgetFor(l.budgets, x)) : null;
+  const fit = x ? fitScore(l.conditions, x, maxBudgetFor(l.budgets, x), activeKeys(l.conditions, l.rows)) : null;
   const { error } = await supabase.from("candidates").upsert({
     condition_set_id: l.conditionSetId, complex_id: complexId, is_favorite: true,
     fit_score: fit?.score ?? null, pros: fit?.met ?? [], cons: fit?.unmet ?? [],

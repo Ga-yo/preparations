@@ -16,7 +16,7 @@ const VALUE: Record<Exclude<ConditionKey, "area">, keyof ComplexRow> = {
   station_distance_max: "nearest_station_m", elementary_distance_max: "nearest_elementary_m",
 };
 
-export function fitScore(c: Conditions, x: ComplexRow, maxBudget: number | null, active = activeKeys(c)): Fit {
+export function fitScore(c: Conditions, x: ComplexRow, maxBudget: number | null, active: ConditionKey[]): Fit {
   const met = active.filter((k) => meets(c, k, x));
   const unmet = active.filter((k) => !met.includes(k));
   const missing = unmet.filter((k) => k !== "area" && x[VALUE[k]] === null);

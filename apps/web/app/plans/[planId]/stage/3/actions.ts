@@ -17,6 +17,8 @@ const check = z.string().optional().transform((s) => s === "on");
 const text = (max: number) =>
   z.string().max(max).optional().transform((s) => (s?.trim() ? s.trim() : null));
 
+// 3단계 폼에 있는 조건 키(거리 키는 아직 폼에 없다)
+type FormKey = Exclude<ConditionKey, "station_distance_max" | "elementary_distance_max">;
 export const PRIORITY_KEYS: ConditionKey[] = ["price_max", "area", "approval_year_min", "household_count_min",
   "parking_per_household_min", "floor_area_ratio_max"];
 const priority = z.enum(["must", "prefer", "ignore"]).optional();
@@ -51,8 +53,8 @@ export const stage3Schema = z
     const priorities: Record<string, string> = {};
     for (const [k, val] of Object.entries(v)) {
       if (!k.startsWith("priority.")) { out[k] = val; continue; }
-      const key = k.slice("priority.".length) as ConditionKey;
-      const isSet = key === "area" ? v.area_min !== null || v.area_max !== null : (v as Record<string, unknown>)[key] !== null; // 거리 키는 4단계에서 폼에 추가(PRIORITY_KEYS에 없음)
+      const key = k.slice("priority.".length) as FormKey;
+      const isSet = key === "area" ? v.area_min !== null || v.area_max !== null : v[key] !== null;
       if (val && isSet) priorities[key] = val as string; // 값이 없는 조건의 우선순위는 의미가 없다
     }
     return { ...(out as Omit<typeof v, `priority.${string}`>), priorities };

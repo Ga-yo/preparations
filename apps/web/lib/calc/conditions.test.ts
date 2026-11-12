@@ -145,3 +145,13 @@ test("no_poi_data when pois empty", () => {
   expect(r.conflicts.map((x) => x.code)).not.toContain("no_match_for_musts");
   expect(r.counts.must).toBe(2);
 });
+
+test("only schools missing: elementary must ignored with no_poi_data, station must still filters", () => {
+  const c = cond({ station_distance_max_m: 1000, elementary_distance_max_m: 500,
+    priorities: { station_distance_max: "must", elementary_distance_max: "must" } });
+  const rows = [cx({ nearest_station_m: 400 }), cx({ nearest_station_m: 2000 })];
+  const r = findConflicts(c, [], rows, false);
+  expect(r.counts.must).toBe(1);
+  expect(r.notices).toContain("no_poi_data");
+  expect(r.conflicts.map((x) => x.code)).not.toContain("no_match_for_musts");
+});

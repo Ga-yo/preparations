@@ -37,10 +37,13 @@ const MAX_MATCHES = 20;
 const FEW = 4;
 
 const noLocation = (x: ComplexRow) => x.nearest_station_m === null && x.nearest_elementary_m === null;
-// POI 데이터가 통째로 없으면 거리 조건은 판정할 수 없으므로 must·점수에서 뺀다(findConflicts·rankComplexes 공용)
+// 키별로 모든 행의 거리값이 null이면 그 거리 조건은 판정할 수 없으므로 must·점수에서 뺀다(모든 호출자 공용)
 export const noPoiData = (rows: ComplexRow[]) => rows.length > 0 && rows.every(noLocation);
+const DISTANCE_VALUE = { station_distance_max: "nearest_station_m", elementary_distance_max: "nearest_elementary_m" } as const;
+type DistanceKey = keyof typeof DISTANCE_VALUE;
+const absent = (k: DistanceKey, rows: ComplexRow[]) => rows.length > 0 && rows.every((x) => x[DISTANCE_VALUE[k]] === null);
 export const activeKeys = (c: Conditions, rows?: ComplexRow[]) =>
-  KEYS.filter((k) => isSet(c, k) && !(rows && DISTANCE.includes(k) && noPoiData(rows)));
+  KEYS.filter((k) => isSet(c, k) && !(rows && DISTANCE.includes(k) && absent(k as DistanceKey, rows)));
 export const priorityOf = (c: Conditions, k: ConditionKey): Priority => c.priorities[k] ?? "prefer";
 
 const isSet = (c: Conditions, k: ConditionKey) =>
@@ -108,10 +111,9 @@ export function findConflicts(c: Conditions, budgets: RegionBudget[], complexes:
     notices.push("unit_level_condition");
   }
   if (!complexes.length) notices.push("no_complex_data");
-  if (isSet(c, "station_distance_max") || isSet(c, "elementary_distance_max")) {
-    if (noPoiData(complexes)) notices.push("no_poi_data");
-    else if (complexes.some(noLocation)) notices.push("location_partial");
-  }
+  const dist = (DISTANCE as DistanceKey[]).filter((k) => isSet(c, k));
+  if (dist.some((k) => absent(k, complexes))) notices.push("no_poi_data");
+  if (dist.some((k) => !absent(k, complexes) && complexes.some((x) => x[DISTANCE_VALUE[k]] === null))) notices.push("location_partial");
   if (truncated) notices.push("truncated");
   if (matches.length) notices.push("land_share_is_average");
 

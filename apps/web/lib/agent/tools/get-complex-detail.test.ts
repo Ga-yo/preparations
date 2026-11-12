@@ -92,3 +92,8 @@ test("returns nearby and drops no_location_data when located", async () => {
   expect(d.complex).toMatchObject({ nearest_station_name: "개포동역", nearest_station_m: 420, nearest_elementary_m: 300 });
   expect(r.notices).not.toContain("no_location_data");
 });
+
+test("no_location_data still emitted for an unlocated complex", async () => {
+  const { ctx } = setup();
+  expect((await getComplexDetail.run({ complex_id: 1 }, ctx)).notices).toContain("no_location_data");
+});

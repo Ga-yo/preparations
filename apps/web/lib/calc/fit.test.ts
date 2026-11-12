@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import type { ComplexRow, Conditions, RegionBudget } from "./conditions";
-import { fitScore, neighborStats, rankComplexes } from "./fit";
+import { activeKeys, type ComplexRow, type Conditions, type RegionBudget } from "./conditions";
+import { fitScore as score, neighborStats, rankComplexes } from "./fit";
+const fitScore = (c: Conditions, x: ComplexRow, b: number | null) => score(c, x, b, activeKeys(c));
 
 const C: Conditions = {
   housing_types: [], price_min: null, price_max: null, area_min: null, area_max: null,
@@ -91,4 +92,12 @@ describe("distance conditions", () => {
     expect(r).toHaveLength(2);
     expect(r[0].fit.score).toBe(100);
   });
+});
+
+it("per-key: only elementary missing drops elementary must, station must still filters", () => {
+  const m = { ...C, station_distance_max_m: 1000, elementary_distance_max_m: 500,
+    priorities: { station_distance_max: "must" as const, elementary_distance_max: "must" as const } };
+  const r = rankComplexes(m, [X(1, { nearest_station_m: 400 }), X(2, { nearest_station_m: 2000 })], [], 10);
+  expect(r.map((x) => x.complex_id)).toEqual([1]);
+  expect(r[0].fit.score).toBe(100);
 });
