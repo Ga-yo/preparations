@@ -14,7 +14,8 @@ const LABELS: Record<string, string> = {
   area_min: "희망 전용면적", area_max: "희망 전용면적(최소 ≤ 최대)", rooms_min: "방 개수(1~10)", baths_min: "욕실 개수(1~5)",
   floor_pref: "희망 층", direction_pref: "희망 향(20자 이내)", approval_year_min: "준공 연도(1950~2030)",
   household_count_min: "세대수(1~10,000)", parking_per_household_min: "세대당 주차(0~5대)",
-  mgmt_fee_per_m2_max: "관리비", floor_area_ratio_max: "용적률 상한(0~2,000%)",
+  mgmt_fee_per_m2_max: "관리비",
+  station_distance_max_m: "지하철역까지 직선거리(100~5,000m, 50m 단위)", elementary_distance_max_m: "초등학교까지 직선거리(100~5,000m, 50m 단위)", floor_area_ratio_max: "용적률 상한(0~2,000%)",
   ...Object.fromEntries(PRIORITY_KEYS.map((k) => [`priority.${k}`, `${CONDITION_LABELS[k]} 우선순위`])),
   plan: "계획(접근 권한 없음 또는 존재하지 않음)",
 };
@@ -118,6 +119,11 @@ export default async function Stage3({
         {field("household_count_min", "세대수 (이상)", numberInput("household_count_min", c?.household_count_min, 1, 10000), "household_count_min")}
         {field("parking_per_household_min", "세대당 주차 대수 (이상)", numberInput("parking_per_household_min", c?.parking_per_household_min, 0, 5, 0.1), "parking_per_household_min")}
         {field("mgmt_fee_per_m2_max", "관리비 (㎡당 월 원, 이하) — 현재 점검 데이터 없음", numberInput("mgmt_fee_per_m2_max", c?.mgmt_fee_per_m2_max, 0, 100000))}
+
+        <h2 className="font-semibold">④ 교통·교육 조건(직선거리)</h2>
+        {field("station_distance_max_m", "지하철역까지 직선거리 (m, 이내)", numberInput("station_distance_max_m", c?.station_distance_max_m, 100, 5000, 50), "station_distance_max")}
+        {field("elementary_distance_max_m", "초등학교까지 직선거리 (m, 이내)", numberInput("elementary_distance_max_m", c?.elementary_distance_max_m, 100, 5000, 50), "elementary_distance_max")}
+        <TipPanel tips={t} fieldKey="station_distance_max_m" />
 
         <h2 className="font-semibold">③ 주택 가치 조건</h2>
         {field("floor_area_ratio_max", "용적률 상한 (%)", numberInput("floor_area_ratio_max", c?.floor_area_ratio_max, 0, 2000, 0.01), "floor_area_ratio_max")}

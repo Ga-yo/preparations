@@ -37,6 +37,10 @@ function Row({ x, rank, fav, selected, planId, toggle }: {
         최근 12개월 중위가 {x.median_price === null ? "최근 거래 없음" : formatWon(x.median_price)} · 거래 {x.deal_count}건 ·
         {" "}{x.approval_year ?? "-"}년 승인 · {x.household_count?.toLocaleString("ko-KR") ?? "-"}세대
       </p>
+      <p className="text-gray-700">
+        {x.nearest_station_m === null && x.nearest_elementary_m === null ? "위치 정보 없음"
+          : `역 ${x.nearest_station_name ?? "-"} 직선 ${x.nearest_station_m ?? "-"}m · 초등학교 직선 ${x.nearest_elementary_m ?? "-"}m`}
+      </p>
       <div className="mt-1 flex flex-wrap gap-1 text-xs">
         <span className={`rounded px-1.5 py-0.5 ${b.cls}`}>{b.text}</span>
         {x.fit.met.map((k) => <span key={k} className="rounded bg-green-50 px-1.5 py-0.5 text-green-800">충족 {label(k)}</span>)}

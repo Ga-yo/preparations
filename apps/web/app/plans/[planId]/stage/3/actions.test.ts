@@ -7,7 +7,8 @@ describe("stage3Schema", () => {
       housing_types: [], price_min: null, price_max: null, area_min: null, area_max: null,
       rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null,
       approval_year_min: null, household_count_min: null, parking_per_household_min: null,
-      mgmt_fee_per_m2_max: null, floor_area_ratio_max: null, redevelopment_interest: false, priorities: {},
+      mgmt_fee_per_m2_max: null, floor_area_ratio_max: null, station_distance_max_m: null, elementary_distance_max_m: null,
+      redevelopment_interest: false, priorities: {},
     });
   });
   test("가격은 만원 입력 → 원", () => {
@@ -37,6 +38,21 @@ describe("stage3Schema", () => {
   test("숫자 범위: 세대당 주차 소수, 준공 1949 거부", () => {
     expect(stage3Schema.parse({ parking_per_household_min: "1.2" }).parking_per_household_min).toBe(1.2);
     expect(stage3Schema.safeParse({ approval_year_min: "1949" }).success).toBe(false);
+  });
+});
+
+describe("distance fields parse", () => {
+  test("800 → 800, 빈 값 → null, 우선순위 저장", () => {
+    const v = stage3Schema.parse({ station_distance_max_m: "800", elementary_distance_max_m: "", "priority.station_distance_max": "must", "priority.elementary_distance_max": "must" });
+    expect(v.station_distance_max_m).toBe(800);
+    expect(v.elementary_distance_max_m).toBeNull();
+    expect(v.priorities).toEqual({ station_distance_max: "must" });
+  });
+  test("75(50m 단위 아님)·6000(범위 밖)·50(범위 밖) 거부", () => {
+    for (const bad of ["75", "6000", "50"]) {
+      const r = stage3Schema.safeParse({ elementary_distance_max_m: bad });
+      expect(r.success).toBe(false);
+    }
   });
 });
 
