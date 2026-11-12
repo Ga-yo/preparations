@@ -79,3 +79,16 @@ test("rejects non-integer id", async () => {
   const { ctx } = setup();
   expect(await runTool(getComplexDetail, '{"complex_id":1.5}', ctx)).toHaveProperty("error");
 });
+
+test("returns nearby and drops no_location_data when located", async () => {
+  const nearby = [{ category: "subway_station", name: "개포동역", lines: ["수인분당선"], distance_m: 420 }];
+  const { ctx } = setup({ rows: [complex(1), { ...complex(2), nearest_station_m: 1 }].map((r, i) => (i ? r : { ...r, nearest_station_name: "개포동역", nearest_station_m: 420, nearest_elementary_m: 300 })) });
+  const db = ctx.supabase as unknown as { rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown[] }> };
+  const rpc = db.rpc.bind(db);
+  db.rpc = (n, a) => (n === "complex_nearby_pois" ? Promise.resolve({ data: nearby }) : rpc(n, a));
+  const r = await getComplexDetail.run({ complex_id: 1 }, ctx);
+  const d = r.data as { nearby: unknown[]; complex: Record<string, unknown> };
+  expect(d.nearby).toEqual(nearby);
+  expect(d.complex).toMatchObject({ nearest_station_name: "개포동역", nearest_station_m: 420, nearest_elementary_m: 300 });
+  expect(r.notices).not.toContain("no_location_data");
+});

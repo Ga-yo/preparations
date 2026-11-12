@@ -4,14 +4,15 @@ import { findConflicts, type ComplexRow, type Conditions, type RegionBudget } fr
 const cond = (o: Partial<Conditions> = {}): Conditions => ({
   housing_types: ["apartment"], price_min: null, price_max: null, area_min: null, area_max: null,
   approval_year_min: null, household_count_min: null, parking_per_household_min: null,
-  floor_area_ratio_max: null, mgmt_fee_per_m2_max: null, rooms_min: null, baths_min: null,
+  floor_area_ratio_max: null, mgmt_fee_per_m2_max: null, station_distance_max_m: null, elementary_distance_max_m: null, rooms_min: null, baths_min: null,
   floor_pref: null, direction_pref: null, priorities: {}, ...o,
 });
 let nextId = 1;
 const cx = (o: Partial<ComplexRow> = {}): ComplexRow => ({
   complex_id: nextId++, name: "단지", region_code: "1168010300", approval_year: 2000, household_count: 500,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 40,
-  median_price: 800_000_000, deal_count: 3, ...o,
+  median_price: 800_000_000, deal_count: 3,
+  nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null, ...o,
 });
 const budget = (max_budget: number | null, median_price = 800_000_000, sigungu_code = "11680"): RegionBudget =>
   ({ sigungu_code, max_budget, median_price });
@@ -117,4 +118,30 @@ test("같은 입력이면 같은 출력", () => {
   const rows = [cx({ median_price: 5 }), cx({ median_price: 5 }), cx({ median_price: 1 })];
   const c = cond({ household_count_min: 100, priorities: { household_count_min: "must" } });
   expect(findConflicts(c, [], [...rows].reverse(), false)).toEqual(findConflicts(c, [], rows, false));
+});
+
+test("distance musts filter and leave-one-out", () => {
+  const rows = [cx({ nearest_station_m: 600, nearest_elementary_m: 1500 }), cx({ nearest_station_m: 1500, nearest_elementary_m: 1500 })];
+  const st = cond({ station_distance_max_m: 1000, priorities: { station_distance_max: "must" } });
+  expect(findConflicts(st, [], rows, false).counts.must).toBe(1);
+  const both = cond({ station_distance_max_m: 1000, elementary_distance_max_m: 500,
+    priorities: { station_distance_max: "must", elementary_distance_max: "must" } });
+  const r = findConflicts(both, [], rows, false);
+  expect(r.conflicts).toContainEqual({ code: "no_match_for_musts", blocking: ["elementary_distance_max"] });
+});
+
+test("location_partial notice when some rows lack location", () => {
+  const rows = [cx({ nearest_station_m: 600 }), cx()];
+  const c = cond({ station_distance_max_m: 1000 });
+  expect(findConflicts(c, [], rows, false).notices).toContain("location_partial");
+  expect(findConflicts(cond(), [], rows, false).notices).not.toContain("location_partial");
+});
+
+test("no_poi_data when pois empty", () => {
+  const c = cond({ station_distance_max_m: 1000, priorities: { station_distance_max: "must" } });
+  const r = findConflicts(c, [], [cx(), cx()], false);
+  expect(r.notices).toContain("no_poi_data");
+  expect(r.notices).not.toContain("location_partial");
+  expect(r.conflicts.map((x) => x.code)).not.toContain("no_match_for_musts");
+  expect(r.counts.must).toBe(2);
 });

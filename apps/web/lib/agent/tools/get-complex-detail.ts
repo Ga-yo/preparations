@@ -1,10 +1,11 @@
 import { z } from "zod";
 import type { ComplexRow } from "@/lib/calc/conditions";
+import { activeKeys } from "@/lib/calc/conditions";
 import { fitScore, maxBudgetFor, neighborStats } from "@/lib/calc/fit";
 import { defineTool, type ToolContext, type ToolResult } from "../tool";
 import { loadConditionContext, MONTHS } from "./condition-context";
 
-const DATASETS = ["complexes:building_ledger", "transactions:apartment"];
+const DATASETS = ["complexes:building_ledger", "transactions:apartment", "complexes:location", "pois:subway_station", "pois:school"];
 const DETAIL_MONTHS = 24;
 const TRADE_LIMIT = 20;
 const round2 = (v: number) => Math.round(v * 100) / 100;
@@ -28,18 +29,22 @@ export const getComplexDetail = defineTool({
     const area_max = ok ? l.conditions.area_max : null;
     const area = { ...(area_min !== null && { area_min }), ...(area_max !== null && { area_max }) };
 
-    const [trades, monthly, nb, fresh] = await Promise.all([
+    const [trades, monthly, nb, nearby, fresh] = await Promise.all([
       supabase.rpc("complex_trades", { p_complex_id: c.id, ...area, lim: TRADE_LIMIT }),
       supabase.rpc("complex_monthly_prices", { p_complex_id: c.id, ...area, months: DETAIL_MONTHS }),
       supabase.rpc("complexes_for_conditions", { region_codes: [c.region_code], ...area, months: MONTHS }),
+      supabase.rpc("complex_nearby_pois", { p_complex_id: c.id, radius_m: 1000 }),
       ok ? null : supabase.from("data_freshness").select("dataset, as_of").in("dataset", DATASETS),
     ]);
-    for (const r of [trades, monthly, nb]) if (r.error) throw new Error(r.error.message);
+    for (const r of [trades, monthly, nb, nearby]) if (r.error) throw new Error(r.error.message);
     if (fresh?.error) throw new Error(fresh.error.message);
 
     const own = ok ? l.rows.find((r) => r.complex_id === c.id) : undefined;
     const ownRow = own ?? ((nb.data ?? []) as ComplexRow[]).find((r) => r.complex_id === c.id); // 사용자 지역 밖 단지는 같은 동 행으로 보충
-    const fit = ok && own ? fitScore(l.conditions, own, maxBudgetFor(l.budgets, own)) : null;
+    const fit = ok && own ? fitScore(l.conditions, own, maxBudgetFor(l.budgets, own), activeKeys(l.conditions, l.rows)) : null;
+    const near = { nearest_station_name: ownRow?.nearest_station_name ?? null, nearest_station_m: ownRow?.nearest_station_m ?? null, nearest_elementary_m: ownRow?.nearest_elementary_m ?? null };
+    const nearbyRows = nearby.data ?? [];
+    const located = nearbyRows.length > 0 || near.nearest_station_m !== null || near.nearest_elementary_m !== null;
     const tradeRows = trades.data ?? [];
     const as_of = ok ? l.as_of : Object.fromEntries((fresh?.data ?? []).map((f) => [f.dataset, f.as_of]));
 
@@ -52,14 +57,15 @@ export const getComplexDetail = defineTool({
           parking_per_household: c.parking_count !== null && c.household_count ? round2(c.parking_count / c.household_count) : null,
           floor_area_ratio: c.floor_area_ratio, building_coverage_ratio: c.building_coverage_ratio,
           land_share_m2: c.site_area_m2 !== null && c.household_count ? round2(c.site_area_m2 / c.household_count) : null,
+          ...near,
         },
-        fit, trades: tradeRows, monthly: monthly.data ?? [],
+        fit, nearby: nearbyRows, trades: tradeRows, monthly: monthly.data ?? [],
         neighbors: { ...neighborStats(c.id, (nb.data ?? []) as ComplexRow[]), basis: "same_dong" },
         criteria: { area_min, area_max, months: DETAIL_MONTHS },
       },
       as_of,
       ...(ok && l.stale && { stale: l.stale }),
-      notices: ["no_location_data", "no_redevelopment_data", "land_share_is_average", ...(tradeRows.length ? [] : ["no_recent_trades"])],
+      notices: [...(located ? [] : ["no_location_data"]), "no_redevelopment_data", "land_share_is_average", ...(tradeRows.length ? [] : ["no_recent_trades"])],
     };
   },
 });

@@ -52,7 +52,7 @@ export const stage3Schema = z
     for (const [k, val] of Object.entries(v)) {
       if (!k.startsWith("priority.")) { out[k] = val; continue; }
       const key = k.slice("priority.".length) as ConditionKey;
-      const isSet = key === "area" ? v.area_min !== null || v.area_max !== null : v[key] !== null;
+      const isSet = key === "area" ? v.area_min !== null || v.area_max !== null : (v as Record<string, unknown>)[key] !== null; // 거리 키는 4단계에서 폼에 추가(PRIORITY_KEYS에 없음)
       if (val && isSet) priorities[key] = val as string; // 값이 없는 조건의 우선순위는 의미가 없다
     }
     return { ...(out as Omit<typeof v, `priority.${string}`>), priorities };
