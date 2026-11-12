@@ -39,7 +39,7 @@ function Row({ x, rank, fav, selected, planId, toggle }: {
       </p>
       <p className="text-gray-700">
         {x.nearest_station_m === null && x.nearest_elementary_m === null ? "위치 정보 없음"
-          : `역 ${x.nearest_station_name ?? "-"} 직선 ${x.nearest_station_m ?? "-"}m · 초등학교 직선 ${x.nearest_elementary_m ?? "-"}m`}
+          : `${x.nearest_station_m === null ? "역 정보 없음" : `역 ${x.nearest_station_name ?? "-"} 직선 ${x.nearest_station_m}m`} · ${x.nearest_elementary_m === null ? "초등학교 정보 없음" : `초등학교 직선 ${x.nearest_elementary_m}m`}`}
       </p>
       <div className="mt-1 flex flex-wrap gap-1 text-xs">
         <span className={`rounded px-1.5 py-0.5 ${b.cls}`}>{b.text}</span>

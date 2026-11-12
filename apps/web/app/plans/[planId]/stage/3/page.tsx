@@ -120,17 +120,16 @@ export default async function Stage3({
         {field("parking_per_household_min", "세대당 주차 대수 (이상)", numberInput("parking_per_household_min", c?.parking_per_household_min, 0, 5, 0.1), "parking_per_household_min")}
         {field("mgmt_fee_per_m2_max", "관리비 (㎡당 월 원, 이하) — 현재 점검 데이터 없음", numberInput("mgmt_fee_per_m2_max", c?.mgmt_fee_per_m2_max, 0, 100000))}
 
-        <h2 className="font-semibold">④ 교통·교육 조건(직선거리)</h2>
-        {field("station_distance_max_m", "지하철역까지 직선거리 (m, 이내)", numberInput("station_distance_max_m", c?.station_distance_max_m, 100, 5000, 50), "station_distance_max")}
-        {field("elementary_distance_max_m", "초등학교까지 직선거리 (m, 이내)", numberInput("elementary_distance_max_m", c?.elementary_distance_max_m, 100, 5000, 50), "elementary_distance_max")}
-        <TipPanel tips={t} fieldKey="station_distance_max_m" />
-
         <h2 className="font-semibold">③ 주택 가치 조건</h2>
         {field("floor_area_ratio_max", "용적률 상한 (%)", numberInput("floor_area_ratio_max", c?.floor_area_ratio_max, 0, 2000, 0.01), "floor_area_ratio_max")}
         <div>
           <label className="flex items-center gap-2"><input name="redevelopment_interest" type="checkbox" defaultChecked={!!c?.redevelopment_interest} /> 재건축·재개발 가능성에 관심이 있습니다</label>
           <TipPanel tips={t} fieldKey="redevelopment_interest" />
         </div>
+        <h2 className="font-semibold">④ 교통·교육 조건(직선거리)</h2>
+        {field("station_distance_max_m", "지하철역까지 직선거리 (m, 이내)", numberInput("station_distance_max_m", c?.station_distance_max_m, 100, 5000, 50), "station_distance_max")}
+        {field("elementary_distance_max_m", "초등학교까지 직선거리 (m, 이내)", numberInput("elementary_distance_max_m", c?.elementary_distance_max_m, 100, 5000, 50), "elementary_distance_max")}
+
         <button type="submit" className="rounded bg-foreground px-4 py-2 text-background">저장하고 조건 점검하기</button>
       </StageForm>
       <div className="space-y-6">

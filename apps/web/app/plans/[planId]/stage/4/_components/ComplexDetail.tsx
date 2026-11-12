@@ -25,6 +25,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
     return <section className="rounded border p-4 text-sm">선택한 단지를 찾을 수 없습니다.</section>;
   }
   const { complex: c, fit, nearby, trades, monthly, neighbors: n, criteria } = result.data as Data;
+  const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 좌표·인근 시설 유무로 정한다
   const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
     : criteria.area_max === null ? `전용 ${criteria.area_min}㎡ 이상`
@@ -79,16 +80,16 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
       <h3 className="font-semibold">주변 시설 (직선거리 1km 이내)</h3>
       {nearby.length ? (
         <>
-          <table className="w-full text-left [&_td]:py-0.5 [&_td]:pr-2">
-            <thead><tr><th>구분</th><th>이름</th><th>노선</th><th>직선거리</th></tr></thead>
+          <table aria-label="주변 시설 (직선거리 1km 이내)" className="w-full text-left [&_td]:py-0.5 [&_td]:pr-2">
+            <thead><tr><th scope="col">구분</th><th scope="col">이름</th><th scope="col">노선</th><th scope="col">직선거리</th></tr></thead>
             <tbody>{nearby.map((p, i) => (
               <tr key={i}><td>{CATEGORY[p.category] ?? "기타"}</td><td>{p.name}</td>
-                <td>{p.category === "subway_station" ? p.lines?.join(", ") ?? "-" : ""}</td><td>{p.distance_m}m</td></tr>
+                <td>{p.category === "subway_station" ? p.lines?.join(", ") ?? "-" : "-"}</td><td>{p.distance_m}m</td></tr>
             ))}</tbody>
           </table>
           <p className="text-xs text-gray-600">직선거리이며 실제 도보 거리는 더 깁니다.</p>
         </>
-      ) : <p className="text-gray-600">좌표 정보가 없어 주변 시설을 표시하지 못했습니다.</p>}
+      ) : <p className="text-gray-600">{hasCoords ? "직선거리 1km 안에 역·학교가 없습니다." : "좌표 정보가 없어 주변 시설을 표시하지 못했습니다."}</p>}
       <p className="text-gray-600">정비사업 진행 상황: 데이터 준비 중</p>
       <TipPanel tips={tips} fieldKey="redevelopment" />
       {asOf.length > 0 && <p className="text-xs text-gray-600">데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}</p>}
