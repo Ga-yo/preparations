@@ -42,7 +42,10 @@ export const INDIVIDUAL_OPS = {
 type Item = Record<string, unknown>;
 type Basis = { kaptName: string; kaptAddr: string | null; kaptMarea: number | null };
 export type MgmtFeeResult =
-  | { status: "ok"; kapt_code: string; kapt_name: string; month: string; common: number; individual: number | null; total: number; per_m2: number | null; partial: boolean; fetched_at: string }
+  | {
+      status: "ok"; kapt_code: string; kapt_name: string; month: string; common: number; individual: number | null; total: number; per_m2: number | null;
+      partial: boolean; individual_status: "disabled" | "unavailable" | "empty" | "ok"; fetched_at: string;
+    }
   | { status: "not_found"; reason: "no_kapt_match" | "no_recent_fee" }
   | { status: "error" };
 
@@ -51,9 +54,9 @@ const num = (v: unknown) => (Number.isFinite(Number(v)) ? Number(v) : 0);
 const toItems = (group: FeeItem["group"], item: Item, fields: readonly string[]): FeeItem[] =>
   fields.map((key) => ({ group, key, amount: num(item[key]) }));
 
-// 아래 캐시 함수는 성공·미발견 값만 돌려주고, API 오류는 throw로 빠져나가 캐시에 남지 않는다
+// 서버리스 인스턴스 간에 공유되도록 remote 핸들러를 쓴다(로컬은 기본 in-memory). 아래 캐시 함수는 성공·미발견 값만 돌려주고, API 오류는 throw로 빠져나가 캐시에 남지 않는다
 async function kaptListByDong(bjdCode: string): Promise<{ kaptCode: string; kaptName: string }[]> {
-  "use cache";
+  "use cache: remote";
   cacheLife("max");
   cacheTag(`kapt-list-${bjdCode}`);
   const out: { kaptCode: string; kaptName: string }[] = [];
@@ -68,7 +71,7 @@ async function kaptListByDong(bjdCode: string): Promise<{ kaptCode: string; kapt
 }
 
 async function kaptBasis(kaptCode: string): Promise<Basis | null> {
-  "use cache";
+  "use cache: remote";
   cacheLife("max");
   cacheTag(`kapt-basis-${kaptCode}`);
   const it = itemOf(await kaptGet("AptBasisInfoServiceV5/getAphusBassInfoV5", { kaptCode }));
@@ -78,7 +81,7 @@ async function kaptBasis(kaptCode: string): Promise<Basis | null> {
 
 // 부과 내역이 없는 달은 200에 모든 필드가 null로 온다
 async function kaptMonthProbe(kaptCode: string, ym: string): Promise<Item | null> {
-  "use cache";
+  "use cache: remote";
   cacheLife("days");
   cacheTag(`kapt-fee-${kaptCode}`);
   const it = itemOf(await kaptGet(`${COMMON_SVC}/${PROBE_OP}`, { kaptCode, searchDate: ym }));
@@ -86,7 +89,7 @@ async function kaptMonthProbe(kaptCode: string, ym: string): Promise<Item | null
 }
 
 async function kaptCommonFee(kaptCode: string, ym: string, probe: Item): Promise<{ items: FeeItem[]; fetched_at: string }> {
-  "use cache";
+  "use cache: remote";
   cacheLife("days");
   cacheTag(`kapt-fee-${kaptCode}`);
   const rest = Object.entries(COMMON_OPS).filter(([op]) => op !== PROBE_OP);
@@ -98,9 +101,9 @@ async function kaptCommonFee(kaptCode: string, ym: string, probe: Item): Promise
   return { items, fetched_at: new Date().toISOString() };
 }
 
-// 하나라도 실패하면 throw — 호출부가 개별사용료 없음(partial)으로 바꾼다
+// 하나라도 실패하면 throw — 호출부가 unavailable로 바꾼다. 모두 비어 있으면 null(이 달 부과 내역 없음)
 async function kaptIndividualFee(kaptCode: string, ym: string): Promise<FeeItem[] | null> {
-  "use cache";
+  "use cache: remote";
   cacheLife("days");
   cacheTag(`kapt-fee-${kaptCode}`);
   const ops = Object.entries(INDIVIDUAL_OPS);
@@ -134,6 +137,21 @@ const prevMonth = (ym: string) => {
   return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
 };
 
+const logFail = (msg: string, complex_id: number, e: unknown) =>
+  console.error(msg, { complex_id, status: (e as { status?: unknown }).status ?? null, name: (e as Error)?.name });
+
+// 개별사용료: 활용신청 승인 전에는 env로 끄고, 실패는 캐시하지 않고 unavailable로 바꾼다
+async function individualFee(complex_id: number, kaptCode: string, ym: string) {
+  if (process.env.KAPT_INDIVIDUAL_FEES !== "1") return { individual_status: "disabled" as const, items: null };
+  try {
+    const items = await kaptIndividualFee(kaptCode, ym);
+    return items ? { individual_status: "ok" as const, items } : { individual_status: "empty" as const, items: null };
+  } catch (e) {
+    logFail("kapt individual fee failed", complex_id, e);
+    return { individual_status: "unavailable" as const, items: null };
+  }
+}
+
 // 캐시하지 않는 진입점: 오류는 여기서 잡아 status: "error"로 바꾼다(캐시에 남지 않음)
 export async function getMgmtFee(
   complex: { id: number; name: string; region_code: string; jibun_address: string | null; kapt_code?: string | null },
@@ -152,18 +170,18 @@ export async function getMgmtFee(
     const ym = month.replace("-", "");
     const [common, individual, basis] = await Promise.all([
       kaptCommonFee(kaptCode, ym, probe),
-      kaptIndividualFee(kaptCode, ym).catch(() => null),
+      individualFee(complex.id, kaptCode, ym),
       kaptBasis(kaptCode),
     ]);
-    const s = summarizeMgmtFee([...common.items, ...(individual ?? [])], basis?.kaptMarea ?? null);
+    const s = summarizeMgmtFee([...common.items, ...(individual.items ?? [])], basis?.kaptMarea ?? null);
     return {
       status: "ok", kapt_code: kaptCode, kapt_name: basis?.kaptName ?? String(probe.kaptName), month,
-      common: s.common, individual: individual ? s.individual : null, total: s.total, per_m2: s.per_m2,
-      partial: !individual, fetched_at: common.fetched_at,
+      common: s.common, individual: individual.items ? s.individual : null, total: s.total, per_m2: s.per_m2,
+      partial: !individual.items, individual_status: individual.individual_status, fetched_at: common.fetched_at,
     };
   } catch (e) {
     // 원본 메시지에 URL이 섞일 수 있어 단지 id·상태코드·예외 이름만 남긴다
-    console.error("kapt mgmt_fee failed", { complex_id: complex.id, status: (e as { status?: unknown }).status ?? null, name: (e as Error)?.name });
+    logFail("kapt mgmt_fee failed", complex.id, e);
     return { status: "error" };
   }
 }

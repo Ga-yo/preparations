@@ -109,3 +109,12 @@ test("includes mgmt_fee", async () => {
   expect(r.as_of).toMatchObject({ mgmt_fee: "2026-09" });
   expect(getMgmtFee).toHaveBeenCalledWith(expect.objectContaining({ id: 1, name: "단지1", region_code: "1168010300", jibun_address: "개포동 1" }), ctx.today);
 });
+
+test("no mgmt_fee when conditions are not saved", async () => {
+  getMgmtFee.mockClear();
+  const { ctx } = setup({ sets: [saved({ region_codes: [] })], rows: [complex(1)] });
+  const r = await getComplexDetail.run({ complex_id: 1 }, ctx);
+  expect(getMgmtFee).not.toHaveBeenCalled();
+  expect(r.data).not.toHaveProperty("mgmt_fee");
+  expect(r.as_of).not.toHaveProperty("mgmt_fee");
+});

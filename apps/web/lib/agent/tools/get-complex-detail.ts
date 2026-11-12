@@ -36,7 +36,7 @@ export const getComplexDetail = defineTool({
       supabase.rpc("complexes_for_conditions", { region_codes: [c.region_code], ...area, months: MONTHS }),
       supabase.rpc("complex_nearby_pois", { p_complex_id: c.id, radius_m: 1000 }),
       ok ? null : supabase.from("data_freshness").select("dataset, as_of").in("dataset", DATASETS),
-      getMgmtFee(c, ctx.today), // 실패해도 throw하지 않고 status로 돌려준다
+      ok ? getMgmtFee(c, ctx.today) : null, // 조건을 저장한 계획에서만 K-apt를 부른다(호출 남용 방지). 실패해도 throw하지 않는다
     ]);
     for (const r of [trades, monthly, nb, nearby]) if (r.error) throw new Error(r.error.message);
     if (fresh?.error) throw new Error(fresh.error.message);
@@ -50,7 +50,7 @@ export const getComplexDetail = defineTool({
     const tradeRows = trades.data ?? [];
     const as_of = {
       ...(ok ? l.as_of : Object.fromEntries((fresh?.data ?? []).map((f) => [f.dataset, f.as_of]))),
-      ...(mgmt_fee.status === "ok" && { mgmt_fee: mgmt_fee.month }),
+      ...(mgmt_fee?.status === "ok" && { mgmt_fee: mgmt_fee.month }),
     };
 
     return {
@@ -64,7 +64,7 @@ export const getComplexDetail = defineTool({
           land_share_m2: c.site_area_m2 !== null && c.household_count ? round2(c.site_area_m2 / c.household_count) : null,
           ...near,
         },
-        fit, mgmt_fee, nearby: nearbyRows, trades: tradeRows, monthly: monthly.data ?? [],
+        fit, ...(mgmt_fee && { mgmt_fee }), nearby: nearbyRows, trades: tradeRows, monthly: monthly.data ?? [],
         neighbors: { ...neighborStats(c.id, (nb.data ?? []) as ComplexRow[]), basis: "same_dong" },
         criteria: { area_min, area_max, months: DETAIL_MONTHS },
       },

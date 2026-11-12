@@ -17,7 +17,7 @@ const forest = { id: 1, name: "개포래미안포레스트", region_code: "11680
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status });
 const empty = { response: { header: { resultCode: "00" }, body: { item: { kaptCode: null, kaptName: null } } } };
 
-type Opts = { individual?: "registered" | "not_registered"; bassOther?: boolean };
+type Opts = { individual?: "registered" | "not_registered" | "empty"; bassOther?: boolean };
 // 경로·파라미터로 fixture를 고른다. 개별사용료는 활용신청 전이라 실제 응답이 403뿐이어서 성공 응답은 합성한다
 function router({ individual = "not_registered", bassOther = false }: Opts = {}) {
   return vi.fn(async (input: string | URL) => {
@@ -35,6 +35,7 @@ function router({ individual = "not_registered", bassOther = false }: Opts = {})
     }
     if (service === "AptIndvdlzManageCostServiceV3") {
       if (individual === "not_registered") return json(notRegistered, 403);
+      if (individual === "empty") return json(empty);
       const fields = INDIVIDUAL_OPS[op as keyof typeof INDIVIDUAL_OPS];
       return json({ response: { header: { resultCode: "00" }, body: { item: { kaptCode: "A10024564", ...Object.fromEntries(fields.map((f) => [f, 100_000])) } } } });
     }
@@ -43,7 +44,7 @@ function router({ individual = "not_registered", bassOther = false }: Opts = {})
 }
 const calledOps = (f: ReturnType<typeof router>) => f.mock.calls.map(([i]) => new URL(String(i)).pathname.split("/").pop());
 
-beforeEach(() => vi.stubEnv("DATA_GO_KR_SERVICE_KEY", KEY));
+beforeEach(() => { vi.stubEnv("DATA_GO_KR_SERVICE_KEY", KEY); vi.stubEnv("KAPT_INDIVIDUAL_FEES", "1"); vi.spyOn(console, "error").mockImplementation(() => {}); });
 afterEach(() => { vi.unstubAllGlobals(); vi.unstubAllEnvs(); vi.restoreAllMocks(); });
 
 test("matches by normalized name", async () => {
@@ -52,7 +53,7 @@ test("matches by normalized name", async () => {
   const r = await getMgmtFee({ ...forest, name: "개포 래미안포레스트 아파트" }, TODAY);
   expect(r).toMatchObject({
     status: "ok", kapt_code: "A10024564", kapt_name: "개포래미안포레스트", month: "2026-09",
-    common: COMMON_TOTAL, individual: 1_500_000, total: COMMON_TOTAL + 1_500_000, per_m2: 1644, partial: false,
+    common: COMMON_TOTAL, individual: 1_500_000, total: COMMON_TOTAL + 1_500_000, per_m2: 1644, partial: false, individual_status: "ok",
   });
   expect(r.status === "ok" && r.fetched_at).toMatch(/^\d{4}-\d\d-\d\dT/);
   expect(calledOps(f).filter((o) => o === "getAphusBassInfoV5")).toHaveLength(1); // 면적용 1회
@@ -88,16 +89,33 @@ test("no_recent_fee when both months empty", async () => {
   expect(await getMgmtFee(forest, TODAY)).toEqual({ status: "not_found", reason: "no_recent_fee" });
 });
 
-test("individual unavailable gives partial common-only result", async () => {
+test("individual unavailable gives partial common-only result and logs no key", async () => {
+  const errors: unknown[] = [];
+  vi.spyOn(console, "error").mockImplementation((...a) => { errors.push(a); });
   vi.stubGlobal("fetch", router({ individual: "not_registered" }));
   const r = await getMgmtFee(forest, TODAY);
-  expect(r).toMatchObject({ status: "ok", common: COMMON_TOTAL, individual: null, total: COMMON_TOTAL, per_m2: 1638, partial: true });
+  expect(r).toMatchObject({ status: "ok", common: COMMON_TOTAL, individual: null, total: COMMON_TOTAL, per_m2: 1638, partial: true, individual_status: "unavailable" });
+  expect(errors).toEqual([["kapt individual fee failed", { complex_id: 1, status: 403, name: "HttpError" }]]);
+});
+
+test("individual flag off skips the 10 individual operations", async () => {
+  vi.stubEnv("KAPT_INDIVIDUAL_FEES", "");
+  const f = router({ individual: "registered" });
+  vi.stubGlobal("fetch", f);
+  expect(await getMgmtFee(forest, TODAY)).toMatchObject({ status: "ok", individual: null, total: COMMON_TOTAL, partial: true, individual_status: "disabled" });
+  expect(f.mock.calls.some(([i]) => String(i).includes("AptIndvdlzManageCostServiceV3"))).toBe(false);
+});
+
+test("individual enabled but empty for the month", async () => {
+  vi.stubGlobal("fetch", router({ individual: "empty" }));
+  expect(await getMgmtFee(forest, TODAY)).toMatchObject({ status: "ok", individual: null, partial: true, individual_status: "empty" });
 });
 
 test("individual partly failing still counts as unavailable", async () => {
   const ok = router({ individual: "registered" });
   vi.stubGlobal("fetch", vi.fn(async (i: string | URL) => (String(i).includes("getHsmpHeatCostInfo") ? Promise.reject(new TypeError("fetch failed")) : ok(i))));
-  expect(await getMgmtFee(forest, TODAY)).toMatchObject({ status: "ok", individual: null, partial: true });
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  expect(await getMgmtFee(forest, TODAY)).toMatchObject({ status: "ok", individual: null, partial: true, individual_status: "unavailable" });
 });
 
 test("fee failure does not break detail", async () => {

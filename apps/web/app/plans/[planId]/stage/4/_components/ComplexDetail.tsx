@@ -12,7 +12,7 @@ type Data = {
     floor_area_ratio: number | null; building_coverage_ratio: number | null; land_share_m2: number | null;
   };
   fit: Fit | null;
-  mgmt_fee: MgmtFeeResult;
+  mgmt_fee?: MgmtFeeResult;
   nearby: { category: string; name: string; lines: string[] | null; distance_m: number }[];
   trades: { deal_date: string; deal_amount: number; exclusive_area: number; floor: number | null }[];
   monthly: { month: string; median_price: number; deal_count: number }[];
@@ -50,13 +50,14 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
       </ul>
       {fit && <p>조건 적합도 {fit.score}점</p>}
 
-      <h3 className="font-semibold">관리비 (K-apt{fee.status === "ok" ? `, ${fee.month} 부과분` : ""})</h3>
-      {fee.status === "ok" ? (
+      {fee && <h3 className="font-semibold">관리비 (K-apt{fee.status === "ok" ? `, ${fee.month} 부과분` : ""})</h3>}
+      {!fee ? null : fee.status === "ok" ? (
         <div>
           <p>{fee.partial ? "공용관리비 합계 (개별사용료 미포함)" : "관리비 합계"} {formatWon(fee.total)} <span className="text-gray-600">(단지 전체 월 부과 합계)</span></p>
-          {fee.per_m2 !== null && <p>관리비 부과면적 ㎡당 {fee.per_m2.toLocaleString("ko-KR")}원</p>}
-          <p>공용관리비 {formatWon(fee.common)} · 개별사용료 {fee.individual === null ? "조회 불가" : formatWon(fee.individual)}</p>
-          {fee.partial && <p className="text-xs text-gray-600">개별사용료(난방·전기·수도 등)는 아직 조회할 수 없습니다.</p>}
+          {fee.per_m2 !== null && <p>{fee.partial ? "공용관리비" : "관리비"} ㎡당 {fee.per_m2.toLocaleString("ko-KR")}원 (관리비 부과면적 기준)</p>}
+          <p>공용관리비 {formatWon(fee.common)} · 개별사용료 {fee.individual !== null ? formatWon(fee.individual) : fee.individual_status === "empty" ? "부과 내역 없음" : "조회 불가"}</p>
+          {fee.individual_status === "empty" && <p className="text-xs text-gray-600">이 달 개별사용료 부과 내역이 없습니다.</p>}
+          {(fee.individual_status === "disabled" || fee.individual_status === "unavailable") && <p className="text-xs text-gray-600">개별사용료(난방·전기·수도 등)는 아직 조회할 수 없습니다.</p>}
           <p className="text-xs text-gray-600">조회 시각 {kstTime(fee.fetched_at)}</p>
         </div>
       ) : (
