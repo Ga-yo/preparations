@@ -123,8 +123,12 @@ async function matchKapt(c: { name: string; region_code: string; jibun_address: 
   const list = await kaptListByDong(c.region_code);
   const name = normName(c.name);
   const exact = list.filter((k) => normName(k.kaptName) === name);
-  if (exact.length === 1) return exact[0];
   const jibun = jibunOf(c.jibun_address);
+  if (exact.length === 1) {
+    // 대장 단지가 K-apt에 없고 같은 동에 같은 이름이 있으면 남의 관리비를 보여주게 된다. 지번이 둘 다 있으면 대조한다
+    const kj = jibun && jibunOf((await kaptBasis(exact[0].kaptCode))?.kaptAddr ?? null);
+    return !kj || kj === jibun ? exact[0] : null;
+  }
   if (!jibun) return null;
   const candidates = (exact.length ? exact : list.filter((k) => { const n = normName(k.kaptName); return n.includes(name) || name.includes(n); })).slice(0, 5);
   const bases = await Promise.all(candidates.map((k) => kaptBasis(k.kaptCode)));

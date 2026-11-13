@@ -24,7 +24,7 @@ export const NOTICES: Record<string, string> = {
   no_complex_data: "희망 지역에 단지 데이터가 아직 없습니다.",
   no_location_data: "교통·학교·생활 인프라 데이터는 아직 없습니다.",
   location_partial: "좌표가 없는 단지는 거리 조건을 판단하지 못했습니다.",
-  no_poi_data: "역·학교 위치 데이터가 아직 없어 거리 조건을 점검하지 못했습니다.",
+  no_poi_data: "역·학교 위치나 희망 지역 단지 좌표가 아직 없어 거리 조건을 점검하지 못했습니다.",
   truncated: "단지가 많아 3,000개까지만 점검했습니다. 지역을 좁혀 보세요.",
 };
 export const DATASETS: Record<string, string> = {

@@ -24,6 +24,14 @@ def test_parse_point_ok():
     assert (round(x, 3), round(y, 3)) == (127.038, 37.508)
 
 
+def test_road_response_checked_by_sigungu():
+    import copy
+    road = copy.deepcopy(OK)
+    road["response"]["refined"]["structure"].update(level4LC="", level4AC="1168064000")
+    assert geocode.parse_point(road, DONG) is not None
+    assert geocode.parse_point(road, "1165010100") is None
+
+
 def test_rejects_point_in_other_dong():
     assert geocode.parse_point(OK, "1168010800") is None
 

@@ -34,8 +34,11 @@ def parse_point(resp: dict, region_code: str) -> tuple[float, float] | None:
         r = resp["response"]
         if r["status"] != "OK":
             return None
-        # 동명 지번·정제 실패로 엉뚱한 동 좌표가 오는 것을 막는다
-        if r["refined"]["structure"]["level4LC"][:10] != region_code[:10]:
+        # 동명 지번·정제 실패로 엉뚱한 동 좌표가 오는 것을 막는다. 도로명 응답은 level4LC가 비어 있어 시군구(level4AC)로 대조
+        st = r["refined"]["structure"]
+        if st["level4LC"] and st["level4LC"][:10] != region_code[:10]:
+            return None
+        if not st["level4LC"] and st["level4AC"][:5] != region_code[:5]:
             return None
         x, y = float(r["result"]["point"]["x"]), float(r["result"]["point"]["y"])
     except (KeyError, TypeError, ValueError):

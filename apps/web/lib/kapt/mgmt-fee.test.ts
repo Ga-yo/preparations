@@ -56,7 +56,14 @@ test("matches by normalized name", async () => {
     common: COMMON_TOTAL, individual: 1_500_000, total: COMMON_TOTAL + 1_500_000, per_m2: 1644, partial: false, individual_status: "ok",
   });
   expect(r.status === "ok" && r.fetched_at).toMatch(/^\d{4}-\d\d-\d\dT/);
-  expect(calledOps(f).filter((o) => o === "getAphusBassInfoV5")).toHaveLength(1); // 면적용 1회
+  // 지번 대조 1회 + 면적용 1회. 운영에서는 같은 kaptCode의 'use cache: remote'라 두 번째는 캐시 적중
+  expect(calledOps(f).filter((o) => o === "getAphusBassInfoV5")).toHaveLength(2);
+});
+
+test("single exact name with a different jibun is rejected", async () => {
+  vi.stubGlobal("fetch", router());
+  expect(await getMgmtFee({ ...forest, jibun_address: "서울특별시 강남구 개포동 5번지" }, TODAY))
+    .toEqual({ status: "not_found", reason: "no_kapt_match" });
 });
 
 test("falls back to jibun via basis info", async () => {

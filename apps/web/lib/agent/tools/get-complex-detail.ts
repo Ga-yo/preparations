@@ -54,7 +54,7 @@ export const getComplexDetail = defineTool({
     const fit = ok && own ? fitScore(l.conditions, own, maxBudgetFor(l.budgets, own), activeKeys(l.conditions, l.rows)) : null;
     const near = { nearest_station_name: ownRow?.nearest_station_name ?? null, nearest_station_m: ownRow?.nearest_station_m ?? null, nearest_elementary_m: ownRow?.nearest_elementary_m ?? null };
     const nearbyRows = nearby.data ?? [];
-        const tradeRows = trades.data ?? [];
+    const tradeRows = trades.data ?? [];
     const as_of = {
       ...(ok ? l.as_of : Object.fromEntries((fresh?.data ?? []).map((f) => [f.dataset, f.as_of]))),
       ...(mgmt_fee?.status === "ok" && { mgmt_fee: mgmt_fee.month }),

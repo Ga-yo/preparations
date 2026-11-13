@@ -14,7 +14,7 @@ const num = (min: number, max: number, int = true) =>
 // 만원 입력 → 원 (1단계와 같은 규칙)
 const won = num(0, 1e9).transform((n) => (n === null ? null : n * 10_000));
 // 100~5000m, 50m 단위 직선거리
-const dist = num(100, 5000).refine((n) => n === null || n % 50 === 0);
+const dist = num(100, 5000).refine((n) => n === null || n % 50 === 0, { message: "50m 단위로 입력하세요" });
 const check = z.string().optional().transform((s) => s === "on");
 const text = (max: number) =>
   z.string().max(max).optional().transform((s) => (s?.trim() ? s.trim() : null));
