@@ -4,6 +4,8 @@ import type { MgmtFeeResult } from "@/lib/kapt/mgmt-fee";
 import { TipPanel, type Tip } from "../../../_components/TipPanel";
 import { DATASETS } from "../../../_components/ConditionCheckCard";
 import { formatWon } from "../../../_components/format";
+import { redevelopmentText } from "../../../_components/redevelopment";
+import type { RedevelopmentInfo } from "@/lib/agent/redevelopment";
 
 type Data = {
   complex: {
@@ -12,6 +14,7 @@ type Data = {
     floor_area_ratio: number | null; building_coverage_ratio: number | null; land_share_m2: number | null;
   };
   fit: Fit | null;
+  redevelopment?: RedevelopmentInfo;
   mgmt_fee?: MgmtFeeResult;
   nearby: { category: string; name: string; lines: string[] | null; distance_m: number }[];
   trades: { deal_date: string; deal_amount: number; exclusive_area: number; floor: number | null }[];
@@ -28,9 +31,9 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
   if ("error" in (result.data as object)) {
     return <section className="rounded border p-4 text-sm">선택한 단지를 찾을 수 없습니다.</section>;
   }
-  const { complex: c, fit, mgmt_fee: fee, nearby, trades, monthly, neighbors: n, criteria } = result.data as Data;
+  const { complex: c, fit, redevelopment, mgmt_fee: fee, nearby, trades, monthly, neighbors: n, criteria } = result.data as Data;
   const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 단지 좌표 유무로 정한다
-  const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois):/.test(k));
+  const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois|redevelopment):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
     : criteria.area_max === null ? `전용 ${criteria.area_min}㎡ 이상`
     : criteria.area_min === null ? `전용 ${criteria.area_max}㎡ 이하`
@@ -108,7 +111,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
           <p className="text-xs text-gray-600">직선거리이며 실제 도보 거리는 더 깁니다.</p>
         </>
       ) : <p className="text-gray-600">{hasCoords ? "직선거리 1km 안에 역·학교가 없습니다." : "좌표 정보가 없어 주변 시설을 표시하지 못했습니다."}</p>}
-      <p className="text-gray-600">정비사업 진행 상황: 데이터 준비 중</p>
+      <p className={redevelopment?.status === "in_zone" ? "font-medium" : "text-gray-600"}>정비사업: {redevelopmentText(redevelopment)}</p>
       <TipPanel tips={tips} fieldKey="redevelopment" />
       {asOf.length > 0 && <p className="text-xs text-gray-600">데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}</p>}
     </section>

@@ -9,3 +9,9 @@ alter table public.redevelopment_projects
     check (stage in ('정비구역지정', '추진위', '조합설립', '건축심의', '사업시행인가', '관리처분인가', '착공'));
 comment on column public.redevelopment_projects.stage is '정비구역지정/추진위/조합설립/건축심의/사업시행인가/관리처분인가/착공 (원본 단계 값 매핑)';
 create index redevelopment_projects_complex_idx on public.redevelopment_projects (complex_id) where complex_id is not null;
+
+-- 4단계 TIP의 "정비사업 데이터 없음" 안내를 서울 자료 적재에 맞게 고친다
+update public.tips
+set caution = '어느 단계에 있든 일정 지연이나 중단 가능성이 있고, 단계별 요건과 명칭은 지역과 법령 개정에 따라 다를 수 있습니다. 이 서비스의 정비사업 정보는 서울시가 분기마다 공개하는 추진현황 기준이라 최신 상황과 다를 수 있고, 서울 외 지역은 제공하지 않으니 해당 지자체 정보를 함께 확인하세요.',
+    updated_at = now()
+where slug = 'redevelopment-stages-4';

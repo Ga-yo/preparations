@@ -2,13 +2,14 @@ import { z } from "zod";
 import { compareComplexes, type CompareInput } from "@/lib/calc/compare";
 import { activeKeys, type ComplexRow } from "@/lib/calc/conditions";
 import { fitScore, maxBudgetFor } from "@/lib/calc/fit";
+import { loadRedevelopment } from "../redevelopment";
 import { defineTool, type ToolContext, type ToolResult } from "../tool";
 import { loadConditionContext, MONTHS } from "./condition-context";
 
 export const compareComplexesTool = defineTool({
   name: "compare_complexes",
   description:
-    "관심 단지 2~4개를 결정론적으로 비교한다. 단지별 적합도(fit), 위험 요소 코드(risks), 최저가 대비 가격 차이(price_gap_from_min), 예산 대비 비율(budget_ratio), 지표별 유리한 단지(best)를 돌려준다. 현재 조건 밖 단지는 fit이 null이다.",
+    "관심 단지 2~4개를 결정론적으로 비교한다. 단지별 적합도(fit), 위험 요소 코드(risks), 최저가 대비 가격 차이(price_gap_from_min), 예산 대비 비율(budget_ratio), 지표별 유리한 단지(best), 정비사업 정보(redevelopment)를 돌려준다. 현재 조건 밖 단지는 fit이 null이다.",
   schema: z.object({ complex_ids: z.array(z.number().int().positive()).min(1).max(4) }),
   async run(args, ctx: ToolContext): Promise<ToolResult> {
     const ids = [...new Set(args.complex_ids)];
@@ -41,12 +42,19 @@ export const compareComplexesTool = defineTool({
       const o = outside.get(id);
       return o ? [{ row: o, fit: null, max_budget: maxBudgetFor(l.budgets, o), in_conditions: false }] : [];
     });
-    const notices = [...(l.notices ?? []), ...(inputs.length < ids.length ? ["complex_not_found"] : []), "land_share_is_average", "no_redevelopment_data"];
-    const base = { as_of: l.as_of, ...(l.stale && { stale: l.stale }), notices };
-    if (inputs.length < 2) return { data: { error: "need_two_or_more" }, ...base };
+    const notices = [...(l.notices ?? []), ...(inputs.length < ids.length ? ["complex_not_found"] : []), "land_share_is_average"];
+    if (inputs.length < 2) return { data: { error: "need_two_or_more" }, as_of: l.as_of, ...(l.stale && { stale: l.stale }), notices };
+    const redev = await loadRedevelopment(ctx.supabase, inputs.map((i) => ({ id: i.row.complex_id, region_code: i.row.region_code })));
+    const result = compareComplexes(inputs, Number(ctx.today.slice(0, 4)));
+    const items = result.items.map((i) => {
+      const redevelopment = redev.byId[i.complex_id];
+      return { ...i, redevelopment, risks: redevelopment.status === "in_zone" ? [...i.risks, "redevelopment_in_zone" as const] : i.risks };
+    });
     return {
-      data: { ...compareComplexes(inputs, Number(ctx.today.slice(0, 4))), rows: inputs.map((i) => i.row), criteria: { months: MONTHS, area_min, area_max } },
-      ...base,
+      data: { ...result, items, rows: inputs.map((i) => i.row), criteria: { months: MONTHS, area_min, area_max } },
+      as_of: { ...l.as_of, ...redev.as_of },
+      ...(l.stale && { stale: l.stale }),
+      notices: [...notices, ...(items.some((i) => i.redevelopment.status === "not_covered") ? ["redevelopment_not_covered"] : [])],
     };
   },
 });

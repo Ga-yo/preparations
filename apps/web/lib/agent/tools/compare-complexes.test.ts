@@ -15,6 +15,7 @@ test("compares two favorites in conditions", async () => {
   expect(items(d).every((i) => typeof i.fit?.score === "number")).toBe(true);
   expect(r.as_of["complexes:building_ledger"]).toBeDefined();
   expect(r.notices).toContain("land_share_is_average");
+  expect(r.notices).not.toContain("no_redevelopment_data");
 });
 
 test("fills complex outside conditions", async () => {
@@ -52,4 +53,16 @@ test("rejects five ids", async () => {
 test("loader error passes through", async () => {
   const { ctx } = mk({ sets: [] });
   expect((await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx)).data).toEqual({ error: "region_required" });
+});
+
+test("compare adds redevelopment risk", async () => {
+  const { ctx } = mk({
+    rows: [complex(1), complex(2)],
+    redevelopment: [{ complex_id: 1, region_code: "1168010300", name: "구역", project_type: "reconstruction", stage: "조합설립", stage_date: null }],
+  });
+  const d = (await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx)).data as { items: (Item & { redevelopment: { status: string } })[] };
+  expect(d.items[0].risks).toContain("redevelopment_in_zone");
+  expect(d.items[0].redevelopment.status).toBe("in_zone");
+  expect(d.items[1].risks).not.toContain("redevelopment_in_zone");
+  expect(d.items[1].redevelopment).toEqual({ status: "near", dong_zone_count: 1 });
 });

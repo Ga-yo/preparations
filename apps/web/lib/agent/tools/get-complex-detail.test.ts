@@ -53,7 +53,9 @@ test("returns detail with neighbors and notices", async () => {
   expect(d.neighbors).toMatchObject({ basis: "same_dong", count: 2 });
   expect(d.criteria).toEqual({ area_min: 80, area_max: 90, months: 24 });
   expect(calls.complex_trades).toMatchObject({ p_complex_id: 1, area_min: 80, area_max: 90 });
-  expect(r.notices).toEqual(expect.arrayContaining(["no_location_data", "no_redevelopment_data", "land_share_is_average"]));
+  expect(r.notices).toEqual(expect.arrayContaining(["no_location_data", "land_share_is_average"]));
+  expect(r.notices).not.toContain("no_redevelopment_data");
+  expect((r.data as { redevelopment: unknown }).redevelopment).toEqual({ status: "none", dong_zone_count: 0 });
   expect(r.notices).not.toContain("no_recent_trades");
   expect(r.as_of).toMatchObject({ "complexes:building_ledger": expect.any(String), "transactions:apartment": expect.any(String) });
 });
@@ -142,4 +144,20 @@ test("K-apt hang becomes mgmt_fee error after the deadline", async () => {
   } finally {
     vi.useRealTimers();
   }
+});
+
+const project = { complex_id: 1, region_code: "1168010300", name: "개포구역", project_type: "reconstruction", stage: "관리처분인가", stage_date: "2025-09-29" };
+
+test("detail replaces no_redevelopment_data", async () => {
+  const { ctx } = setup({ redevelopment: [project] });
+  const r = await getComplexDetail.run({ complex_id: 1 }, ctx);
+  expect((r.data as { redevelopment: unknown }).redevelopment).toMatchObject({ status: "in_zone", project: { stage: "관리처분인가" } });
+  expect(r.notices).not.toContain("no_redevelopment_data");
+});
+
+test("detail marks not_covered outside seoul", async () => {
+  const { ctx } = setup({}, [row(5, { region_code: "4113510300" })]);
+  const r = await getComplexDetail.run({ complex_id: 5 }, ctx);
+  expect((r.data as { redevelopment: unknown }).redevelopment).toEqual({ status: "not_covered" });
+  expect(r.notices).toContain("redevelopment_not_covered");
 });

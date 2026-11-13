@@ -1,11 +1,14 @@
 import Link from "next/link";
+import type { RedevelopmentInfo } from "@/lib/agent/redevelopment";
 import type { CompareItem, CompareResult, Metric } from "@/lib/calc/compare";
 import type { ComplexRow } from "@/lib/calc/conditions";
 import { CONDITION_LABELS } from "../../../_components/ConditionCheckCard";
 import { formatWon } from "../../../_components/format";
+import { redevelopmentText } from "../../../_components/redevelopment";
 import { TipPanel, type Tip } from "../../../_components/TipPanel";
 
-export type CompareData = CompareResult & { rows: ComplexRow[]; criteria: { months: number; area_min: number | null; area_max: number | null } };
+type Item = CompareItem & { redevelopment?: RedevelopmentInfo };
+export type CompareData = Omit<CompareResult, "items"> & { items: Item[]; rows: ComplexRow[]; criteria: { months: number; area_min: number | null; area_max: number | null } };
 
 export const RISK_LABELS: Record<string, string> = {
   over_budget: "예산 초과", budget_unknown: "예산 판단 불가(1단계 미저장)", few_trades: "거래 적음(1~2건)",
@@ -15,7 +18,7 @@ export const RISK_LABELS: Record<string, string> = {
 const label = (k: string) => CONDITION_LABELS[k] ?? k;
 const num = (v: number | null, unit = "") => (v === null ? "-" : `${v.toLocaleString("ko-KR")}${unit}`);
 
-type Line = { key: string; title: string; metric?: Metric; cell: (r: ComplexRow, i: CompareItem) => React.ReactNode };
+type Line = { key: string; title: string; metric?: Metric; cell: (r: ComplexRow, i: Item) => React.ReactNode };
 
 export function CompareTable({ planId, data, tips }: { planId: string; data: CompareData; tips: Tip[] }) {
   const byId = new Map(data.rows.map((r) => [r.complex_id, r]));
@@ -33,7 +36,7 @@ export function CompareTable({ planId, data, tips }: { planId: string; data: Com
     { key: "land", title: "대지지분(평균 근사)", metric: "land_share_m2", cell: (r) => num(r.land_share_m2, "㎡") },
     { key: "station", title: "가까운 역(직선)", metric: "nearest_station_m", cell: (r) => (r.nearest_station_m === null ? "-" : `${r.nearest_station_name ?? ""} ${num(r.nearest_station_m, "m")}`) },
     { key: "school", title: "가까운 초등학교(직선)", metric: "nearest_elementary_m", cell: (r) => num(r.nearest_elementary_m, "m") },
-    { key: "redev", title: "정비사업", cell: () => "데이터 준비 중" },
+    { key: "redev", title: "정비사업", cell: (_, i) => redevelopmentText(i.redevelopment) },
     { key: "risks", title: "위험 요소", cell: (_, i) => (i.risks.length ? i.risks.map((k) => RISK_LABELS[k] ?? k).join(", ") : "없음") },
   ];
   return (

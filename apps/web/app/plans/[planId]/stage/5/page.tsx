@@ -19,7 +19,7 @@ const COMPARE_NOTICES: Record<string, string> = {
   ...NOTICES,
   complex_not_found: "일부 단지 정보를 찾지 못해 비교에서 뺐습니다.",
   land_share_is_average: "대지지분은 대지면적을 세대수로 나눈 평균 근사치입니다.",
-  no_redevelopment_data: "정비사업 진행 정보는 아직 제공하지 않습니다. 해당 지자체에서 확인하세요.",
+  redevelopment_not_covered: "정비사업 정보는 서울시 자료만 제공합니다. 경기·인천 단지는 해당 지자체에서 확인하세요.",
 };
 
 const logError = (e: unknown) => console.error("stage5", e instanceof Error ? `${e.name}: ${e.message}` : e);
