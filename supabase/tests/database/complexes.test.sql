@@ -3,6 +3,7 @@ select plan(15);
 
 delete from public.candidates; -- 앱을 써 본 로컬 DB에서도 FK에 막히지 않게(rollback되므로 남지 않음)
 delete from public.transactions;
+delete from public.redevelopment_projects; -- 정비사업 적재 후에도 FK에 막히지 않게(rollback)
 delete from public.complexes;
 insert into public.regions (code, sido, sigungu, eupmyeondong, full_name) values
   ('1100000000', '서울특별시', null, null, '서울특별시'),
