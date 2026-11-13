@@ -52,7 +52,7 @@ test("runTool: 잘못된 인자는 error 결과", async () => {
 });
 test("toolsForStage는 전체 툴, OpenAI 형식 변환", () => {
   const o = toOpenAiTools(toolsForStage(1));
-  expect(o.map((t) => (t as { function: { name: string } }).function.name)).toEqual(["resolve_region", "get_budget", "get_region_prices", "check_conditions", "search_complexes", "get_complex_detail", "compare_complexes", "get_tip"]);
+  expect(o.map((t) => (t as { function: { name: string } }).function.name)).toEqual(["resolve_region", "get_budget", "get_region_prices", "check_conditions", "search_complexes", "get_complex_detail", "compare_complexes", "compare_condition_changes", "get_tip"]);
 });
 test("get_budget: as_of 포함, 소득 원값 미포함", async () => {
   const r = await getBudget.run({}, mk("2026-11-01"));
