@@ -47,9 +47,11 @@ def test_station_name_normalised():
 
 def test_line_labels_canonical():
     lines = ["서울 도시철도 9호선", "수도권  도시철도 9호선", "도시철도 7호선", "7호선", "수도권 광역철도 8호선", "인천지하철 1호선",
-             "인천지하철 2호선", "분당선"]
+             "인천지하철 2호선", "분당선", "경부선", "경원선", "경인선", "일산선", "안산과천선", "진접선",
+             "수도권 경량도시철도 신림선"]
     rows = pois.station_rows([st(station_id=str(i), line=ln, name=str(i)) for i, ln in enumerate(lines)])
-    assert [r["attrs"]["line"] for r in rows] == ["9호선", "9호선", "7호선", "7호선", "8호선", "인천1호선", "인천2호선", "분당선"]
+    assert [r["attrs"]["line"] for r in rows] == ["9호선", "9호선", "7호선", "7호선", "8호선", "인천1호선", "인천2호선", "분당선", "1호선", "1호선", "1호선", "3호선", "4호선", "4호선",
+                                                "신림선"]
 
 
 def test_normalised_duplicates_dropped():

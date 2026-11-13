@@ -21,7 +21,9 @@ MAX_FAIL_RATIO = 0.01
 
 
 def to_query(row: dict) -> list[tuple[str, str]]:
-    out = [("parcel", row["jibun_address"].removesuffix("번지"))]
+    out = []
+    if row.get("jibun_address"):  # 두 주소 모두 null일 수 있다
+        out.append(("parcel", row["jibun_address"].removesuffix("번지")))
     if row.get("road_address"):
         out.append(("road", row["road_address"]))
     return out

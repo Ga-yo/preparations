@@ -160,9 +160,9 @@ export async function getMgmtFee(
   try {
     const kaptCode = complex.kapt_code ?? (await matchKapt(complex))?.kaptCode;
     if (!kaptCode) return { status: "not_found", reason: "no_kapt_match" };
-    let month = prevMonth(today.slice(0, 7));
-    let probe = await kaptMonthProbe(kaptCode, month.replace("-", ""));
-    if (!probe) {
+    let month = today.slice(0, 7);
+    let probe: Item | null = null;
+    for (let i = 0; i < 3 && !probe; i++) { // 최근 3개월 중 먼저 부과 내역이 있는 달
       month = prevMonth(month);
       probe = await kaptMonthProbe(kaptCode, month.replace("-", ""));
     }

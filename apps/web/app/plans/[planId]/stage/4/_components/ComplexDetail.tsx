@@ -20,7 +20,7 @@ type Data = {
   criteria: { area_min: number | null; area_max: number | null; months: number };
 };
 const CATEGORY: Record<string, string> = { subway_station: "지하철역", elementary_school: "초등학교", middle_school: "중학교", high_school: "고등학교" };
-const FEE_REASON = { no_kapt_match: "K-apt에서 이 단지를 찾지 못했습니다.", no_recent_fee: "최근 2개월 부과 내역이 없습니다." };
+const FEE_REASON = { no_kapt_match: "K-apt에서 이 단지를 찾지 못했습니다.", no_recent_fee: "최근 3개월 부과 내역이 없습니다." };
 const kstTime = (iso: string) => new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "short", timeStyle: "short" });
 const dash = (v: number | null, unit = "") => (v === null ? "-" : `${v.toLocaleString("ko-KR")}${unit}`);
 
@@ -29,7 +29,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
     return <section className="rounded border p-4 text-sm">선택한 단지를 찾을 수 없습니다.</section>;
   }
   const { complex: c, fit, mgmt_fee: fee, nearby, trades, monthly, neighbors: n, criteria } = result.data as Data;
-  const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 좌표·인근 시설 유무로 정한다
+  const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 단지 좌표 유무로 정한다
   const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
     : criteria.area_max === null ? `전용 ${criteria.area_min}㎡ 이상`

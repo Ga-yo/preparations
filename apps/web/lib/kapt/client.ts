@@ -17,7 +17,7 @@ export async function kaptGet(path: string, params: Record<string, string>): Pro
   const q = new URLSearchParams({ serviceKey: decodeURIComponent(key), _type: "json", ...params });
   let res: Response;
   try {
-    res = await fetch(`${BASE}${path}?${q}`, { signal: AbortSignal.timeout(8000) });
+    res = await fetch(`${BASE}${path}?${q}`, { signal: AbortSignal.timeout(5000) });
   } catch (e) {
     throw new KaptError(null, e instanceof Error ? e.name : "FetchError");
   }

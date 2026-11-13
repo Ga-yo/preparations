@@ -84,7 +84,16 @@ test("uses previous-previous month when last month empty", async () => {
   expect(calledOps(f).filter((o) => o?.endsWith("InfoV3") && o.startsWith("getHsmpLabor"))).toHaveLength(2);
 });
 
-test("no_recent_fee when both months empty", async () => {
+test("falls back to month-3 and probes each month once", async () => {
+  const r3 = router();
+  const f = vi.fn(async (i: string | URL) => (String(i).includes("getHsmpLaborCostInfoV3") && String(i).includes("searchDate=202609") ? json(empty) : r3(i)));
+  vi.stubGlobal("fetch", f);
+  expect(await getMgmtFee(forest, TODAY)).toMatchObject({ status: "ok", month: "2026-08" });
+  const probes = f.mock.calls.filter(([i]) => String(i).includes("getHsmpLaborCostInfoV3")).map(([i]) => new URL(String(i)).searchParams.get("searchDate"));
+  expect(probes.slice(0, 3)).toEqual(["202610", "202609", "202608"]);
+});
+
+test("no_recent_fee when all three months empty", async () => {
   vi.stubGlobal("fetch", vi.fn(async (i: string | URL) => (String(i).includes("ManageCost") ? json(empty) : router()(i))));
   expect(await getMgmtFee(forest, TODAY)).toEqual({ status: "not_found", reason: "no_recent_fee" });
 });

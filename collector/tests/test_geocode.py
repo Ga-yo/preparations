@@ -136,6 +136,15 @@ def test_marks_not_found_as_missed(env):
     assert c.missed == [1, 2, 3] and c.sets == []
 
 
+def test_null_jibun_address_marked_missed(env):
+    calls = []
+    c = env(2, lambda *a, **k: calls.append(1) or Resp(OK))
+    for r in c.rows:
+        r["jibun_address"] = None
+    geocode.run()
+    assert calls == [] and c.missed == [1, 2] and c.sets == []
+
+
 def test_request_errors_are_not_marked(env):
     def boom(url, **k):
         raise requests.ConnectionError("x")
