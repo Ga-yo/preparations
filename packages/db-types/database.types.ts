@@ -227,14 +227,14 @@ isOneToOne: false
                   ]
                 },"redevelopment_projects": {
                   Row: {
-                    "area_m2": number | null,"complex_id": number | null,"data_as_of": string,"id": number,"location": unknown,"name": string,"project_type": string,"region_code": string | null,"source": string,"source_url": string | null,"stage": string,"stage_date": string | null
+                    "address": string | null,"area_m2": number | null,"complex_id": number | null,"data_as_of": string,"id": number,"location": unknown,"match_method": string,"name": string,"project_type": string,"region_code": string | null,"source": string,"source_key": string,"source_url": string | null,"stage": string,"stage_date": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "area_m2"?: number | null,"complex_id"?: number | null,"data_as_of": string,"id"?: never,"location"?: unknown,"name": string,"project_type": string,"region_code"?: string | null,"source": string,"source_url"?: string | null,"stage": string,"stage_date"?: string | null
+                    "address"?: string | null,"area_m2"?: number | null,"complex_id"?: number | null,"data_as_of": string,"id"?: never,"location"?: unknown,"match_method"?: string,"name": string,"project_type": string,"region_code"?: string | null,"source": string,"source_key": string,"source_url"?: string | null,"stage": string,"stage_date"?: string | null
                   }
                   Update: {
-                    "area_m2"?: number | null,"complex_id"?: number | null,"data_as_of"?: string,"id"?: never,"location"?: unknown,"name"?: string,"project_type"?: string,"region_code"?: string | null,"source"?: string,"source_url"?: string | null,"stage"?: string,"stage_date"?: string | null
+                    "address"?: string | null,"area_m2"?: number | null,"complex_id"?: number | null,"data_as_of"?: string,"id"?: never,"location"?: unknown,"match_method"?: string,"name"?: string,"project_type"?: string,"region_code"?: string | null,"source"?: string,"source_key"?: string,"source_url"?: string | null,"stage"?: string,"stage_date"?: string | null
                   }
                   Relationships: [
                     {

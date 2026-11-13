@@ -1,10 +1,11 @@
 # collector/data
 
-`pois` job(`jobs/pois.py`)가 읽는 수동 갱신 CSV. 원본 파일은 커밋하지 않는다.
+`pois` job(`jobs/pois.py`)과 `redevelopment` job(`jobs/redevelopment.py`)이 읽는 수동 갱신 CSV. 원본 파일은 커밋하지 않는다.
 
 | 파일 | 데이터 | 기관 | 행 수 | 데이터 기준일 | 받은 날 |
 |------|--------|------|-------|---------------|---------|
 | subway_stations.csv | 도시철도역사정보 표준데이터 전체 기관판 `전체_도시철도역사정보_20260630.xlsx` (철도산업정보센터 data.kric.go.kr 파일데이터 id=32, data.go.kr 15093755 "국가철도공단_도시광역철도_역사정보"가 같은 파일을 가리킴) | 국가철도공단 | 776 | 행마다 다름 2022-04-30 ~ 2026-06-18(최댓값 2026-06-18, 유효 기준일만 계산) | 2026-11-12 |
+| seoul_redevelopment.csv | 서울시 정비사업 추진현황 `★(26년 6월기준) 서울시 정비사업 추진현황.xlsx` (서울 열린데이터광장 OA-22856, 파일 수정일 2026-09-10) | 서울특별시 주택실 | 496 | 2026-06-30 | 2026-11-13 |
 | schools.csv | 전국초중등학교위치표준데이터 (data.go.kr 15021148) | 한국교육시설안전원 | 4,439 | 2026-10-01 | 2026-11-12 |
 
 - 원본: 역은 철도산업정보센터(data.kric.go.kr) 파일데이터 `전체_도시철도역사정보_20260630.xlsx`(수정일 2026-07-06, 1,099행)를 받아 추렸다(`/rips/dataset/download.file?type=filedata&id=32&operation=1`, 로그인 불필요, data.go.kr 15093755 "바로가기"가 가리키는 파일). 학교는 OpenAPI 없이 표준데이터 페이지의 파일 다운로드(`/download/columList.json`, `/download/standard.json`, 로그인 불필요)로 받은 전체 레코드(12,004행)다. 15013205의 standard.json 합본(898행, 2020~2021 기준)은 더 오래되어 쓰지 않는다.
@@ -15,3 +16,12 @@
   - 학교: 소재지 지번주소(없으면 도로명주소)가 서울·경기·인천이고 학교급구분이 초등학교·중학교·고등학교인 행. `level`은 원본 값 그대로, 운영상태 값은 전부 `운영`(job은 `운영`이 아니면 버린다).
 - 알려진 한계: GTX-A 없음. 서울·경기·인천 주소가 아닌 구간(예: 경춘선 강원 구간)은 제외했다.
 - 갱신: 파일을 새로 받아 위 규칙으로 CSV를 다시 만들고 `uv run python main.py pois`를 돌린다(역 연 1회, 학교 필요할 때). CSV에서 빠진 행은 DB에서 지워진다.
+
+## seoul_redevelopment.csv (정비사업)
+
+- 원본: 데이터셋 페이지(https://data.seoul.go.kr/dataList/OA-22856/F/1/datasetView.do)의 파일 목록 `downloadFile('2')`. `https://datafile.seoul.go.kr/bigfile/iot/inf/nio_download.do?&useCache=false`에 `infId=OA-22856&seqNo=&seq=2&infSeq=2`를 POST하고 Referer를 데이터셋 페이지로 둔다(로그인 불필요, Referer가 없으면 "잘못된 접근" HTML이 온다). 시트 1개, 머리글 4행, CODE가 정수인 데이터 행 496개.
+- 이용허락범위: 페이지 표기 "이용허락범위 제한 없음", 저작권자 서울특별시, 제3저작권자 없음. 갱신주기 분기.
+- 추린 규칙: 원본 열(0부터) 0 CODE→`code`, 2 자치구→`gu`, 3 구역명→`zone_name`, 4 위치1(지번)→`jibun_address`, 5 위치2(도로명)→`road_address`, 8 사업유형→`project_type`, 9 사업추진단계→`stage`, 단계 일자 11·12 구역지정(최초·변경최종)→`d_zone`·`d_zone_last`, 13 추진위원회→`d_committee`, 14 조합설립인가→`d_union`, 15 건축심의→`d_review`, 16·17 사업시행인가→`d_permit`·`d_permit_last`, 18·19 관리처분계획인가→`d_mgmt`·`d_mgmt_last`, 22 착공→`d_start`. 날짜는 `YYYY-MM-DD`, 0과 빈 칸은 빈 문자열. 값 정규화(단계 이름, 사업 유형, 지번·법정동 변환)는 CSV가 아니라 job에서 한다.
+- job 규칙: 단계 7개(구역지정·추진위·조합설립·건축심의·사업시행·관리처분·착공)를 DB 값으로 바꾸고, 그 단계의 변경(최종) 일자(없으면 최초)를 `stage_date`로 쓴다. 위치1에서 그 행의 자치구 접두사, `번지`·`일대`·`일원`·`외N` 꼬리, 쉼표 뒤 지번을 떼고, 행정동 표기(`중곡4동`, `망우본동`, `목2동`)는 법정동 이름으로 바꿔 `regions`에서 법정동 코드를 찾는다. (법정동 코드, 지번)이 `complexes` 한 곳과 정확히 같으면 `complex_id`를 넣는다(`match_method = 'jibun'`).
+- 알려진 한계: 법정동으로 바꾸지 못하는 7곳(관악구 행정동 `보라매동`·`조원동`·`미성동`, `서소문`·`가리봉`처럼 동이 빠진 표기, `청구동`, `한강로160일대`)은 `region_code`가 비어 단지·같은 동 집계에 쓰이지 않는다. 철거되어 건축물대장 단지가 없는 착공 단계 구역은 매칭되지 않는다. 경기·인천 자료는 없다.
+- 갱신: 새 분기 파일을 받아 위 규칙으로 CSV를 다시 만들고 `jobs/redevelopment.py`의 `AS_OF`를 파일 기준일로 고친 뒤 `uv run python main.py redevelopment`(또는 Actions `run_redevelopment`)를 돌린다. CSV에서 빠진 구역은 DB에서 지워진다.
