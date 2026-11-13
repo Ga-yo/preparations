@@ -1,0 +1,275 @@
+{
+ "getHsmpLaborCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "pay": 67298340,
+     "sundryCost": 9110253,
+     "bonus": 0,
+     "pension": 8166233,
+     "accidentPremium": 600080,
+     "employPremium": 866730,
+     "nationalPension": 3059980,
+     "healthPremium": 2818550,
+     "welfareBenefit": 4167160
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpCleaningCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "cleanCost": 100351000
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpClothingCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "clothesCost": 462250
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpConsignManageFeeInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "manageCost": 8300484
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpDisasterPreventionCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "lrefCost4": 476500
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpDisinfectionCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "disinfCost": 852000
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpEduTraingCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "eduCost": 148000
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpElevatorMntncCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "elevCost": 15257440
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpEtcCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "careItemCost": 162400,
+     "accountingCost": 220000,
+     "hiddenCost": 717200
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpFacilityMntncCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "lrefCost2": 11391350
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpGuardCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "guardCost": 102770413
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpHomeNetworkMntncCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "hnetwCost": 269500
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpOfcrkCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "officeSupply": 637670,
+     "bookSupply": 2655400,
+     "transportCost": 0
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpRepairsCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "lrefCost1": 59052560
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpSafetyCheckUpCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "lrefCost3": 0
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpTaxdueInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "electCost": 0,
+     "telCost": 370830,
+     "postageCost": 26130,
+     "taxrestCost": 225071
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ },
+ "getHsmpVhcleMntncCostInfoV3": {
+  "response": {
+   "body": {
+    "item": {
+     "kaptCode": "A10024564",
+     "kaptName": "개포래미안포레스트",
+     "fuelCost": 0,
+     "refairCost": 0,
+     "carInsurance": 46960,
+     "carEtc": 704170
+    }
+   },
+   "header": {
+    "resultCode": "00",
+    "resultMsg": "NORMAL SERVICE."
+   }
+  }
+ }
+}

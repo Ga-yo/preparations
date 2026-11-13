@@ -11,6 +11,7 @@ type Data =
 export const CONDITION_LABELS: Record<string, string> = {
   price_max: "희망 최고가", area: "희망 면적", approval_year_min: "준공 연도", household_count_min: "세대수",
   parking_per_household_min: "세대당 주차", floor_area_ratio_max: "용적률 상한",
+  station_distance_max: "지하철역 거리", elementary_distance_max: "초등학교 거리",
 };
 export const ERRORS: Record<string, string> = {
   region_required: "2단계에서 희망 지역을 저장하면 조건을 점검해 드립니다.",
@@ -22,11 +23,14 @@ export const NOTICES: Record<string, string> = {
   unit_level_condition: "방·욕실 수, 층, 향은 세대마다 달라 단지 단위로 점검하지 않습니다.",
   no_complex_data: "희망 지역에 단지 데이터가 아직 없습니다.",
   no_location_data: "교통·학교·생활 인프라 데이터는 아직 없습니다.",
+  location_partial: "좌표가 없는 단지는 거리 조건을 판단하지 못했습니다.",
+  no_poi_data: "역·학교 위치나 희망 지역 단지 좌표가 아직 없어 거리 조건을 점검하지 못했습니다.",
   truncated: "단지가 많아 3,000개까지만 점검했습니다. 지역을 좁혀 보세요.",
 };
 export const DATASETS: Record<string, string> = {
   "complexes:building_ledger": "건축물대장 단지", "transactions:apartment": "아파트 실거래가",
   "loan_products:bank": "시중은행 상품", regulated_areas: "규제지역", loan_rules: "대출 규제", tax_rates: "세율", policy_loans: "정책대출",
+  "complexes:location": "단지 좌표", "pois:subway_station": "지하철역 위치", "pois:school": "학교 위치",
 };
 const names = (keys: string[]) => keys.map((k) => CONDITION_LABELS[k] ?? k).join(", ");
 

@@ -14,7 +14,8 @@ const LABELS: Record<string, string> = {
   area_min: "희망 전용면적", area_max: "희망 전용면적(최소 ≤ 최대)", rooms_min: "방 개수(1~10)", baths_min: "욕실 개수(1~5)",
   floor_pref: "희망 층", direction_pref: "희망 향(20자 이내)", approval_year_min: "준공 연도(1950~2030)",
   household_count_min: "세대수(1~10,000)", parking_per_household_min: "세대당 주차(0~5대)",
-  mgmt_fee_per_m2_max: "관리비", floor_area_ratio_max: "용적률 상한(0~2,000%)",
+  mgmt_fee_per_m2_max: "관리비",
+  station_distance_max_m: "지하철역까지 직선거리(100~5,000m, 50m 단위)", elementary_distance_max_m: "초등학교까지 직선거리(100~5,000m, 50m 단위)", floor_area_ratio_max: "용적률 상한(0~2,000%)",
   ...Object.fromEntries(PRIORITY_KEYS.map((k) => [`priority.${k}`, `${CONDITION_LABELS[k]} 우선순위`])),
   plan: "계획(접근 권한 없음 또는 존재하지 않음)",
 };
@@ -125,6 +126,10 @@ export default async function Stage3({
           <label className="flex items-center gap-2"><input name="redevelopment_interest" type="checkbox" defaultChecked={!!c?.redevelopment_interest} /> 재건축·재개발 가능성에 관심이 있습니다</label>
           <TipPanel tips={t} fieldKey="redevelopment_interest" />
         </div>
+        <h2 className="font-semibold">④ 교통·교육 조건(직선거리)</h2>
+        {field("station_distance_max_m", "지하철역까지 직선거리 (m, 이내)", numberInput("station_distance_max_m", c?.station_distance_max_m, 100, 5000, 50), "station_distance_max")}
+        {field("elementary_distance_max_m", "초등학교까지 직선거리 (m, 이내)", numberInput("elementary_distance_max_m", c?.elementary_distance_max_m, 100, 5000, 50), "elementary_distance_max")}
+
         <button type="submit" className="rounded bg-foreground px-4 py-2 text-background">저장하고 조건 점검하기</button>
       </StageForm>
       <div className="space-y-6">

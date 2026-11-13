@@ -3,6 +3,7 @@ import type { ToolContext } from "../tool";
 import { getRegionPrices } from "./get-region-prices";
 
 const DATASET = "complexes:building_ledger";
+const DATASETS = [DATASET, "complexes:location", "pois:subway_station", "pois:school"];
 export const MONTHS = 12;
 const MAX_ROWS = 3000; // RPC는 잘림을 알리려고 한 행 더 준다
 
@@ -25,12 +26,14 @@ export async function loadConditionContext(ctx: ToolContext): Promise<ConditionC
     area_min: c.area_min, area_max: c.area_max, approval_year_min: c.approval_year_min,
     household_count_min: c.household_count_min, parking_per_household_min: c.parking_per_household_min,
     floor_area_ratio_max: c.floor_area_ratio_max, mgmt_fee_per_m2_max: c.mgmt_fee_per_m2_max,
+    station_distance_max_m: c.station_distance_max_m, elementary_distance_max_m: c.elementary_distance_max_m,
     rooms_min: c.rooms_min, baths_min: c.baths_min, floor_pref: c.floor_pref, direction_pref: c.direction_pref,
     priorities: (c.priorities ?? {}) as Conditions["priorities"],
   };
   const stage3Empty = !conditions.housing_types.length && [conditions.price_min, conditions.price_max,
     conditions.area_min, conditions.area_max, conditions.approval_year_min, conditions.household_count_min,
-    conditions.parking_per_household_min, conditions.floor_area_ratio_max].every((v) => v === null);
+    conditions.parking_per_household_min, conditions.floor_area_ratio_max,
+    conditions.station_distance_max_m, conditions.elementary_distance_max_m].every((v) => v === null);
   if (stage3Empty) return { error: "conditions_required" };
 
   const [prices, rpc, fresh] = await Promise.all([
@@ -40,7 +43,7 @@ export async function loadConditionContext(ctx: ToolContext): Promise<ConditionC
       ...(c.area_min !== null && { area_min: c.area_min }),
       ...(c.area_max !== null && { area_max: c.area_max }),
     }),
-    supabase.from("data_freshness").select("as_of").eq("dataset", DATASET).maybeSingle(),
+    supabase.from("data_freshness").select("dataset, as_of").in("dataset", DATASETS),
   ]);
   if (rpc.error) throw new Error(rpc.error.message);
   if (fresh.error) throw new Error(fresh.error.message);
@@ -53,7 +56,7 @@ export async function loadConditionContext(ctx: ToolContext): Promise<ConditionC
   return {
     conditions, conditionSetId: c.id, regionCodes: c.region_codes, budgets,
     rows: all.slice(0, MAX_ROWS), truncated: all.length > MAX_ROWS,
-    as_of: { ...prices.as_of, ...(fresh.data?.as_of && { [DATASET]: fresh.data.as_of }) },
+    as_of: { ...prices.as_of, ...Object.fromEntries((fresh.data ?? []).map((f) => [f.dataset, f.as_of])) },
     ...(prices.stale?.length && { stale: prices.stale }),
     ...(prices.notices?.length && { notices: prices.notices }),
   };

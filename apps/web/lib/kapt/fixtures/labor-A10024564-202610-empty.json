@@ -1,0 +1,23 @@
+{
+ "response": {
+  "body": {
+   "item": {
+    "kaptCode": null,
+    "kaptName": null,
+    "pay": null,
+    "sundryCost": null,
+    "bonus": null,
+    "pension": null,
+    "accidentPremium": null,
+    "employPremium": null,
+    "nationalPension": null,
+    "healthPremium": null,
+    "welfareBenefit": null
+   }
+  },
+  "header": {
+   "resultCode": "00",
+   "resultMsg": "NORMAL SERVICE."
+  }
+ }
+}

@@ -28,9 +28,11 @@ test("passes through no_complex_data notice", async () => {
   expect((await searchComplexes.run({ limit: 20 }, ctx)).notices).toContain("no_complex_data");
 });
 
-test("includes no_location_data notice", async () => {
-  const { ctx } = mk();
-  expect((await searchComplexes.run({ limit: 20 }, ctx)).notices).toContain("no_location_data");
+test("no_location_data only when no row has distance", async () => {
+  const none = mk();
+  expect((await searchComplexes.run({ limit: 20 }, none.ctx)).notices).toContain("no_location_data");
+  const some = mk({ rows: [complex(1), { ...complex(2), nearest_station_m: 400 }] });
+  expect((await searchComplexes.run({ limit: 20 }, some.ctx)).notices).not.toContain("no_location_data");
 });
 
 test("rejects limit 0", async () => {

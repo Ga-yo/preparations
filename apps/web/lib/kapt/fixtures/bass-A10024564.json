@@ -1,0 +1,43 @@
+{
+ "response": {
+  "body": {
+   "item": {
+    "kaptCode": "A10024564",
+    "kaptName": "개포래미안포레스트",
+    "kaptAddr": "서울특별시 강남구 개포동 1282 개포래미안포레스트",
+    "codeSaleNm": "혼합",
+    "codeHeatNm": "지역난방",
+    "kaptTarea": 422390.0,
+    "kaptDongCnt": "31",
+    "kaptdaCnt": 2296.0,
+    "kaptBcompany": "삼성물산(주)",
+    "kaptAcompany": "개포시영아파트 주택재건축 정비사업조합",
+    "kaptTel": "0220580890",
+    "kaptUrl": "gpforest.aptner.com",
+    "codeAptNm": "아파트",
+    "doroJuso": "서울특별시 강남구 개포로 264",
+    "codeMgrNm": "위탁관리",
+    "codeHallNm": "혼합식",
+    "kaptUsedate": "20200928",
+    "kaptFax": "0220580891",
+    "hoCnt": 2296,
+    "kaptMarea": 244894.45,
+    "kaptMparea60": 900.0,
+    "kaptMparea85": 905.0,
+    "kaptMparea135": 458.0,
+    "kaptMparea136": 33.0,
+    "privArea": "178215.29",
+    "bjdCode": "1168010300",
+    "kaptTopFloor": 35,
+    "ktownFlrNo": 35,
+    "kaptBaseFloor": 3,
+    "kaptdEcntp": 80,
+    "zipcode": "06310"
+   }
+  },
+  "header": {
+   "resultCode": "00",
+   "resultMsg": "NORMAL SERVICE."
+  }
+ }
+}

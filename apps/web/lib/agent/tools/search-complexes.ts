@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { findConflicts } from "@/lib/calc/conditions";
+import { findConflicts, noPoiData } from "@/lib/calc/conditions";
 import { rankComplexes } from "@/lib/calc/fit";
 import { defineTool, type ToolContext, type ToolResult } from "../tool";
 import { loadConditionContext, MONTHS } from "./condition-context";
 
-const PASSTHROUGH = ["no_data_for_type", "no_complex_data", "truncated", "land_share_is_average"];
+const PASSTHROUGH = ["no_data_for_type", "no_complex_data", "truncated", "land_share_is_average", "location_partial", "no_poi_data"];
 
 export const searchComplexes = defineTool({
   name: "search_complexes",
@@ -23,7 +23,7 @@ export const searchComplexes = defineTool({
       data: { candidates, total: counts.must, ...(blocking && { blocking }), criteria: { months: MONTHS } },
       as_of: l.as_of,
       ...(l.stale && { stale: l.stale }),
-      notices: [...(l.notices ?? []), ...notices.filter((n) => PASSTHROUGH.includes(n)), "no_location_data"],
+      notices: [...(l.notices ?? []), ...notices.filter((n) => PASSTHROUGH.includes(n)), ...(noPoiData(l.rows) ? ["no_location_data"] : [])],
     };
   },
 });

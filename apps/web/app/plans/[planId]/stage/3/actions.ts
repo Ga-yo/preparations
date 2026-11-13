@@ -13,12 +13,15 @@ const num = (min: number, max: number, int = true) =>
     .pipe((int ? z.number().int() : z.number()).min(min).max(max).nullable());
 // 만원 입력 → 원 (1단계와 같은 규칙)
 const won = num(0, 1e9).transform((n) => (n === null ? null : n * 10_000));
+// 100~5000m, 50m 단위 직선거리
+const dist = num(100, 5000).refine((n) => n === null || n % 50 === 0, { message: "50m 단위로 입력하세요" });
 const check = z.string().optional().transform((s) => s === "on");
 const text = (max: number) =>
   z.string().max(max).optional().transform((s) => (s?.trim() ? s.trim() : null));
 
 export const PRIORITY_KEYS: ConditionKey[] = ["price_max", "area", "approval_year_min", "household_count_min",
-  "parking_per_household_min", "floor_area_ratio_max"];
+  "parking_per_household_min", "floor_area_ratio_max",
+  "station_distance_max", "elementary_distance_max"];
 const priority = z.enum(["must", "prefer", "ignore"]).optional();
 
 export const stage3Schema = z
@@ -37,6 +40,8 @@ export const stage3Schema = z
     parking_per_household_min: num(0, 5, false),
     mgmt_fee_per_m2_max: num(0, 100000),
     floor_area_ratio_max: num(0, 2000, false),
+    station_distance_max_m: dist,
+    elementary_distance_max_m: dist,
     redevelopment_interest: check,
     ...Object.fromEntries(PRIORITY_KEYS.map((k) => [`priority.${k}`, priority])),
   })
@@ -52,7 +57,9 @@ export const stage3Schema = z
     for (const [k, val] of Object.entries(v)) {
       if (!k.startsWith("priority.")) { out[k] = val; continue; }
       const key = k.slice("priority.".length) as ConditionKey;
-      const isSet = key === "area" ? v.area_min !== null || v.area_max !== null : v[key] !== null;
+      // 거리 조건은 입력 이름에 _m이 붙는다
+      const field = key.endsWith("_distance_max") ? (`${key}_m` as "station_distance_max_m") : (key as keyof typeof v);
+      const isSet = key === "area" ? v.area_min !== null || v.area_max !== null : v[field] !== null;
       if (val && isSet) priorities[key] = val as string; // 값이 없는 조건의 우선순위는 의미가 없다
     }
     return { ...(out as Omit<typeof v, `priority.${string}`>), priorities };

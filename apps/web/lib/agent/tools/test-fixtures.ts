@@ -25,13 +25,14 @@ export const saved = (o: Record<string, unknown> = {}) => ({
   plan_id: "p1", region_codes: ["1168000000"], area_min: 80, area_max: 90,
   housing_types: ["apartment"], price_min: null, price_max: 900_000_000, approval_year_min: null,
   household_count_min: 1000, parking_per_household_min: null, floor_area_ratio_max: null,
-  mgmt_fee_per_m2_max: null, rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null,
+  mgmt_fee_per_m2_max: null, station_distance_max_m: null, elementary_distance_max_m: null, rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null,
   priorities: { household_count_min: "must" }, ...o,
 });
 export const complex = (complex_id: number, household_count = 1500) => ({
   complex_id, name: `단지${complex_id}`, region_code: "1168010300", approval_year: 2000, household_count,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 40,
   median_price: 800_000_000, deal_count: 3,
+  nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null,
 });
 
 export function mk(o: { rows?: unknown[]; sets?: unknown[]; ledgerAsOf?: string | null } = {}) {

@@ -1,17 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { ComplexRow, Conditions, RegionBudget } from "./conditions";
-import { fitScore, neighborStats, rankComplexes } from "./fit";
+import { activeKeys, type ComplexRow, type Conditions, type RegionBudget } from "./conditions";
+import { fitScore as score, neighborStats, rankComplexes } from "./fit";
+const fitScore = (c: Conditions, x: ComplexRow, b: number | null) => score(c, x, b, activeKeys(c));
 
 const C: Conditions = {
   housing_types: [], price_min: null, price_max: null, area_min: null, area_max: null,
   approval_year_min: null, household_count_min: null, parking_per_household_min: null,
-  floor_area_ratio_max: null, mgmt_fee_per_m2_max: null, rooms_min: null, baths_min: null,
+  floor_area_ratio_max: null, mgmt_fee_per_m2_max: null, station_distance_max_m: null, elementary_distance_max_m: null, rooms_min: null, baths_min: null,
   floor_pref: null, direction_pref: null, priorities: {},
 };
 const X = (id: number, o: Partial<ComplexRow> = {}): ComplexRow => ({
   complex_id: id, name: `c${id}`, region_code: "1168010100", approval_year: 2000, household_count: 500,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 30,
-  median_price: 500_000_000, deal_count: 3, ...o,
+  median_price: 500_000_000, deal_count: 3,
+  nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null, ...o,
 });
 const B = (max: number | null): RegionBudget[] => [{ sigungu_code: "11680", max_budget: max, median_price: 0 }];
 
@@ -76,4 +78,26 @@ describe("neighborStats", () => {
     expect(neighborStats(2, rows)).toEqual({ count: 4, priced: 3, dong_median: 400_000_000, rank: 3 });
   });
   it("null target has no rank", () => expect(neighborStats(4, rows).rank).toBeNull());
+});
+
+describe("distance conditions", () => {
+  const c = { ...C, station_distance_max_m: 1000 };
+  it("distance missing when no location", () => {
+    expect(fitScore(c, X(1), null).missing).toEqual(["station_distance_max"]);
+    expect(fitScore(c, X(1, { nearest_station_m: 500 }), null).met).toEqual(["station_distance_max"]);
+  });
+  it("rankComplexes drops distance must when no row has poi data", () => {
+    const m = { ...c, priorities: { station_distance_max: "must" as const } };
+    const r = rankComplexes(m, [X(1), X(2)], [], 10);
+    expect(r).toHaveLength(2);
+    expect(r[0].fit.score).toBe(100);
+  });
+});
+
+it("per-key: only elementary missing drops elementary must, station must still filters", () => {
+  const m = { ...C, station_distance_max_m: 1000, elementary_distance_max_m: 500,
+    priorities: { station_distance_max: "must" as const, elementary_distance_max: "must" as const } };
+  const r = rankComplexes(m, [X(1, { nearest_station_m: 400 }), X(2, { nearest_station_m: 2000 })], [], 10);
+  expect(r.map((x) => x.complex_id)).toEqual([1]);
+  expect(r[0].fit.score).toBe(100);
 });
