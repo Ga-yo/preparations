@@ -11,3 +11,7 @@ test("redevelopment text per status", () => {
   expect(redevelopmentText({ status: "not_covered" })).toBe("서울 외 지역은 정비사업 데이터 미제공");
   expect(redevelopmentText(undefined)).toBe("정보 없음");
 });
+
+test("not_loaded text", () => {
+  expect(redevelopmentText({ status: "not_loaded" })).toBe("정비사업 데이터 준비 중");
+});

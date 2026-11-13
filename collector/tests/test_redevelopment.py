@@ -82,3 +82,13 @@ def test_skips_unknown_stage_or_type():
 
 def test_keys_to_delete():
     assert rd.keys_to_delete(["1", "2", "3"], [{"source_key": "2"}]) == ["1", "3"]
+
+
+def test_refuses_to_wipe():
+    import pytest
+    with pytest.raises(SystemExit):
+        rd.guard_rows(0, 0)  # 빈 CSV는 언제나 잘못된 파일
+    with pytest.raises(SystemExit):
+        rd.guard_rows(200, 496)  # 기존의 절반 미만이면 단계 값 변경 등을 의심하고 멈춘다
+    rd.guard_rows(300, 496)
+    rd.guard_rows(496, 0)  # 첫 적재

@@ -11,5 +11,6 @@ export function redevelopmentText(r: RedevelopmentInfo | undefined): string {
     case "near": return `이 단지는 매칭되지 않음 · 같은 동 정비구역 ${r.dong_zone_count}곳`;
     case "none": return "정비구역 아님(서울시 자료 기준)";
     case "not_covered": return "서울 외 지역은 정비사업 데이터 미제공";
+    case "not_loaded": return "정비사업 데이터 준비 중";
   }
 }

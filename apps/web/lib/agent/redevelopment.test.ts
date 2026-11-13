@@ -44,3 +44,10 @@ test("not_covered outside seoul", async () => {
 test("empty input makes no as_of", async () => {
   expect(await loadRedevelopment(db([]), [])).toEqual({ byId: {}, as_of: {} });
 });
+
+test("not_loaded when dataset never loaded", async () => {
+  const r = await loadRedevelopment(fakeDb({ redevelopment_projects: [], data_freshness: [] }), [{ id: 7, region_code: "1168011800" }, { id: 8, region_code: "4113510300" }]);
+  expect(r.byId[7]).toEqual({ status: "not_loaded" }); // 적재 전 빈 테이블을 "정비구역 아님"으로 말하지 않는다
+  expect(r.byId[8]).toEqual({ status: "not_covered" });
+  expect(r.as_of).toEqual({});
+});

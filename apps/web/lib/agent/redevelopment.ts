@@ -5,6 +5,7 @@ import type { Database } from "@repo/db-types";
 export type RedevelopmentProject = { name: string; project_type: string; stage: string; stage_date: string | null };
 export type RedevelopmentInfo =
   | { status: "not_covered" }
+  | { status: "not_loaded" } // 적재 전(기준일 없음): 빈 테이블을 "정비구역 아님"으로 말하지 않는다
   | { status: "none"; dong_zone_count: 0 }
   | { status: "in_zone"; project: RedevelopmentProject; dong_zone_count: number }
   | { status: "near"; dong_zone_count: number };
@@ -28,6 +29,10 @@ export async function loadRedevelopment(
     supabase.from("data_freshness").select("dataset, as_of").eq("dataset", DATASET),
   ]);
   for (const r of [own, dong, fresh]) if (r.error) throw new Error(r.error.message);
+  if (!fresh.data?.length) {
+    for (const c of covered) byId[c.id] = { status: "not_loaded" };
+    return { byId, as_of: {} };
+  }
 
   for (const c of covered) {
     const count = (dong.data ?? []).filter((p) => p.region_code === c.region_code).length;

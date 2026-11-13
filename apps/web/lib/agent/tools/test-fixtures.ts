@@ -50,6 +50,7 @@ export function mk(o: { rows?: unknown[]; sets?: unknown[]; ledgerAsOf?: string 
         redevelopment_projects: (o.redevelopment ?? []) as Record<string, unknown>[],
         data_freshness: [
           { dataset: "transactions:apartment", as_of: "2026-11-07", source: "MOLIT" },
+          { dataset: "redevelopment:seoul", as_of: "2026-06-30", source: "Seoul" },
           ...(o.ledgerAsOf === null ? [] : [{ dataset: "complexes:building_ledger", as_of: o.ledgerAsOf ?? "2026-11-02", source: "MOLIT" }]),
         ],
       },

@@ -92,6 +92,12 @@ def project_rows(raw: list[dict], regions: dict[tuple[str, str], str], lots: dic
     return out
 
 
+def guard_rows(n_rows: int, n_existing: int) -> None:
+    # 빈 CSV나 단계 값 이름이 바뀐 파일로 전체 구역을 지우고 "정비구역 아님"을 보이지 않도록 멈춘다
+    if n_rows == 0 or n_rows < n_existing / 2:
+        raise SystemExit(f"{DATASET}: {n_rows} rows parsed vs {n_existing} existing — CSV를 확인하세요(적재·삭제하지 않음)")
+
+
 def keys_to_delete(existing: list[str], rows: list[dict]) -> list[str]:
     # CSV가 원본이다. CSV에서 빠진 구역은 DB에서도 지운다.
     return sorted(set(existing) - {r["source_key"] for r in rows})
@@ -120,8 +126,9 @@ def run() -> None:
     for x in _all(c, "complexes", "id, region_code, jibun", lambda q: q.like("region_code", "11%").not_.is_("jibun", "null")):
         lots[(x["region_code"], x["jibun"])].append(x["id"])
     rows = project_rows(raw, regions, lots)
-    n = db.upsert_rows("redevelopment_projects", rows, on_conflict="source_key")
     existing = [x["source_key"] for x in _all(c, "redevelopment_projects", "source_key", lambda q: q)]
+    guard_rows(len(rows), len(existing))
+    n = db.upsert_rows("redevelopment_projects", rows, on_conflict="source_key")
     gone = keys_to_delete(existing, rows)
     for k in gone:
         c.table("redevelopment_projects").delete().eq("source_key", k).execute()
