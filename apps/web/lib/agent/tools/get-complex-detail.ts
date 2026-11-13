@@ -22,7 +22,7 @@ const withDeadline = <T extends { status: string }>(p: Promise<T>) => {
 export const getComplexDetail = defineTool({
   name: "get_complex_detail",
   description:
-    "단지 하나의 기본 정보, 최근 실거래 사례, 월별 중위가, 같은 법정동 단지 대비 가격 위치, K-apt 관리비(mgmt_fee, 조건을 저장했고 단지가 사용자 지역에 있을 때만 포함), 정비사업 정보(redevelopment: in_zone/near/none/not_covered)를 돌려준다. 실거래는 저장된 희망 면적 범위 기준이다. fit이 있으면 저장된 조건과의 적합도다.",
+    "단지 하나의 기본 정보, 최근 실거래 사례, 월별 중위가, 같은 법정동 단지 대비 가격 위치, K-apt 관리비(mgmt_fee, 조건을 저장했고 단지가 사용자 지역에 있을 때만 포함), 정비사업 정보(redevelopment: in_zone/near/none/not_covered/not_loaded)를 돌려준다. 실거래는 저장된 희망 면적 범위 기준이다. fit이 있으면 저장된 조건과의 적합도다.",
   schema: z.object({ complex_id: z.number().int().positive() }),
   async run(args, ctx: ToolContext): Promise<ToolResult> {
     const { supabase } = ctx;
