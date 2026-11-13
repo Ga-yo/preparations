@@ -8,6 +8,7 @@ import type { ToolResult } from "@/lib/agent/tool";
 import { ChatPanel } from "../../_components/ChatPanel";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
 import { detailForPlan, favoriteComplexIds, searchForPlan, setFavorite } from "./actions";
+import { enterStage5 } from "../5/actions";
 import { CandidateList } from "./_components/CandidateList";
 import { ComplexDetail } from "./_components/ComplexDetail";
 
@@ -63,6 +64,12 @@ export default async function Stage4({
     redirect(`/plans/${planId}/stage/4${qs.size ? `?${qs}` : ""}`);
   }
 
+  async function toStage5(): Promise<void> {
+    "use server";
+    await enterStage5(planId).catch(logError); // 단계 기록 실패해도 비교 화면은 연다
+    redirect(`/plans/${planId}/stage/5`);
+  }
+
   const data = search?.data as SearchData | undefined;
   const asOf = Object.entries(search?.as_of ?? {});
   const stage = (n: number) => <Link href={`/plans/${planId}/stage/${n}`} className="text-blue-700">{n}단계</Link>;
@@ -72,6 +79,11 @@ export default async function Stage4({
         <Link href={`/plans/${planId}/stage/3`} className="text-sm text-blue-700">← 3단계 주택 선택 기준</Link>
         <h1 className="text-lg font-semibold">4단계. 후보 단지</h1>
         {favError && <p role="alert" className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-900">{favError}</p>}
+        {favorites.length >= 2 && (
+          <form action={toStage5}>
+            <button type="submit" className="rounded border border-blue-700 px-2 py-1 text-sm text-blue-800">관심 단지 {favorites.length}개 → 5단계에서 비교하기</button>
+          </form>
+        )}
         {!data ? (
           <p role="alert" className="rounded border p-3 text-sm">후보를 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.</p>
         ) : "error" in data ? (
