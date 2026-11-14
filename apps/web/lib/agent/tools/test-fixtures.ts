@@ -32,7 +32,7 @@ export const complex = (complex_id: number, household_count = 1500) => ({
   complex_id, name: `단지${complex_id}`, region_code: "1168010300", approval_year: 2000, household_count,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 40,
   median_price: 800_000_000, deal_count: 3,
-  nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null,
+  nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null, nearest_park_m: null, shop_count_500m: null, commute_m: null,
 });
 
 export function mk(o: { rows?: unknown[]; sets?: unknown[]; ledgerAsOf?: string | null; complexes?: unknown[]; redevelopment?: unknown[]; rowsFor?: (args: Record<string, unknown>) => unknown[] | undefined } = {}) {

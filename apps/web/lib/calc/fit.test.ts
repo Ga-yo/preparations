@@ -13,7 +13,7 @@ const X = (id: number, o: Partial<ComplexRow> = {}): ComplexRow => ({
   complex_id: id, name: `c${id}`, region_code: "1168010100", approval_year: 2000, household_count: 500,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 30,
   median_price: 500_000_000, deal_count: 3,
-  nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null, ...o,
+  nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null, nearest_park_m: null, shop_count_500m: null, commute_m: null, ...o,
 });
 const B = (max: number | null): RegionBudget[] => [{ sigungu_code: "11680", max_budget: max, median_price: 0 }];
 
@@ -100,4 +100,22 @@ it("per-key: only elementary missing drops elementary must, station must still f
   const r = rankComplexes(m, [X(1, { nearest_station_m: 400 }), X(2, { nearest_station_m: 2000 })], [], 10);
   expect(r.map((x) => x.complex_id)).toEqual([1]);
   expect(r[0].fit.score).toBe(100);
+});
+
+describe("M6 weights and ties", () => {
+  it("weight counts met condition twice", () => {
+    const c = { ...C, station_distance_max_m: 500, household_count_min: 1000, weights: { station_distance_max: 2 } };
+    expect(fitScore(c, X(1, { nearest_station_m: 300 }), null).score).toBe(67); // 2 / 3
+    expect(fitScore(c, X(1, { nearest_station_m: 900, household_count: 2000 }), null).score).toBe(33); // 1 / 3
+  });
+  it("ties sort within same score", () => {
+    const c = { ...C, ties: [{ field: "nearest_park_m" as const, dir: 1 as const }] };
+    const r = rankComplexes(c, [X(1, { nearest_park_m: 900 }), X(2, { nearest_park_m: null }), X(3, { nearest_park_m: 100 })], B(null), 10);
+    expect(r.map((x) => x.complex_id)).toEqual([3, 1, 2]); // null은 뒤로
+  });
+  it("descending tie for shop count", () => {
+    const c = { ...C, ties: [{ field: "shop_count_500m" as const, dir: -1 as const }] };
+    const r = rankComplexes(c, [X(1, { shop_count_500m: 5 }), X(2, { shop_count_500m: 50 })], B(null), 10);
+    expect(r.map((x) => x.complex_id)).toEqual([2, 1]);
+  });
 });
