@@ -11,7 +11,7 @@ import { checkConditionsForPlan, PRIORITY_KEYS, saveStage3Conditions } from "./a
 
 const LABELS: Record<string, string> = {
   housing_types: "주택 유형", price_min: "희망 최저가", price_max: "희망 최고가(최저 ≤ 최고)",
-  area_min: "희망 전용면적", area_max: "희망 전용면적(최소 ≤ 최대)", rooms_min: "방 개수(1~10)", baths_min: "욕실 개수(1~5)",
+  rooms_min: "방 개수(1~10)", baths_min: "욕실 개수(1~5)",
   floor_pref: "희망 층", direction_pref: "희망 향(20자 이내)", approval_year_min: "준공 연도(1950~2030)",
   household_count_min: "세대수(1~10,000)", parking_per_household_min: "세대당 주차(0~5대)",
   mgmt_fee_per_m2_max: "관리비",
@@ -95,11 +95,15 @@ export default async function Stage3({
           {field("price_max", "희망 최고가 (만원)", numberInput("price_max", man(c?.price_max), 0, 1e9))}
         </div>
         {priority("price_max")}
-        <div className="grid grid-cols-2 gap-2">
-          {field("area_min", "희망 전용면적 최소 (㎡)", numberInput("area_min", c?.area_min, 10, 300, 0.01))}
-          {field("area_max", "최대 (㎡)", numberInput("area_max", c?.area_max, 10, 300, 0.01))}
+        {/* 면적은 2단계에서만 입력한다(M6-D4) */}
+        <div>
+          <p className="font-medium">희망 전용면적</p>
+          <p className="text-sm">
+            {c?.area_min == null && c?.area_max == null ? "2단계에서 아직 입력하지 않았습니다." : `${c?.area_min ?? "-"} ~ ${c?.area_max ?? "-"}㎡`}
+            {" "}<Link href={`/plans/${planId}/stage/2`} className="text-blue-700">2단계에서 수정</Link>
+          </p>
         </div>
-        {priority("area")}
+        {(c?.area_min != null || c?.area_max != null) && priority("area")}
         <div className="grid grid-cols-2 gap-2">
           {field("rooms_min", "방 개수 (최소)", numberInput("rooms_min", c?.rooms_min, 1, 10))}
           {field("baths_min", "욕실 개수 (최소)", numberInput("baths_min", c?.baths_min, 1, 5))}

@@ -161,3 +161,9 @@ test("detail marks not_covered outside seoul", async () => {
   expect((r.data as { redevelopment: unknown }).redevelopment).toEqual({ status: "not_covered" });
   expect(r.notices).toContain("redevelopment_not_covered");
 });
+
+test("detail carries park shop and commute values", async () => {
+  const { ctx } = setup({ rows: [{ ...complex(1), nearest_park_m: 210, shop_count_500m: 42, commute_m: 3100 }, complex(2)] });
+  const d = (await getComplexDetail.run({ complex_id: 1 }, ctx)).data as { complex: Record<string, unknown> };
+  expect(d.complex).toMatchObject({ nearest_park_m: 210, shop_count_500m: 42, commute_m: 3100 });
+});

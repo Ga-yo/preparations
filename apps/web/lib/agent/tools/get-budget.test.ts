@@ -86,3 +86,9 @@ test("get_budget: 대출 0원이면 binding 생략", async () => {
   expect(loan.amount).toBe(0);
   expect(loan).not.toHaveProperty("binding");
 });
+
+test("get_budget: 목적·시기·합산 여부와 안내", async () => {
+  const r = await getBudget.run({}, mk("2026-11-01", "FSS", true, { ...profile, purpose: "invest", timeline: "2_3y", income_is_combined: true }));
+  expect(r.data).toMatchObject({ profile_summary: { purpose: "invest", timeline: "2_3y", income_is_combined: true } });
+  expect(r.notices).toEqual(expect.arrayContaining(["invest_not_supported", "recheck_regulation"]));
+});

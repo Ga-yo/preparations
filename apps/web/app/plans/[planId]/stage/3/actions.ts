@@ -29,8 +29,6 @@ export const stage3Schema = z
     housing_types: z.array(z.enum(["apartment", "officetel", "row_house"])).default([]),
     price_min: won,
     price_max: won,
-    area_min: num(10, 300, false),
-    area_max: num(10, 300, false),
     rooms_min: num(1, 10),
     baths_min: num(1, 5),
     floor_pref: z.enum(["low", "mid", "high", ""]).optional().transform((s) => (s ? s : null)),
@@ -48,9 +46,6 @@ export const stage3Schema = z
   .refine((v) => v.price_min === null || v.price_max === null || v.price_min <= v.price_max, {
     path: ["price_max"], message: "price_min <= price_max",
   })
-  .refine((v) => v.area_min === null || v.area_max === null || v.area_min <= v.area_max, {
-    path: ["area_max"], message: "area_min <= area_max",
-  })
   .transform((v) => {
     const out: Record<string, unknown> = {};
     const priorities: Record<string, string> = {};
@@ -59,7 +54,7 @@ export const stage3Schema = z
       const key = k.slice("priority.".length) as ConditionKey;
       // 거리 조건은 입력 이름에 _m이 붙는다
       const field = key.endsWith("_distance_max") ? (`${key}_m` as "station_distance_max_m") : (key as keyof typeof v);
-      const isSet = key === "area" ? v.area_min !== null || v.area_max !== null : v[field] !== null;
+      const isSet = key === "area" || v[field as keyof typeof v] !== null; // 면적은 2단계 값이라 stage3Row가 판단(M6-D4)
       if (val && isSet) priorities[key] = val as string; // 값이 없는 조건의 우선순위는 의미가 없다
     }
     return { ...(out as Omit<typeof v, `priority.${string}`>), priorities };
@@ -69,10 +64,13 @@ export type Stage3Values = z.output<typeof stage3Schema>;
 type FieldErrors = Record<string, string[]>;
 
 // condition_sets는 append-only: 최신 행(2단계 값 포함)을 복사하고 3단계 값만 덮는다
-export function stage3Row<T extends { id?: unknown; created_at?: unknown }>(latest: T | null, values: Stage3Values, planId: string, userId: string) {
+export function stage3Row<T extends { id?: unknown; created_at?: unknown; area_min?: number | null; area_max?: number | null }>(latest: T | null, values: Stage3Values, planId: string, userId: string) {
   const { id: _id, created_at: _created, ...prev } = latest ?? {};
   void _id; void _created;
-  return { ...prev, ...values, plan_id: planId, user_id: userId };
+  const hasArea = (latest?.area_min ?? null) !== null || (latest?.area_max ?? null) !== null;
+  const { area: _area, ...rest } = values.priorities;
+  void _area;
+  return { ...prev, ...values, priorities: hasArea ? values.priorities : rest, plan_id: planId, user_id: userId };
 }
 
 export async function saveStage3Conditions(

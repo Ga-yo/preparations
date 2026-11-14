@@ -36,6 +36,9 @@ export function CompareTable({ planId, data, tips }: { planId: string; data: Com
     { key: "land", title: "대지지분(평균 근사)", metric: "land_share_m2", cell: (r) => num(r.land_share_m2, "㎡") },
     { key: "station", title: "가까운 역(직선)", metric: "nearest_station_m", cell: (r) => (r.nearest_station_m === null ? "-" : `${r.nearest_station_name ?? ""} ${num(r.nearest_station_m, "m")}`) },
     { key: "school", title: "가까운 초등학교(직선)", metric: "nearest_elementary_m", cell: (r) => num(r.nearest_elementary_m, "m") },
+    { key: "commute", title: "출퇴근 지역까지(직선, 근사)", cell: (r) => num(r.commute_m, "m") },
+    { key: "park", title: "가까운 공원(직선)", cell: (r) => num(r.nearest_park_m, "m") },
+    { key: "shops", title: "반경 500m 생활 상가", cell: (r) => num(r.shop_count_500m, "곳") },
     { key: "redev", title: "정비사업", cell: (_, i) => redevelopmentText(i.redevelopment) },
     { key: "risks", title: "위험 요소", cell: (_, i) => (i.risks.length ? i.risks.map((k) => RISK_LABELS[k] ?? k).join(", ") : "없음") },
   ];

@@ -13,7 +13,7 @@ const LABELS: Record<string, string> = {
   sigungu_codes: "희망 시군구", dong_names: "희망 동(지역명을 찾지 못했거나 여러 곳과 일치 — 시·구부터 입력해 주세요)",
   commute_region_name: "직장·주요 이동 지역(지역명을 찾지 못했거나 여러 곳과 일치 — 시·구부터 입력해 주세요)",
   commute_minutes_max: "희망 출퇴근 시간(10~180분)", school_importance: "교육 환경 중요도", infra_importance: "편의시설 중요도",
-  household_size: "거주 인원", rooms_min: "필요한 방 개수", area_min: "희망 전용면적", area_max: "희망 전용면적(최소 ≤ 최대)",
+  household_size: "거주 인원", area_min: "희망 전용면적", area_max: "희망 전용면적(최소 ≤ 최대)",
   environment_prefs: "선호 환경", region_reason: "선호 이유(200자 이내)", plan: "계획(접근 권한 없음 또는 존재하지 않음)",
 };
 const ENV = { quiet: "조용한 환경", near_commercial: "상권 인접", near_park: "공원 인접" } as const;
@@ -117,7 +117,6 @@ export default async function Stage2({
 
         <h2 className="font-semibold">③ 거주 환경</h2>
         {field("household_size", "예상 거주 인원", numberInput("household_size", c?.household_size, 1, 20))}
-        {field("rooms_min", "필요한 방 개수", numberInput("rooms_min", c?.rooms_min, 1, 10))}
         <div className="grid grid-cols-2 gap-2">
           {field("area_min", "희망 전용면적 최소 (㎡)", numberInput("area_min", c?.area_min, 10, 300, 0.01))}
           {field("area_max", "최대 (㎡)", numberInput("area_max", c?.area_max, 10, 300, 0.01))}
@@ -130,6 +129,7 @@ export default async function Stage2({
               <input type="checkbox" name="environment_prefs" value={v} defaultChecked={c?.environment_prefs.includes(v)} /> {label}
             </label>
           ))}
+          <TipPanel tips={t} fieldKey="environment_prefs" />
         </fieldset>
         <button type="submit" className="rounded bg-foreground px-4 py-2 text-background">저장하고 지역 시세 보기</button>
       </StageForm>

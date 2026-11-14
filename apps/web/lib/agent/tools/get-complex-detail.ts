@@ -43,7 +43,7 @@ export const getComplexDetail = defineTool({
     const [trades, monthly, nb, nearby, fresh, mgmt_fee, redev] = await Promise.all([
       supabase.rpc("complex_trades", { p_complex_id: c.id, ...area, lim: TRADE_LIMIT }),
       supabase.rpc("complex_monthly_prices", { p_complex_id: c.id, ...area, months: DETAIL_MONTHS }),
-      supabase.rpc("complexes_for_conditions", { region_codes: [c.region_code], ...area, months: MONTHS }),
+      supabase.rpc("complexes_for_conditions", { region_codes: [c.region_code], ...area, months: MONTHS, ...(ok && l.commuteCode && { commute_code: l.commuteCode }) }),
       supabase.rpc("complex_nearby_pois", { p_complex_id: c.id, radius_m: 1000 }),
       ok ? null : supabase.from("data_freshness").select("dataset, as_of").in("dataset", DATASETS),
       ok && own ? withDeadline(getMgmtFee(c, ctx.today)) : null, // 조건을 저장한 계획의 자기 지역 단지에서만 K-apt를 부른다(호출 남용 방지). 실패해도 throw하지 않는다
@@ -55,7 +55,8 @@ export const getComplexDetail = defineTool({
 
     const ownRow = own ?? ((nb.data ?? []) as ComplexRow[]).find((r) => r.complex_id === c.id); // 사용자 지역 밖 단지는 같은 동 행으로 보충
     const fit = ok && own ? fitScore(l.conditions, own, maxBudgetFor(l.budgets, own), activeKeys(l.conditions, l.rows)) : null;
-    const near = { nearest_station_name: ownRow?.nearest_station_name ?? null, nearest_station_m: ownRow?.nearest_station_m ?? null, nearest_elementary_m: ownRow?.nearest_elementary_m ?? null };
+    const near = { nearest_station_name: ownRow?.nearest_station_name ?? null, nearest_station_m: ownRow?.nearest_station_m ?? null, nearest_elementary_m: ownRow?.nearest_elementary_m ?? null,
+      nearest_park_m: ownRow?.nearest_park_m ?? null, shop_count_500m: ownRow?.shop_count_500m ?? null, commute_m: ownRow?.commute_m ?? null };
     const nearbyRows = nearby.data ?? [];
     const tradeRows = trades.data ?? [];
     const as_of = {

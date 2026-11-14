@@ -17,7 +17,7 @@ describe("stage2Schema", () => {
     expect(stage2Schema.parse({ sigungu_codes: [], environment_prefs: [] })).toEqual({
       sigungu_codes: [], dong_names: [], commute_region_name: null, commute_minutes_max: null,
       uses_transit: false, parking_required: false, school_importance: null, infra_importance: null,
-      household_size: null, rooms_min: null, area_min: null, area_max: null, environment_prefs: [], region_reason: null,
+      household_size: null, area_min: null, area_max: null, environment_prefs: [], region_reason: null,
     });
   });
   test("area_min > area_max → area_max 오류", () => {
@@ -56,4 +56,8 @@ describe("resolveStage2Regions", () => {
   test("통근 지역 이름 → 코드", async () => {
     expect(await resolveStage2Regions(db, { ...none, commute_region_name: "강남구 개포동" })).toEqual({ ok: true, region_codes: [], commute_region_code: "1168010300" });
   });
+});
+
+test("rooms are entered in stage 3 only (M6-D4)", () => {
+  expect(stage2Schema.parse({ rooms_min: "3" })).not.toHaveProperty("rooms_min");
 });

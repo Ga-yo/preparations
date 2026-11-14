@@ -18,6 +18,13 @@ const DATASETS: Record<string, string> = {
   "loan_products:bank": "시중은행 상품", regulated_areas: "규제지역", loan_rules: "대출 규제",
   tax_rates: "세율", policy_loans: "정책대출",
 };
+const PURPOSE: Record<string, string> = { live: "실거주", invest: "투자", both: "실거주 및 투자" };
+const TIMELINE: Record<string, string> = { "6m": "6개월 이내", "1y": "1년 이내", "2_3y": "2~3년 이내", undecided: "미정" };
+const PROFILE_NOTICES: Record<string, string> = {
+  invest_not_supported: "투자 수익(전세가율·임대수익) 분석은 제공하지 않습니다. 예산은 실거주와 같은 기준으로 계산했습니다.",
+  recheck_regulation: "구매까지 시간이 남아 있습니다. 그 사이 대출 규제와 시세가 바뀔 수 있으니 구매 직전에 다시 확인하세요.",
+};
+type Summary = { purpose: string | null; timeline: string | null; income_is_combined: boolean | null };
 const BINDING = { ltv: "LTV 한도", loan_cap: "한도 상한", dsr: "DSR 한도" } as const;
 const ERRORS: Record<string, string> = {
   profile_missing: "왼쪽 폼을 저장하면 예산이 계산됩니다.",
@@ -25,7 +32,7 @@ const ERRORS: Record<string, string> = {
   region_not_found: "지역을 찾지 못했습니다.",
 };
 
-type Data = (Omit<BudgetResult, "loan"> & { loan: { amount: number; binding?: keyof typeof BINDING } }) | { error: string };
+type Data = (Omit<BudgetResult, "loan"> & { loan: { amount: number; binding?: keyof typeof BINDING }; profile_summary?: Summary }) | { error: string };
 
 export function BudgetCard({ result }: { result: ToolResult }) {
   const data = result.data as Data;
@@ -55,6 +62,14 @@ export function BudgetCard({ result }: { result: ToolResult }) {
             {data.loan.binding && ` (${BINDING[data.loan.binding]} 적용)`}
           </p>
           <p>자기자금: {formatWon(data.ownFunds)}</p>
+          {data.profile_summary && (
+            <p className="text-gray-700">
+              {[data.profile_summary.purpose && `목적 ${PURPOSE[data.profile_summary.purpose]}`,
+                data.profile_summary.timeline && `희망 시기 ${TIMELINE[data.profile_summary.timeline]}`,
+                data.profile_summary.income_is_combined && "소득은 부부 합산 기준"].filter(Boolean).join(" · ")}
+            </p>
+          )}
+          {result.notices?.filter((n) => PROFILE_NOTICES[n]).map((n) => <p key={n} className="rounded bg-blue-50 p-2 text-blue-900">{PROFILE_NOTICES[n]}</p>)}
           {data.products.length > 0 && (
             <table className="w-full text-left [&_td]:pr-3 [&_td]:py-0.5 [&_th]:pr-3 [&_td:not(:first-child)]:whitespace-nowrap">
               <caption className="text-left font-medium">상품별 월 상환액</caption>
