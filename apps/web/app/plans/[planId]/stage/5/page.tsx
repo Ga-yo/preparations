@@ -105,6 +105,7 @@ export default async function Stage5({
         </div>
         <ChatPanel planId={planId} />
       </div>
+      <p><Link href={`/plans/${planId}/report`} className="text-blue-700">구매 검토 리포트 만들기 →</Link></p>
     </main>
   );
 }
