@@ -14,11 +14,12 @@ export type ConditionContext = {
 };
 
 // 최신 condition_sets + 예산 + 지역 단지 행을 읽는다. RPC 오류는 throw
-export async function loadConditionContext(ctx: ToolContext): Promise<ConditionContext | { error: "region_required" | "conditions_required" }> {
+// offset: 0이면 최신 세트, 1이면 직전 세트(5단계 조건 변경 비교)
+export async function loadConditionContext(ctx: ToolContext, offset = 0): Promise<ConditionContext | { error: "region_required" | "conditions_required" }> {
   const { supabase, planId } = ctx;
   const { data: c, error } = await supabase
     .from("condition_sets").select("*").eq("plan_id", planId)
-    .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    .order("created_at", { ascending: false }).range(offset, offset).maybeSingle();
   if (error) throw new Error(error.message);
   if (!c?.region_codes?.length) return { error: "region_required" };
   const conditions: Conditions = {

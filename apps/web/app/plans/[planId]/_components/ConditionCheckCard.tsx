@@ -30,7 +30,7 @@ export const NOTICES: Record<string, string> = {
 export const DATASETS: Record<string, string> = {
   "complexes:building_ledger": "건축물대장 단지", "transactions:apartment": "아파트 실거래가",
   "loan_products:bank": "시중은행 상품", regulated_areas: "규제지역", loan_rules: "대출 규제", tax_rates: "세율", policy_loans: "정책대출",
-  "complexes:location": "단지 좌표", "pois:subway_station": "지하철역 위치", "pois:school": "학교 위치",
+  "complexes:location": "단지 좌표", "pois:subway_station": "지하철역 위치", "pois:school": "학교 위치", "redevelopment:seoul": "서울 정비사업",
 };
 const names = (keys: string[]) => keys.map((k) => CONDITION_LABELS[k] ?? k).join(", ");
 

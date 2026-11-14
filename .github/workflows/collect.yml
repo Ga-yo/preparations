@@ -31,6 +31,10 @@ on:
         description: '역·학교 CSV 적재 실행 (CSV를 바꾼 뒤에만)'
         type: boolean
         default: false
+      run_redevelopment:
+        description: '서울 정비사업 CSV 적재 실행 (분기 파일로 CSV를 바꾼 뒤에만)'
+        type: boolean
+        default: false
 
 concurrency:
   group: collect
@@ -137,3 +141,10 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: uv run --frozen python main.py pois
+      # 정비사업 적재는 수동 실행 전용(커밋된 CSV를 바꾼 뒤에만, 분기 갱신)
+      - name: redevelopment (manual only)
+        if: ${{ !cancelled() && github.event_name == 'workflow_dispatch' && inputs.run_redevelopment }}
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: uv run --frozen python main.py redevelopment

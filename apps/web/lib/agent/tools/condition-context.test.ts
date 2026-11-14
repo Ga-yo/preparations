@@ -18,3 +18,8 @@ test("region_required", async () => {
   const { ctx } = mk({ sets: [saved({ region_codes: [] })] });
   expect(await loadConditionContext(ctx)).toEqual({ error: "region_required" });
 });
+
+test("offset 1 reads previous set", async () => {
+  const { ctx } = mk({ sets: [saved({ id: "old", created_at: "2026-11-01" }), saved({ id: "new", created_at: "2026-11-05" })] });
+  expect(await loadConditionContext(ctx, 1)).toMatchObject({ conditionSetId: "old" });
+});

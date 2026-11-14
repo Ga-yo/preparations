@@ -35,7 +35,7 @@ export const complex = (complex_id: number, household_count = 1500) => ({
   nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null,
 });
 
-export function mk(o: { rows?: unknown[]; sets?: unknown[]; ledgerAsOf?: string | null } = {}) {
+export function mk(o: { rows?: unknown[]; sets?: unknown[]; ledgerAsOf?: string | null; complexes?: unknown[]; redevelopment?: unknown[]; rowsFor?: (args: Record<string, unknown>) => unknown[] | undefined } = {}) {
   const calls: Record<string, unknown>[] = [];
   const ctx: ToolContext = {
     planId: "p1", today: "2026-11-08",
@@ -46,8 +46,11 @@ export function mk(o: { rows?: unknown[]; sets?: unknown[]; ledgerAsOf?: string 
         regulated_areas: [], loan_products: [product],
         regions: [{ code: "1168000000", full_name: "서울특별시 강남구", is_active: true }],
         condition_sets: (o.sets ?? [saved()]) as Record<string, unknown>[],
+        complexes: (o.complexes ?? []) as Record<string, unknown>[],
+        redevelopment_projects: (o.redevelopment ?? []) as Record<string, unknown>[],
         data_freshness: [
           { dataset: "transactions:apartment", as_of: "2026-11-07", source: "MOLIT" },
+          { dataset: "redevelopment:seoul", as_of: "2026-06-30", source: "Seoul" },
           ...(o.ledgerAsOf === null ? [] : [{ dataset: "complexes:building_ledger", as_of: o.ledgerAsOf ?? "2026-11-02", source: "MOLIT" }]),
         ],
       },
@@ -55,7 +58,7 @@ export function mk(o: { rows?: unknown[]; sets?: unknown[]; ledgerAsOf?: string 
         region_price_stats: () => [{ sigungu_code: "11680", sigungu_name: "서울특별시 강남구", median_price: 700_000_000, deal_count: 10, latest_deal_date: "2026-11-01" }],
         complexes_for_conditions: (args) => {
           calls.push(args);
-          return (o.rows ?? [complex(1), complex(2, 300)]) as Record<string, unknown>[];
+          return (o.rowsFor?.(args) ?? o.rows ?? [complex(1), complex(2, 300)]) as Record<string, unknown>[];
         },
       },
     ),
