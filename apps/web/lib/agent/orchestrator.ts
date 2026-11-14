@@ -3,9 +3,9 @@ import { SYSTEM_PROMPT } from "./prompt";
 import { runTool, toOpenAiTools, type ToolContext } from "./tool";
 import { toolsForStage } from "./tools";
 
-export function modelForStage(stage: number): "deepseek-v4-flash" | "deepseek-v4-pro" {
-  return stage === 3 || stage === 5 ? "deepseek-v4-pro" : "deepseek-v4-flash";
-}
+// Gemini OpenAI 호환 엔드포인트(무료 요금제). gemini-3.8-flash는 응답이 2분 넘게 걸려 전 단계 flash-lite로 통일한다
+export const LLM_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
+export const LLM_MODEL = "gemini-3.5-flash-lite";
 
 export const kstToday = (now = new Date()) =>
   new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Seoul" }).format(now);
@@ -26,7 +26,7 @@ export async function runAgent(p: {
 
   for (let step = 0; step < (p.maxSteps ?? 5); step++) {
     const res = await p.client.chat.completions.create({
-      model: modelForStage(p.stage),
+      model: LLM_MODEL,
       messages,
       tools: openAiTools,
     });

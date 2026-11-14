@@ -1,11 +1,11 @@
 import OpenAI from "openai";
 import { z } from "zod";
-import { kstToday, runAgent } from "@/lib/agent/orchestrator";
+import { kstToday, LLM_BASE_URL, runAgent } from "@/lib/agent/orchestrator";
 import { createClient } from "@/lib/supabase/server";
 
 const Body = z.object({ plan_id: z.uuid(), message: z.string().min(1).max(2000) });
 const HISTORY_LIMIT = 20;
-// DeepSeek은 선불 잔액에서 차감되므로 익명 사용자 한 명이 잔액을 소진하지 못하게 막는다
+// Gemini 무료 요금제 한도는 프로젝트 전체가 나눠 쓰므로 익명 사용자 한 명이 한도를 소진하지 못하게 막는다
 export const DAILY_CHAT_LIMIT = 30;
 
 export async function POST(req: Request) {
@@ -34,15 +34,15 @@ export async function POST(req: Request) {
   const saveUser = await supabase.from("chat_messages").insert({ plan_id, role: "user", content: message });
   if (saveUser.error) return Response.json({ error: "db_error" }, { status: 500 });
 
-  // 키가 비면 openai SDK가 OPENAI_API_KEY로 폴백해 다른 키를 DeepSeek에 보내므로 먼저 막는다
-  const apiKey = process.env.DEEPSEEK_API_KEY;
+  // 키가 비면 openai SDK가 OPENAI_API_KEY로 폴백해 다른 키를 Gemini에 보내므로 먼저 막는다
+  const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    console.error("DEEPSEEK_API_KEY is not configured");
+    console.error("GEMINI_API_KEY is not configured");
     return Response.json({ error: "llm_unavailable" }, { status: 502 });
   }
   let out;
   try {
-    const client = new OpenAI({ apiKey, baseURL: "https://api.deepseek.com" });
+    const client = new OpenAI({ apiKey, baseURL: LLM_BASE_URL });
     out = await runAgent({
       client,
       stage: plan.current_stage,
@@ -50,6 +50,11 @@ export async function POST(req: Request) {
       ctx: { supabase, planId: plan_id, today: kstToday() },
     });
   } catch (e) {
+    // 무료 요금제 분당·하루 한도 초과: 장애와 구분해 사용자에게 잠시 후 재시도를 안내한다
+    if (e instanceof OpenAI.APIError && e.status === 429) {
+      console.error("llm quota exceeded");
+      return Response.json({ error: "llm_quota" }, { status: 503 });
+    }
     console.error("llm failed", e);
     return Response.json({ error: "llm_unavailable" }, { status: 502 });
   }
