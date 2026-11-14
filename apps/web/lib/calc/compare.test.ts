@@ -76,3 +76,13 @@ describe("riskFlags", () => {
     expect(riskFlags(I(X(1)), 2026)).toEqual([]);
   });
 });
+
+describe("budget edge cases", () => {
+  it("zero budget gives null ratio", () => {
+    const r = compareComplexes([I(X(1), { max_budget: 0 }), I(X(2))], 2026);
+    expect(r.items[0].budget_ratio).toBeNull(); // 0으로 나누지 않는다
+  });
+  it("unknown price is not over budget", () => {
+    expect(riskFlags(I(X(1, { median_price: null }), { max_budget: 1 }), 2026)).not.toContain("over_budget");
+  });
+});

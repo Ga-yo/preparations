@@ -66,3 +66,24 @@ test("compare adds redevelopment risk", async () => {
   expect(d.items[1].risks).not.toContain("redevelopment_in_zone");
   expect(d.items[1].redevelopment).toEqual({ status: "near", dong_zone_count: 1 });
 });
+
+test("non-seoul complex gets not_covered notice", async () => {
+  const { ctx } = mk({ rows: [complex(1), { ...complex(2), region_code: "4113510300" }] });
+  const r = await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx);
+  const d = r.data as { items: { redevelopment: { status: string } }[] };
+  expect(d.items[1].redevelopment.status).toBe("not_covered");
+  expect(r.notices).toContain("redevelopment_not_covered");
+  expect(r.as_of["redevelopment:seoul"]).toBe("2026-06-30");
+});
+
+test("seoul-only compare has no not_covered notice", async () => {
+  const { ctx } = mk({ rows: [complex(1), complex(2)] });
+  expect((await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx)).notices).not.toContain("redevelopment_not_covered");
+});
+
+test("missing id noted but compare still runs", async () => {
+  const { ctx } = mk({ rows: [complex(1), complex(2)] });
+  const r = await compareComplexesTool.run({ complex_ids: [1, 2, 77] }, ctx);
+  expect(items(r.data as Data)).toHaveLength(2);
+  expect(r.notices).toContain("complex_not_found");
+});

@@ -51,3 +51,11 @@ test("not_loaded when dataset never loaded", async () => {
   expect(r.byId[8]).toEqual({ status: "not_covered" });
   expect(r.as_of).toEqual({});
 });
+
+test("db error throws instead of reporting none", async () => {
+  const q: Record<string, unknown> = {};
+  Object.assign(q, { select: () => q, in: () => q, eq: () => q,
+    then: (f: (v: unknown) => unknown) => Promise.resolve({ data: null, error: { message: "boom" } }).then(f) });
+  const errDb = { from: () => q } as never;
+  await expect(loadRedevelopment(errDb, [{ id: 7, region_code: "1168011800" }])).rejects.toThrow("boom");
+});

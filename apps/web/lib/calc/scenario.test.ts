@@ -41,3 +41,14 @@ describe("diffRankings", () => {
     expect([d.count_before, d.count_after]).toEqual([3, 3]);
   });
 });
+
+describe("order-insensitive and stable", () => {
+  it("reordered region codes is no change", () => {
+    const two = { ...C, region_codes: ["1168000000", "1165000000"] };
+    expect(diffConditions(two, { ...two, region_codes: ["1165000000", "1168000000"] })).toEqual([]);
+  });
+  it("same rank is not moved", () => {
+    const d = diffRankings([R(1), R(2)], [R(1), R(3)]);
+    expect(d.moved).toEqual([]);
+  });
+});
