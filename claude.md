@@ -295,3 +295,15 @@ AI가 구매 가능 예산을 분석하고 주택을 추천하며, 비교 과정
 - 구매 전 추가 확인이 필요한 사항
 - 후보별 위험 요소 및 불확실성 안내
 - 다음 구매 절차 안내
+
+## Skill routing
+
+When the user's request matches an available skill, invoke it via the Skill tool. Route only to skills in the session's available-skills list; answer directly for quick questions or small scoped edits.
+
+Key routing rules:
+- Product ideas/brainstorming → invoke /office-hours
+- QA/testing site behavior → invoke /qa
+- Code review/diff check → invoke /review
+- Ship/deploy/PR → invoke /ship
+
+Do not suggest or auto-invoke other gstack skills: they run when the user types them, or when a running skill hands off to them (`gstack-config set proactive all` routes every skill).
