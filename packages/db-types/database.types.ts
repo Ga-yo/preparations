@@ -358,6 +358,11 @@ isOneToOne: false
               "category": string,"distance_m": number,"lines": (string)[],"name": string
             }[]
                            },
+"complex_points":
+{ Args: { "sgg": string }; Returns: {
+              "id": number,"lat": number,"lon": number
+            }[]
+                           },
 "complex_trades":
 { Args: { "area_max"?: number,"area_min"?: number,"lim"?: number,"p_complex_id": number }; Returns: {
               "deal_amount": number,"deal_date": string,"exclusive_area": number,"floor": number
@@ -388,6 +393,9 @@ isOneToOne: false
                            },
 "set_complex_locations":
 { Args: { "ids": (number)[],"lats": (number)[],"lons": (number)[] }; Returns: number
+                           },
+"set_shop_counts":
+{ Args: { "counts": (number)[],"ids": (number)[] }; Returns: number
                            },
 "transaction_lots":
 { Args: { "sgg": string }; Returns: {

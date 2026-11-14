@@ -3,7 +3,7 @@ import sys
 
 JOBS = {"regions": "jobs.regions", "regulated_areas": "jobs.regulated_areas", "loan_products_fss": "jobs.loan_products_fss",
         "transactions": "jobs.transactions", "complexes": "jobs.complexes", "geocode": "jobs.geocode", "pois": "jobs.pois",
-        "redevelopment": "jobs.redevelopment"}
+        "redevelopment": "jobs.redevelopment", "parks": "jobs.parks", "shops": "jobs.shops"}
 
 
 def main() -> None:
