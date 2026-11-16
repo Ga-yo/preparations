@@ -1,6 +1,7 @@
 import type { BudgetResult, Diagnosis } from "@/lib/calc/budget";
 import type { ToolResult } from "@/lib/agent/tool";
 import { formatWon } from "./format";
+import { byMonthly, type ProductPayment } from "./products";
 
 const DIAGNOSES: Record<Diagnosis, string> = {
   region_unspecified: "지역 미지정: 비규제 지방 기준으로 계산한 값입니다. 서울·수도권·규제지역은 대출 한도가 크게 낮아질 수 있습니다.",
@@ -64,25 +65,7 @@ export function BudgetCard({ result, flat = false }: { result: ToolResult; flat?
               <dd className="mt-1 text-base font-semibold">{formatWon(data.ownFunds)}</dd>
             </div>
           </dl>
-          {data.products.length > 0 && (
-            <table className="w-full text-left [&_td]:pr-3 [&_td]:py-0.5 [&_th]:pr-3 [&_td:not(:first-child)]:whitespace-nowrap">
-              <caption className="mb-1 text-left font-semibold">상품별 월 상환액</caption>
-              <thead className="text-chb-muted"><tr><th className="font-normal">상품</th><th className="font-normal">대출액</th><th className="font-normal">월 상환액</th></tr></thead>
-              <tbody>
-                {data.products.map((p) => (
-                  <tr key={p.productId}>
-                    <td>{p.provider} {p.name}{p.rateType && ` (${p.rateType === "fixed" ? "고정" : p.rateType === "variable" ? "변동" : p.rateType})`}</td>
-                    <td>{formatWon(p.loanAmount)}</td>
-                    <td>
-                      {p.monthlyAtMin === null ? "-" : formatWon(p.monthlyAtMin)}
-                      {p.monthlyAtMax !== null && p.monthlyAtMax !== p.monthlyAtMin && ` ~ ${formatWon(p.monthlyAtMax)}`}
-                      {" "}({p.termYears}년)
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          {data.products.length > 0 && <ProductList products={data.products} />}
           <div>
             <p className="font-semibold">부대비용: 총 {formatWon(data.costs.total)}</p>
             <ul className="list-disc pl-5">
@@ -107,5 +90,46 @@ export function BudgetCard({ result, flat = false }: { result: ToolResult; flat?
         </p>
       )}
     </section>
+  );
+}
+
+const TOP = 3;
+const RATE_TYPE: Record<string, string> = { fixed: "고정", variable: "변동" };
+
+function ProductItem({ p }: { p: ProductPayment }) {
+  return (
+    <li className="rounded-2xl border border-chb-line p-3">
+      <p className="flex items-start justify-between gap-2">
+        <span className="font-semibold">{p.provider} <span className="font-normal">{p.name}</span></span>
+        {p.rateType && <span className="shrink-0 rounded-full bg-chb-accent-soft px-2 py-0.5 text-xs font-semibold text-chb-accent">{RATE_TYPE[p.rateType] ?? p.rateType}</span>}
+      </p>
+      <p className="mt-1 text-base font-bold text-chb-ink">
+        <span className="sr-only">월 상환액 </span>월 {p.monthlyAtMin === null ? "-" : formatWon(p.monthlyAtMin)}
+        {p.monthlyAtMax !== null && p.monthlyAtMax !== p.monthlyAtMin && ` ~ ${formatWon(p.monthlyAtMax)}`}
+      </p>
+      <p className="text-chb-muted">대출 {formatWon(p.loanAmount)} · {p.termYears}년</p>
+    </li>
+  );
+}
+
+// 많을 때 한눈에 보이도록 월 상환액 적은 순 3개만 펼치고 나머지는 접는다. 순위는 추천이 아니다
+function ProductList({ products }: { products: ProductPayment[] }) {
+  const sorted = byMonthly(products);
+  const rest = sorted.slice(TOP);
+  return (
+    <div>
+      <p className="font-semibold">상품별 월 상환액 <span className="font-normal text-chb-muted">· 월 상환액 적은 순</span></p>
+      <p className="mb-2 text-xs text-chb-muted">상품마다 대출액과 기간이 달라 월 상환액만으로 유불리를 판단하기는 어려워요.</p>
+      <ul className="space-y-2">{sorted.slice(0, TOP).map((p) => <ProductItem key={p.productId} p={p} />)}</ul>
+      {rest.length > 0 && (
+        <details className="group mt-2">
+          <summary className="cursor-pointer list-none rounded-full py-2 text-center font-semibold text-chb-accent select-none [&::-webkit-details-marker]:hidden">
+            <span className="group-open:hidden">전체 {sorted.length}개 보기 ▾</span>
+            <span className="hidden group-open:inline">접기 ▴</span>
+          </summary>
+          <ul className="space-y-2">{rest.map((p) => <ProductItem key={p.productId} p={p} />)}</ul>
+        </details>
+      )}
+    </div>
   );
 }
