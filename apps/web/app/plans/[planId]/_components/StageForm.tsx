@@ -8,7 +8,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 // 도착하므로, 저장마다 바뀌는 resultKey(예: updated_at)가 바뀐 것을 보고 팝업을 연다(이전 결과를 띄우지 않게).
 // resultLabel이 있으면(결과가 한 번이라도 계산됐으면) 화면 아래에 결과를 다시 여는 버튼을 띄운다.
 export function StageForm({
-  id, title, back, labels, action, children, result, resultKey, resultLabel, next,
+  id, title, back, labels, action, children, result, resultKey, resultLabel, next, pendingText = "저장하는 중이에요…",
 }: {
   id?: string;
   title: string;
@@ -19,6 +19,7 @@ export function StageForm({
   result?: React.ReactNode;
   resultKey?: string | null;
   resultLabel?: string;
+  pendingText?: string;
   next?: { href: string; label: string };
 }) {
   const [invalid, setInvalid] = useState<string[]>([]);
@@ -69,7 +70,7 @@ export function StageForm({
         </p>
       )}
       <fieldset disabled={waiting} className="space-y-8">{children}</fieldset>
-      <p aria-live="polite" className="min-h-6 font-semibold text-chb-accent">{waiting ? "저장하고 예산을 계산하는 중이에요…" : ""}</p>
+      <p aria-live="polite" className="min-h-6 font-semibold text-chb-accent">{waiting ? pendingText : ""}</p>
       {result && (
         // Esc는 dialog가 처리하고 close 이벤트로 상태를 맞춘다. 바깥(backdrop) 클릭은 dialog 자신이 target일 때다
         <dialog

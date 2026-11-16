@@ -115,6 +115,7 @@ export default async function Stage1({
           id={FORM_ID} title="1단계. 나의 구매 상황" labels={LABELS} action={save}
           result={<BudgetCard result={budget} flat income={p?.annual_income} />} resultKey={p?.updated_at} resultLabel={resultLabel}
           next={{ href: `/plans/${planId}/stage/2`, label: "2단계로 →" }}
+          pendingText="저장하고 예산을 계산하는 중이에요…"
         >
           <p className="-mt-4 text-lg text-chb-muted">입력한 내용으로 무리 없는 예산을 계산하고, 받을 수 있는 대출을 찾아 드려요.</p>
           {group(1, "주택 구매 목적", "목적과 시기에 따라 맞는 대출과 준비 일정이 달라져요.", <>
