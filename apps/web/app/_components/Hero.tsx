@@ -69,11 +69,6 @@ export function Hero({ start }: { start: () => Promise<void> }) {
           <form action={start} className="chb-ctas">
             <StartButton />
           </form>
-          <ul className="chb-checks">
-            <li><Check />베타 기간 무료</li>
-            <li><Check />중개 수수료 없음</li>
-            <li><Check />매물 광고 없음</li>
-          </ul>
         </div>
 
         <div className="chb-visual">
