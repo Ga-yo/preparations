@@ -1,5 +1,11 @@
+import { Gothic_A1, IBM_Plex_Sans_KR } from 'next/font/google'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { Hero } from './_components/Hero'
+
+// 한글 글리프는 unicode-range로 필요할 때 받으므로 latin만 preload
+const gothic = Gothic_A1({ weight: ['500', '700', '900'], subsets: ['latin'], variable: '--font-gothic-a1' })
+const plex = IBM_Plex_Sans_KR({ weight: ['400', '500', '600', '700'], subsets: ['latin'], variable: '--font-plex-kr' })
 
 async function start() {
   'use server'
@@ -16,13 +22,8 @@ async function start() {
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6">
-      <h1 className="text-3xl font-semibold">내 집 마련 AI 에이전트</h1>
-      <form action={start}>
-        <button type="submit" className="rounded-full bg-foreground px-6 py-3 text-background">
-          시작하기
-        </button>
-      </form>
+    <main className={`${gothic.variable} ${plex.variable} flex flex-1 flex-col`}>
+      <Hero start={start} />
     </main>
   )
 }
