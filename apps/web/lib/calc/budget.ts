@@ -44,6 +44,7 @@ export type BudgetResult = {
   minRatePrice: number;
   maxRatePrice: number;
   loan: { amount: number; binding: "ltv" | "loan_cap" | "dsr" };
+  maxRateLoan: number; // maxRatePrice(가장 높은 금리 기준)에서의 대출 가능액. loan은 minRatePrice 기준
   ownFunds: number;
   costs: { acquisitionTax: number; brokerage: number; total: number };
   products: Array<{
@@ -176,6 +177,7 @@ export function computeBudget(input: BudgetInput): BudgetResult {
     minRatePrice: lo.price,
     maxRatePrice: hi.price,
     loan: lo.loan,
+    maxRateLoan: hi.loan.amount,
     ownFunds,
     costs: lo.costs,
     products: lo.loan.amount === 0 ? [] : lo.elig.map(toProduct),

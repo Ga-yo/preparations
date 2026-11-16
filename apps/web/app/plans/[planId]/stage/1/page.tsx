@@ -113,7 +113,7 @@ export default async function Stage1({
       <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
         <StageForm
           id={FORM_ID} title="1단계. 나의 구매 상황" labels={LABELS} action={save}
-          result={<BudgetCard result={budget} flat />} resultKey={p?.updated_at} resultLabel={resultLabel}
+          result={<BudgetCard result={budget} flat income={p?.annual_income} />} resultKey={p?.updated_at} resultLabel={resultLabel}
           next={{ href: `/plans/${planId}/stage/2`, label: "2단계로 →" }}
         >
           <p className="-mt-4 text-lg text-chb-muted">입력한 내용으로 무리 없는 예산을 계산하고, 받을 수 있는 대출을 찾아 드려요.</p>

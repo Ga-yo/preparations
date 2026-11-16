@@ -28,13 +28,12 @@ const ERRORS: Record<string, string> = {
 
 type Data = (Omit<BudgetResult, "loan"> & { loan: { amount: number; binding?: keyof typeof BINDING } }) | { error: string };
 
-// flat: 팝업 안에 넣을 때 카드 테두리 없이
-export function BudgetCard({ result, flat = false }: { result: ToolResult; flat?: boolean }) {
+// flat: 팝업 안에 넣을 때 카드 테두리 없이. income(원): 설명 문장용. 툴 결과에는 소득 원값을 넣지 않아 화면이 따로 넘긴다
+export function BudgetCard({ result, flat = false, income }: { result: ToolResult; flat?: boolean; income?: number | null }) {
   const data = result.data as Data;
   const asOf = Object.entries(result.as_of);
   return (
     <section className={flat ? "p-4" : "rounded-3xl border border-chb-line bg-white p-6"} aria-label="예산 결과">
-      <h2 className="mb-3 text-sm font-semibold text-chb-muted">구매 가능 예산</h2>
       {result.notices?.includes("dummy_data:loan_products:bank") && (
         <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 font-bold text-red-800">
           은행 상품 금리는 테스트용 가짜 데이터입니다
@@ -49,22 +48,7 @@ export function BudgetCard({ result, flat = false }: { result: ToolResult; flat?
         <p className="text-chb-muted">{ERRORS[data.error] ?? "예산을 계산하지 못했습니다."}</p>
       ) : (
         <div className="space-y-4 text-sm">
-          <p className="font-display text-2xl font-black tracking-tight text-chb-ink">
-            <span className="sr-only">예산 범위: </span>{formatWon(data.maxRatePrice)} ~ {formatWon(data.minRatePrice)}
-          </p>
-          <dl className="grid grid-cols-2 gap-3">
-            <div className="rounded-2xl bg-chb-soft2 p-3">
-              <dt className="text-chb-muted">대출 가능액</dt>
-              <dd className="mt-1 text-base font-semibold">
-                {formatWon(data.loan.amount)}
-                {data.loan.binding && <span className="block text-xs font-normal text-chb-muted">{BINDING[data.loan.binding]} 적용</span>}
-              </dd>
-            </div>
-            <div className="rounded-2xl bg-chb-soft2 p-3">
-              <dt className="text-chb-muted">자기자금</dt>
-              <dd className="mt-1 text-base font-semibold">{formatWon(data.ownFunds)}</dd>
-            </div>
-          </dl>
+          <BudgetHeadline data={data} income={income} />
           {data.products.length > 0 && <ProductList products={data.products} />}
           <div>
             <p className="font-semibold">부대비용: 총 {formatWon(data.costs.total)}</p>
@@ -90,6 +74,46 @@ export function BudgetCard({ result, flat = false }: { result: ToolResult; flat?
         </p>
       )}
     </section>
+  );
+}
+
+type Budget = Exclude<Data, { error: string }>;
+const loanText = (n: number) => (n > 0 ? `대출 ${formatWon(n)}` : "대출 없이 내 돈으로만");
+
+// 두 금리 조건의 예산을 나란히: 안정 = 가장 높은 금리 기준(maxRatePrice), 최대 = 가장 낮은 금리 기준(minRatePrice)
+function BudgetHeadline({ data, income }: { data: Budget; income?: number | null }) {
+  const same = data.maxRatePrice === data.minRatePrice;
+  const basis = [income ? `연소득 ${formatWon(income)}` : null, `구매에 쓸 수 있는 내 돈 ${formatWon(data.ownFunds)}`].filter(Boolean).join(", ");
+  const pct = data.minRatePrice > 0 ? Math.round((data.maxRatePrice / data.minRatePrice) * 100) : 0;
+  return (
+    <div>
+      <h2 className="font-display text-3xl leading-tight font-black tracking-tight text-chb-ink">
+        금리가 올라도 살 수 있는 집값은<br />
+        <span className="text-chb-accent">{formatWon(data.maxRatePrice)}</span>까지예요
+      </h2>
+      <p className="mt-3 text-base leading-relaxed text-chb-muted">
+        {basis} 기준이에요.
+        {!same && ` 가장 낮은 금리를 받으면 ${formatWon(data.minRatePrice)}까지도 가능하지만 매달 갚는 부담이 커져요.`}
+      </p>
+      <div className="mt-5 h-3 rounded-full bg-chb-accent/30" aria-hidden="true">
+        <div className="h-full rounded-full bg-chb-accent" style={{ width: `${pct}%` }} />
+      </div>
+      <dl className="mt-4 grid grid-cols-2 gap-3">
+        <div className="rounded-2xl bg-chb-soft2 p-4">
+          <dt className="flex items-center gap-2 text-chb-muted"><span aria-hidden="true" className="size-3 rounded-sm bg-chb-accent" />안정 예산 <span className="text-xs">높은 금리 기준</span></dt>
+          <dd className="mt-1 font-display text-xl font-black">{formatWon(data.maxRatePrice)}</dd>
+          <dd className="text-chb-muted">{loanText(data.maxRateLoan)}</dd>
+        </div>
+        <div className="rounded-2xl bg-chb-soft2 p-4">
+          <dt className="flex items-center gap-2 text-chb-muted"><span aria-hidden="true" className="size-3 rounded-sm bg-chb-accent/30" />최대 예산 <span className="text-xs">낮은 금리 기준</span></dt>
+          <dd className="mt-1 font-display text-xl font-black">{formatWon(data.minRatePrice)}</dd>
+          <dd className="text-chb-muted">
+            {loanText(data.loan.amount)}
+            {data.loan.binding && data.loan.amount > 0 && <span className="block text-xs">{BINDING[data.loan.binding]} 적용</span>}
+          </dd>
+        </div>
+      </dl>
+    </div>
   );
 }
 
