@@ -5,13 +5,13 @@ export function TipPanel({ tips, fieldKey }: { tips: Tip[]; fieldKey: string }) 
   const mine = tips.filter((t) => t.field_key === fieldKey);
   if (!mine.length) return null;
   return (
-    <details className="mt-1 text-sm">
-      <summary className="cursor-pointer select-none text-blue-700" aria-label="TIP 보기">ⓘ TIP</summary>
+    <details className="group mt-2 text-sm">
+      <summary className="inline-flex cursor-pointer list-none items-center gap-1 rounded-full bg-chb-accent-soft px-2.5 py-1 text-xs font-semibold text-chb-accent select-none [&::-webkit-details-marker]:hidden" aria-label="TIP 보기">TIP<span aria-hidden="true" className="transition group-open:rotate-180">▾</span></summary>
       {mine.map((t) => (
-        <div key={t.slug} className="mt-1 rounded border border-blue-200 bg-blue-50 p-2 text-gray-900">
-          <p className="font-semibold">{t.title}</p>
+        <div key={t.slug} className="mt-2 rounded-2xl bg-chb-soft2 p-4 leading-relaxed text-chb-ink">
+          <p className="mb-1 font-semibold">{t.title}</p>
           <p className="whitespace-pre-line">{t.body}</p>
-          {t.caution && <p className="mt-1 font-medium">알아두기: {t.caution}</p>}
+          {t.caution && <p className="mt-2 font-medium text-chb-accent">알아두기: {t.caution}</p>}
         </div>
       ))}
     </details>

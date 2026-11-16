@@ -5,6 +5,11 @@ const base = { purpose: "live", timeline: "1y", cash_assets: "20000", annual_inc
 
 describe("financialProfileSchema", () => {
   test("만원 → 원 변환", () => expect(financialProfileSchema.parse(base).cash_assets).toBe(200_000_000));
+  test("천 단위 콤마는 빼고 읽는다", () => {
+    expect(financialProfileSchema.parse({ ...base, annual_income: "6,000" }).annual_income).toBe(60_000_000);
+    expect(financialProfileSchema.parse({ ...base, cash_assets: "1,234,567" }).cash_assets).toBe(12_345_670_000);
+  });
+  test("콤마 외 문자는 여전히 거부", () => expect(financialProfileSchema.safeParse({ ...base, cash_assets: "6천" }).success).toBe(false));
   test("빈 금액은 null", () => expect(financialProfileSchema.parse({ ...base, extra_funds: "" }).extra_funds).toBeNull());
   test("음수 금액 거부", () => expect(financialProfileSchema.safeParse({ ...base, cash_assets: "-1" }).success).toBe(false));
   test("purpose는 live|invest|both만", () => {

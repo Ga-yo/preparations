@@ -27,38 +27,47 @@ const ERRORS: Record<string, string> = {
 
 type Data = (Omit<BudgetResult, "loan"> & { loan: { amount: number; binding?: keyof typeof BINDING } }) | { error: string };
 
-export function BudgetCard({ result }: { result: ToolResult }) {
+// flat: 팝업 안에 넣을 때 카드 테두리 없이
+export function BudgetCard({ result, flat = false }: { result: ToolResult; flat?: boolean }) {
   const data = result.data as Data;
   const asOf = Object.entries(result.as_of);
   return (
-    <section className="rounded border p-4" aria-label="예산 결과">
-      <h2 className="mb-2 font-semibold">구매 가능 예산</h2>
+    <section className={flat ? "p-4" : "rounded-3xl border border-chb-line bg-white p-6"} aria-label="예산 결과">
+      <h2 className="mb-3 text-sm font-semibold text-chb-muted">구매 가능 예산</h2>
       {result.notices?.includes("dummy_data:loan_products:bank") && (
-        <p role="alert" className="mb-2 rounded bg-red-100 p-2 font-bold text-red-800">
+        <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 font-bold text-red-800">
           은행 상품 금리는 테스트용 가짜 데이터입니다
         </p>
       )}
       {!!result.stale?.length && (
-        <p role="alert" className="mb-2 rounded bg-yellow-100 p-2 text-yellow-900">
+        <p role="alert" className="mb-3 rounded-xl bg-amber-50 p-3 text-amber-900">
           오래된 데이터가 포함되어 있습니다 (7일 초과): {result.stale.join(", ")}
         </p>
       )}
       {"error" in data ? (
-        <p>{ERRORS[data.error] ?? "예산을 계산하지 못했습니다."}</p>
+        <p className="text-chb-muted">{ERRORS[data.error] ?? "예산을 계산하지 못했습니다."}</p>
       ) : (
-        <div className="space-y-3 text-sm">
-          <p className="text-lg">
-            예산 범위: {formatWon(data.maxRatePrice)} ~ {formatWon(data.minRatePrice)}
+        <div className="space-y-4 text-sm">
+          <p className="font-display text-2xl font-black tracking-tight text-chb-ink">
+            <span className="sr-only">예산 범위: </span>{formatWon(data.maxRatePrice)} ~ {formatWon(data.minRatePrice)}
           </p>
-          <p>
-            대출 가능액: {formatWon(data.loan.amount)}
-            {data.loan.binding && ` (${BINDING[data.loan.binding]} 적용)`}
-          </p>
-          <p>자기자금: {formatWon(data.ownFunds)}</p>
+          <dl className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-chb-soft2 p-3">
+              <dt className="text-chb-muted">대출 가능액</dt>
+              <dd className="mt-1 text-base font-semibold">
+                {formatWon(data.loan.amount)}
+                {data.loan.binding && <span className="block text-xs font-normal text-chb-muted">{BINDING[data.loan.binding]} 적용</span>}
+              </dd>
+            </div>
+            <div className="rounded-2xl bg-chb-soft2 p-3">
+              <dt className="text-chb-muted">자기자금</dt>
+              <dd className="mt-1 text-base font-semibold">{formatWon(data.ownFunds)}</dd>
+            </div>
+          </dl>
           {data.products.length > 0 && (
             <table className="w-full text-left [&_td]:pr-3 [&_td]:py-0.5 [&_th]:pr-3 [&_td:not(:first-child)]:whitespace-nowrap">
-              <caption className="text-left font-medium">상품별 월 상환액</caption>
-              <thead><tr><th>상품</th><th>대출액</th><th>월 상환액</th></tr></thead>
+              <caption className="mb-1 text-left font-semibold">상품별 월 상환액</caption>
+              <thead className="text-chb-muted"><tr><th className="font-normal">상품</th><th className="font-normal">대출액</th><th className="font-normal">월 상환액</th></tr></thead>
               <tbody>
                 {data.products.map((p) => (
                   <tr key={p.productId}>
@@ -75,25 +84,25 @@ export function BudgetCard({ result }: { result: ToolResult }) {
             </table>
           )}
           <div>
-            <p className="font-medium">부대비용: 총 {formatWon(data.costs.total)}</p>
+            <p className="font-semibold">부대비용: 총 {formatWon(data.costs.total)}</p>
             <ul className="list-disc pl-5">
               <li>취득세 {formatWon(data.costs.acquisitionTax)}</li>
               <li>중개보수 {formatWon(data.costs.brokerage)}</li>
             </ul>
-            <p className="text-gray-600">중개보수는 상한 요율 기준, 부가세 별도입니다.</p>
+            <p className="text-chb-muted">중개보수는 상한 요율 기준, 부가세 별도입니다.</p>
           </div>
           {data.diagnoses.includes("region_unspecified") && (
-            <p role="alert" className="rounded bg-yellow-100 p-2 font-bold text-yellow-900">{DIAGNOSES.region_unspecified}</p>
+            <p role="alert" className="rounded-xl bg-amber-50 p-3 font-semibold text-amber-900">{DIAGNOSES.region_unspecified}</p>
           )}
           {data.diagnoses.length > 0 && (
-            <ul className="list-disc pl-5">
+            <ul className="list-disc space-y-1 pl-5 text-chb-muted">
               {data.diagnoses.filter((d) => d !== "region_unspecified").map((d) => <li key={d}>{DIAGNOSES[d]}</li>)}
             </ul>
           )}
         </div>
       )}
       {asOf.length > 0 && (
-        <p className="mt-3 text-xs text-gray-600">
+        <p className="mt-4 text-xs text-chb-muted">
           데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}
         </p>
       )}

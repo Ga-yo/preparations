@@ -1,16 +1,10 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Gothic_A1, IBM_Plex_Sans_KR } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// 한글 글리프는 unicode-range로 필요할 때 받으므로 latin만 preload
+const gothic = Gothic_A1({ weight: ["500", "700", "900"], subsets: ["latin"], variable: "--font-gothic-a1" });
+const plex = IBM_Plex_Sans_KR({ weight: ["400", "500", "600", "700"], subsets: ["latin"], variable: "--font-plex-kr" });
 
 export const metadata: Metadata = {
   title: "채비 — 첫 집 마련 AI 길잡이",
@@ -21,7 +15,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="ko"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${gothic.variable} ${plex.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
