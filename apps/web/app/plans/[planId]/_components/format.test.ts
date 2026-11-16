@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { caretAfterDigits, formatWon, groupDigits } from "./format";
+import { caretAfterDigits, formatEokShort, formatWon, groupDigits } from "./format";
 
 test.each([
   [0, "0원"], [9_999, "9,999원"], [10_000, "1만원"], [100_000_000, "1억원"],
@@ -16,3 +16,8 @@ test("caretAfterDigits: n번째 숫자 바로 뒤 위치(콤마는 건너뜀)", 
   expect(caretAfterDigits("1,234,567", 2)).toBe(3);
   expect(caretAfterDigits("1,234,567", 7)).toBe(9);
 });
+
+test.each([
+  [456_000_000, "4.6억"], [576_000_000, "5.8억"], [400_000_000, "4억"], [1_234_000_000, "12.3억"],
+  [95_000_000, "9,500만"], [99_990_000, "9,999만"], [100_000_000, "1억"],
+])("formatEokShort(%i) = %s", (n, s) => expect(formatEokShort(n)).toBe(s));

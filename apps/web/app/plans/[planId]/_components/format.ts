@@ -24,3 +24,9 @@ export function caretAfterDigits(formatted: string, n: number): number {
   }
   return formatted.length;
 }
+
+// 떠 있는 버튼처럼 좁은 곳용 짧은 표기: 1억 이상은 소수 첫째 자리 억, 미만은 만 단위
+export function formatEokShort(n: number): string {
+  if (n >= 100_000_000) return `${Math.round(n / 10_000_000) / 10}억`; // 1억 미만을 "1억"으로 올리지 않게 원값으로 판정
+  return `${Math.round(n / 10_000).toLocaleString("ko-KR")}만`;
+}
