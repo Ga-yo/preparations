@@ -14,7 +14,7 @@ const same = (a: unknown, b: unknown) =>
   Array.isArray(a) && Array.isArray(b) ? a.length === b.length && [...a].sort().join() === [...b].sort().join() : a === b;
 
 export function diffConditions(before: Saved, after: Saved): string[] {
-  const fields = (Object.keys(after) as (keyof Saved)[]).filter((k) => k !== "priorities" && !same(before[k], after[k]));
+  const fields = (Object.keys(after) as (keyof Saved)[]).filter((k) => !["priorities", "weights", "ties"].includes(k) && !same(before[k], after[k])); // weights·ties는 2단계에서 파생된 점수 설정(M6)
   const keys = [...new Set([...Object.keys(before.priorities), ...Object.keys(after.priorities)])];
   const prio = keys.filter((k) => (before.priorities[k] ?? "prefer") !== (after.priorities[k] ?? "prefer")).map((k) => `priorities.${k}`);
   return [...fields, ...prio];

@@ -40,3 +40,14 @@ def test_fetch_hides_url():
 def test_fetch_refuses_truncated_page():
     with pytest.raises(RuntimeError, match="truncated"):
         shops.fetch(_Big(), "11680")
+
+
+class _Translating:
+    # PublicDataReader SmallShop은 translate=True(기본)이면 lon/lat를 경도/위도로 바꾼다
+    def get_data(self, *a, translate=True, **kw):
+        cols = ("경도", "위도") if translate else ("lon", "lat")
+        return pd.DataFrame({cols[0]: ["127.0"], cols[1]: ["37.5"]})
+
+
+def test_fetch_keeps_original_column_names():
+    assert shops.shop_points(shops.fetch(_Translating(), "11680")) == [(127.0, 37.5)]

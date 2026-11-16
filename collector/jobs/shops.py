@@ -67,7 +67,7 @@ def shop_points(df) -> list[tuple[float, float]]:
 
 def fetch(api, sgg: str):
     try:
-        df = api.get_data("행정동상가", divId="signguCd", key=sgg)
+        df = api.get_data("행정동상가", divId="signguCd", key=sgg, translate=False)  # 기본값은 lon/lat를 한글 열 이름으로 바꾼다
     except Exception as e:
         raise RuntimeError(f"{sgg}: {type(e).__name__}") from None  # 원본 메시지·URL에 서비스키가 있을 수 있다(원칙 8)
     if len(df) >= PAGE_LIMIT:

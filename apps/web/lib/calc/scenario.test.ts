@@ -52,3 +52,11 @@ describe("order-insensitive and stable", () => {
     expect(d.moved).toEqual([]);
   });
 });
+
+describe("scored conditions", () => {
+  it("weights and ties from stage 2 are not condition changes", () => {
+    const a = { ...C, weights: {}, ties: [] };
+    const b = { ...C, weights: {}, ties: [], price_max: 1e9 };
+    expect(diffConditions(a, b)).toEqual(["price_max"]);
+  });
+});
