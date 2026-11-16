@@ -1,13 +1,13 @@
-/* 채비 히어로. 바탕은 연보라·보라빛 먹색, 포인트(버튼·아이콘·체크)는 초록. next.config의 Tailwind 로더가 *.css를 모듈로 처리하지 않아 전역 CSS로 두고 chb- 접두사로 겹침을 막는다.
+/* 채비 히어로. 초록 계열로 통일: 바탕은 연민트·녹빛 먹색, 포인트(버튼·아이콘·체크)는 짙은 초록. next.config의 Tailwind 로더가 *.css를 모듈로 처리하지 않아 전역 CSS로 두고 chb- 접두사로 겹침을 막는다.
     시안(chaebi-hero.html)의 토큰·레이아웃을 옮기고, 노트북 화면(약 1280~1600 × 720~900) 한 화면에 들어오게 높이 기준으로도 줄인다 */
 .chb-hero {
   --hx-bg: #ffffff;
-  --hx-ink: #17131f;
-  --hx-muted: #5f5b6b;
-  --hx-line: #eeecf3;
+  --hx-ink: #14201a;
+  --hx-muted: #5a6760;
+  --hx-line: #e5ede8;
   --hx-card: #ffffff;
-  --hx-soft: #f1eefa;
-  --hx-soft2: #f8f4fc;
+  --hx-soft: #e8f4ed;
+  --hx-soft2: #f3faf6;
   --hx-accent: #2e7d5b;
   --hx-accent-soft: #e2f1e9;
   --hx-on-ink: #ffffff;
@@ -74,17 +74,17 @@
   position: absolute; left: 50%; top: 50%; width: 50%; aspect-ratio: 3 / 4;
   transform: translate(-50%, -50%);
   border-radius: 999px 999px 28px 28px; overflow: hidden;
-  background: linear-gradient(160deg, #f6f3fd 0%, #ebe6f8 50%, #e6eff7 100%);
-  box-shadow: 0 0 0 8px var(--hx-card), 0 40px 80px -30px rgba(60, 40, 110, 0.22);
+  background: linear-gradient(160deg, #f4faf6 0%, #e4f2ea 50%, #e3f0f0 100%);
+  box-shadow: 0 0 0 8px var(--hx-card), 0 40px 80px -30px rgba(30, 80, 58, 0.22);
 }
 .chb-arch video { width: 100%; height: 100%; object-fit: cover; object-position: center 60%; display: block; }
-.chb-float { position: absolute; background: var(--hx-card); border: 1px solid var(--hx-line); border-radius: 22px; box-shadow: 0 18px 44px -18px rgba(40, 30, 70, 0.14); animation: chb-bob 6s ease-in-out infinite; }
+.chb-float { position: absolute; background: var(--hx-card); border: 1px solid var(--hx-line); border-radius: 22px; box-shadow: 0 18px 44px -18px rgba(20, 50, 36, 0.14); animation: chb-bob 6s ease-in-out infinite; }
 .chb-f1 { left: 0; top: 20%; padding: 16px 22px; white-space: nowrap; }
 .chb-f1 b { display: flex; align-items: center; gap: 8px; font: 700 16px/1.2 var(--hx-body); }
 .chb-f1 b i { width: 9px; height: 9px; border-radius: 50%; background: #4cc794; box-shadow: 0 0 0 4px rgba(76, 199, 148, 0.18); }
 .chb-f1 span { display: block; margin-top: 6px; font-size: 14px; color: var(--hx-muted); }
 .chb-f2 { right: 0; top: 16%; display: flex; gap: 10px; background: none; border: 0; box-shadow: none; animation-delay: -2s; }
-.chb-f2 span { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: var(--hx-card); border: 1px solid var(--hx-line); box-shadow: 0 18px 44px -18px rgba(40, 30, 70, 0.14); }
+.chb-f2 span { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; background: var(--hx-card); border: 1px solid var(--hx-line); box-shadow: 0 18px 44px -18px rgba(20, 50, 36, 0.14); }
 .chb-f2 svg { width: 22px; height: 22px; color: var(--hx-accent); }
 .chb-f3 { left: 6%; bottom: 12%; display: flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 999px; font: 600 15px/1 var(--hx-body); color: var(--hx-ink); cursor: pointer; animation-delay: -4s; }
 .chb-f3 svg { width: 18px; height: 18px; }
