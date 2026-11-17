@@ -7,9 +7,10 @@ AI가 구매 가능 예산을 분석하고 주택을 추천하며, 비교 과정
 ## 기술 스택
 - 모노레포 (pnpm workspace)
 - apps/web: Next.js (App Router, TypeScript), Vercel 배포, 함수 리전 icn1
-- LLM: DeepSeek API (OpenAI 호환, openai SDK + baseURL https://api.deepseek.com)
-  - 모델 ID: deepseek-v4-flash (기본), deepseek-v4-pro (비교·조건 분석)
-  - deepseek-chat, deepseek-reasoner 별칭은 종료되었으므로 사용 금지
+- LLM: Google Gemini API 무료 요금제 (OpenAI 호환, openai SDK + baseURL https://generativelanguage.googleapis.com/v1beta/openai/)
+  - 모델 ID: gemini-3.5-flash-lite (전 단계). gemini-3.8-flash는 툴 호출 응답이 2분 넘게 걸려(2026-11-08 실측) 쓰지 않는다
+  - 무료 요금제에 없는 모델(gemini-3.1-pro-preview 등)과 지원 종료 예정 모델(gemini-2.5-*)은 쓰지 않는다
+  - 키는 GEMINI_API_KEY (서버 전용, NEXT_PUBLIC_ 금지)
 - DB: Supabase (Postgres + PostGIS + pgvector, Auth, Storage), 서울 리전
 - collector/: Python 배치 수집기 (uv, PublicDataReader), GitHub Actions에서 실행
 
@@ -40,7 +41,8 @@ AI가 구매 가능 예산을 분석하고 주택을 추천하며, 비교 과정
    - SUPABASE_SERVICE_ROLE_KEY는 RLS를 무시하는 최고 권한 키다. 웹(Vercel)에는 넣지 않는다.
 11. 무료 요금제 안에서 운영한다.
    - Supabase Free: DB 500MB/프로젝트, 1주 비활성 시 일시정지. 새 데이터셋(특히 실거래가)은 적재 전에 행 수×행 크기로 용량을 추정해 계획에 적고, 지역·기간·컬럼을 필요한 만큼만 저장한다. 원본 응답 전체(raw JSON)는 저장하지 않는다. 합계가 400MB를 넘을 것 같으면 먼저 알린다.
-   - DeepSeek: 무료 요금제 없음(선불 충전). 충전 잔액이 비용 상한이다. 기본은 deepseek-v4-flash, /api/chat은 사용자별 호출 제한을 둔다.
+   - Gemini: 무료 요금제만 쓴다(비용 0원). AI Studio에 결제 수단을 등록하지 않는다(유료 전환 방지). 무료 한도(분당·하루 호출 수)는 프로젝트 전체가 공유하므로 /api/chat은 사용자별 호출 제한을 두고, 한도 초과(429)는 503 llm_quota로 안내한다.
+   - 무료 요금제에서는 입력·응답이 Google 제품 개선(학습)에 쓰인다. 사용자가 이를 받아들이고 선택했다(2026-11-07). 그래서 9번 원칙(식별 정보 금지, 계산 결과 위주)을 더 엄격히 지킨다.
    - GitHub Actions 예약 실행은 저장소 60일 무활동 시 자동 중지되므로 수집이 멈췄는지 data_freshness로 확인한다.
 9. LLM에 보내는 데이터에는 이름·연락처 등 식별 정보를 넣지 않는다. 소득·자산은 계산 결과 위주로 전달한다.
 10. 시중 대출상품 현황을 매번 조회해서 추천해줘.

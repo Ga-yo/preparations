@@ -3,11 +3,11 @@ import { getBudget } from "@/lib/agent/tools/get-budget";
 import { kstToday } from "@/lib/agent/orchestrator";
 import type { ToolResult } from "@/lib/agent/tool";
 
-// 만원 입력 → 원. 빈 값은 null, 음수·비정수 거부
+// 만원 입력 → 원. 빈 값은 null, 음수·비정수 거부. 입력칸이 붙이는 천 단위 콤마는 뺀다
 const won = z
   .string()
   .optional()
-  .transform((s) => (s?.trim() ? Number(s) : null))
+  .transform((s) => (s?.trim() ? Number(s.replace(/,/g, "")) : null))
   .pipe(z.number().int().min(0).max(1e9).nullable()) // 1e9 만원 = 10조원, 오타 방지 상한
   .transform((n) => (n === null ? null : n * 10_000));
 const emptyToNull = (v: unknown) => (v === "" ? null : v);

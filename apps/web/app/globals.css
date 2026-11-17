@@ -1,26 +1,28 @@
 @import "tailwindcss";
 
+/* 채비 브랜드 톤(밝은 테마만): 녹빛 먹색 글자, 민트 바탕, 짙은 초록 포인트. 랜딩 hero.css와 같은 값 */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #14201a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-chb-ink: #14201a;
+  --color-chb-muted: #5a6760;
+  --color-chb-line: #e5ede8;
+  --color-chb-soft: #e8f4ed;
+  --color-chb-soft2: #f3faf6;
+  --color-chb-accent: #2e7d5b;
+  --color-chb-accent-soft: #e2f1e9;
+  --font-sans: var(--font-plex-kr), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-display: var(--font-gothic-a1), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  word-break: keep-all;
 }

@@ -80,6 +80,14 @@ test("get_budget: 면적 0은 검증 실패", async () => {
 test("get_tip: slug로 조회", async () => {
   expect((await getTip.run({ slug: "ltv-dsr" }, mk("2026-11-01"))).data).toMatchObject({ tips: [{ slug: "ltv-dsr" }] });
 });
+test("get_tip: 인자 없이 부르면 TIP 목록(slug·제목)", async () => {
+  expect((await getTip.run({}, mk("2026-11-01"))).data).toEqual({ available: [{ slug: "ltv-dsr", title: "LTV" }] });
+});
+test("get_tip: 없는 slug면 빈 결과와 함께 목록을 돌려줘 다시 고르게 한다", async () => {
+  expect((await getTip.run({ slug: "LTV" }, mk("2026-11-01"))).data).toEqual({
+    tips: [], available: [{ slug: "ltv-dsr", title: "LTV" }],
+  });
+});
 test("get_budget: 대출 0원이면 binding 생략", async () => {
   const r = await getBudget.run({}, mk("2026-11-01", "FSS", true, { ...profile, annual_income: null }));
   const loan = (r.data as { loan: { amount: number } }).loan;
