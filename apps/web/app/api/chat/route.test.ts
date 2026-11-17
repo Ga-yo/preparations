@@ -1,3 +1,4 @@
+import OpenAI from "openai";
 import { beforeEach, expect, test, vi } from "vitest";
 import { fakeDb } from "@/lib/agent/fake-db";
 
@@ -13,13 +14,20 @@ vi.mock("@/lib/supabase/server", () => ({
     }),
 }));
 
+const runAgent = vi.fn();
+vi.mock("@/lib/agent/orchestrator", async (orig) => ({
+  ...(await orig<typeof import("@/lib/agent/orchestrator")>()),
+  runAgent,
+}));
+
 const { POST, DAILY_CHAT_LIMIT } = await import("./route");
 const call = () =>
   POST(new Request("http://x/api/chat", { method: "POST", body: JSON.stringify({ plan_id: PLAN, message: "LTV가 뭐야?" }) }));
 
 beforeEach(() => {
   rpc.mockClear();
-  vi.stubEnv("DEEPSEEK_API_KEY", ""); // LLM 호출 전 단계까지만 검증
+  runAgent.mockReset();
+  vi.stubEnv("GEMINI_API_KEY", ""); // LLM 호출 전 단계까지만 검증
 });
 
 test("하루 한도를 넘으면 429이고 LLM 단계로 가지 않는다", async () => {
@@ -35,4 +43,22 @@ test("한도 이내면 통과한다 (키 없음 → 502까지 진행)", async ()
   const res = await call();
   expect(res.status).toBe(502);
   expect(rpc).toHaveBeenCalledOnce();
+});
+
+test("Gemini 무료 한도 초과(429)는 503 llm_quota", async () => {
+  used = 1;
+  vi.stubEnv("GEMINI_API_KEY", "test-key");
+  runAgent.mockRejectedValue(Object.assign(Object.create(OpenAI.APIError.prototype), { status: 429 }));
+  const res = await call();
+  expect(res.status).toBe(503);
+  expect(await res.json()).toEqual({ error: "llm_quota" });
+});
+
+test("그 밖의 LLM 오류는 502 llm_unavailable", async () => {
+  used = 1;
+  vi.stubEnv("GEMINI_API_KEY", "test-key");
+  runAgent.mockRejectedValue(new Error("down"));
+  const res = await call();
+  expect(res.status).toBe(502);
+  expect(await res.json()).toEqual({ error: "llm_unavailable" });
 });

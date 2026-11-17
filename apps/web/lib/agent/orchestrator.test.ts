@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import type OpenAI from "openai";
 import { fakeDb } from "./fake-db";
-import { kstToday, modelForStage, runAgent } from "./orchestrator";
+import { kstToday, runAgent } from "./orchestrator";
 import { SYSTEM_PROMPT } from "./prompt";
 
 type Msg = { content: string | null; tool_calls?: { id: string; type: "function"; function: { name: string; arguments: string } }[] };
@@ -38,7 +38,7 @@ test("툴 호출 후 최종 답변", async () => {
   expect(r.reply).toBe("예산은 이렇습니다");
   expect(r.toolCalls).toHaveLength(1);
   expect(r.toolCalls[0].name).toBe("get_budget");
-  expect((calls[0] as { model: string }).model).toBe("deepseek-v4-flash");
+  expect((calls[0] as { model: string }).model).toBe("gemini-3.5-flash-lite");
 });
 
 test("툴이 던져도 루프는 tool_failed로 계속된다", async () => {
@@ -63,12 +63,6 @@ test("maxSteps 초과 시 중단하고 안내 문구", async () => {
   expect(r.reply).toMatch(/다시 질문/);
 });
 
-test("모델 선택", () => {
-  expect(modelForStage(1)).toBe("deepseek-v4-flash");
-  expect(modelForStage(3)).toBe("deepseek-v4-pro");
-  expect(modelForStage(5)).toBe("deepseek-v4-pro");
-});
-
 test("시스템 프롬프트 필수 문구", () => {
   expect(SYSTEM_PROMPT).toMatch(/직접 계산/);
   expect(SYSTEM_PROMPT).toMatch(/기준일/);
@@ -87,7 +81,7 @@ test("LLM에 보내는 메시지에 프로필 원값이 없다", async () => {
   expect(sent).not.toContain("987654321");
 });
 
-test("DeepSeek 오류는 runAgent 밖으로 전파된다 (route가 502 처리)", async () => {
+test("LLM 오류는 runAgent 밖으로 전파된다 (route가 502 처리)", async () => {
   const { client } = fakeClient([new Error("down")]);
   await expect(runAgent({ client, ...base, ctx: ctx() })).rejects.toThrow("down");
 });

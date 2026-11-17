@@ -2,6 +2,7 @@ import { brokerageFee } from "./brokerage";
 import { maxLoan, maxPrincipalByDsr, monthlyPayment } from "./loan";
 import { activeAreaTypes, buyerTypeOf, selectRule } from "./rules";
 import { acquisitionTax } from "./tax";
+import { ownFunds as ownFundsOf } from "./funds";
 import type { BuyerType, LoanProduct, LoanRule, RegulatedArea } from "./types";
 
 export const DEFAULT_TERM_YEARS = 30;
@@ -43,6 +44,7 @@ export type BudgetResult = {
   minRatePrice: number;
   maxRatePrice: number;
   loan: { amount: number; binding: "ltv" | "loan_cap" | "dsr" };
+  maxRateLoan: number; // maxRatePrice(가장 높은 금리 기준)에서의 대출 가능액. loan은 minRatePrice 기준
   ownFunds: number;
   costs: { acquisitionTax: number; brokerage: number; total: number };
   products: Array<{
@@ -90,7 +92,7 @@ export function eligibleProducts(
 }
 
 export function computeBudget(input: BudgetInput): BudgetResult {
-  const ownFunds = input.cashAssets + input.extraFunds;
+  const ownFunds = ownFundsOf(input.cashAssets, input.extraFunds);
   const buyerType = buyerTypeOf(input);
   const houseCountAfter = input.ownedHouseCount + 1;
   const areaTypes = input.regionCode ? activeAreaTypes(input.regionCode, input.areas, input.date) : [];
@@ -175,6 +177,7 @@ export function computeBudget(input: BudgetInput): BudgetResult {
     minRatePrice: lo.price,
     maxRatePrice: hi.price,
     loan: lo.loan,
+    maxRateLoan: hi.loan.amount,
     ownFunds,
     costs: lo.costs,
     products: lo.loan.amount === 0 ? [] : lo.elig.map(toProduct),

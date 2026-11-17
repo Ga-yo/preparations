@@ -40,6 +40,12 @@ test("금리가 높으면 예산이 같거나 낮다", () => {
   const wide = computeBudget({ ...input, products: [product({ rate_min: 3, rate_max: 8 })] });
   expect(wide.maxRatePrice).toBeLessThan(wide.minRatePrice);
 });
+test("높은 금리 기준 대출액(maxRateLoan)은 낮은 금리 기준보다 작고, 소득이 없으면 0", () => {
+  const wide = computeBudget({ ...input, products: [product({ rate_min: 3, rate_max: 8 })] });
+  expect(wide.maxRateLoan).toBeGreaterThan(0);
+  expect(wide.maxRateLoan).toBeLessThan(wide.loan.amount);
+  expect(computeBudget({ ...input, annualIncome: null }).maxRateLoan).toBe(0);
+});
 test("소득 없음 → 대출 0, missing_income", () => {
   for (const annualIncome of [null, 0]) {
     const r = computeBudget({ ...input, annualIncome });
