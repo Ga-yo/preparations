@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import { Hero } from './_components/Hero'
 
 async function start() {
   'use server'
@@ -16,13 +17,8 @@ async function start() {
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6">
-      <h1 className="text-3xl font-semibold">내 집 마련 AI 에이전트</h1>
-      <form action={start}>
-        <button type="submit" className="rounded-full bg-foreground px-6 py-3 text-background">
-          시작하기
-        </button>
-      </form>
+    <main className="flex flex-1 flex-col">
+      <Hero start={start} />
     </main>
   )
 }
