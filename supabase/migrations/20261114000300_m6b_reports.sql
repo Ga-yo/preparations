@@ -1,4 +1,4 @@
--- M6b: 구매 검토 리포트 스냅숏(M6-D6). payload는 툴 결과(예산·비교) 스냅숏, narrative는 AI 해설 자리(팀원 담당, 지금은 null)
+-- M6b: 구매 검토 리포트 스냅숏(M6-D6). payload는 툴 결과(예산·비교) 스냅숏, narrative는 AI 해설(사용자가 버튼을 누를 때 채움)
 create table public.reports (
   id uuid primary key default gen_random_uuid(),
   plan_id uuid not null,
