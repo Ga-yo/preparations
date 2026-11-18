@@ -1,14 +1,15 @@
 import type { ComplexRow, Conditions, RegionBudget } from "@/lib/calc/conditions";
+import { applyParkingDefault, lifeNotices, tieBreakers, weightsFor, type LifePrefs } from "@/lib/calc/preferences";
 import type { ToolContext } from "../tool";
 import { getRegionPrices } from "./get-region-prices";
 
 const DATASET = "complexes:building_ledger";
-const DATASETS = [DATASET, "complexes:location", "pois:subway_station", "pois:school"];
+const DATASETS = [DATASET, "complexes:location", "pois:subway_station", "pois:school", "pois:park", "complexes:shops"];
 export const MONTHS = 12;
 const MAX_ROWS = 3000; // RPC는 잘림을 알리려고 한 행 더 준다
 
 export type ConditionContext = {
-  conditions: Conditions; conditionSetId: string; regionCodes: string[];
+  conditions: Conditions; conditionSetId: string; regionCodes: string[]; commuteCode: string | null; redevelopmentInterest: boolean;
   budgets: RegionBudget[]; rows: ComplexRow[]; truncated: boolean;
   as_of: Record<string, string>; stale?: string[]; notices?: string[];
 };
@@ -31,11 +32,18 @@ export async function loadConditionContext(ctx: ToolContext, offset = 0): Promis
     rooms_min: c.rooms_min, baths_min: c.baths_min, floor_pref: c.floor_pref, direction_pref: c.direction_pref,
     priorities: (c.priorities ?? {}) as Conditions["priorities"],
   };
+  const prefs: LifePrefs = {
+    uses_transit: c.uses_transit ?? null, school_importance: c.school_importance ?? null, infra_importance: c.infra_importance ?? null,
+    environment_prefs: c.environment_prefs ?? [], parking_required: c.parking_required ?? null,
+  };
   const stage3Empty = !conditions.housing_types.length && [conditions.price_min, conditions.price_max,
     conditions.area_min, conditions.area_max, conditions.approval_year_min, conditions.household_count_min,
     conditions.parking_per_household_min, conditions.floor_area_ratio_max,
     conditions.station_distance_max_m, conditions.elementary_distance_max_m].every((v) => v === null);
   if (stage3Empty) return { error: "conditions_required" };
+  // 2단계 생활 조건은 3단계 조건이 있을 때만 점수·정렬에 얹는다 (M6-D3)
+  const scored: Conditions = { ...applyParkingDefault(conditions, prefs), weights: weightsFor(prefs), ties: tieBreakers(prefs) };
+  const commuteCode = c.commute_region_code ?? null;
 
   const [prices, rpc, fresh] = await Promise.all([
     getRegionPrices.run({}, ctx),
@@ -43,6 +51,7 @@ export async function loadConditionContext(ctx: ToolContext, offset = 0): Promis
       region_codes: c.region_codes, months: MONTHS,
       ...(c.area_min !== null && { area_min: c.area_min }),
       ...(c.area_max !== null && { area_max: c.area_max }),
+      ...(commuteCode && { commute_code: commuteCode }),
     }),
     supabase.from("data_freshness").select("dataset, as_of").in("dataset", DATASETS),
   ]);
@@ -54,11 +63,13 @@ export async function loadConditionContext(ctx: ToolContext, offset = 0): Promis
     sigungu_code: r.sigungu_code, median_price: r.median_price, max_budget: r.max_budget ?? null,
   }));
   const all = (rpc.data ?? []) as ComplexRow[];
+  const notices = [...(prices.notices ?? []), ...lifeNotices(prefs, all), ...(commuteCode ? ["commute_is_straight_line"] : [])];
   return {
-    conditions, conditionSetId: c.id, regionCodes: c.region_codes, budgets,
+    conditions: scored, conditionSetId: c.id, regionCodes: c.region_codes, budgets,
+    commuteCode, redevelopmentInterest: c.redevelopment_interest ?? false,
     rows: all.slice(0, MAX_ROWS), truncated: all.length > MAX_ROWS,
     as_of: { ...prices.as_of, ...Object.fromEntries((fresh.data ?? []).map((f) => [f.dataset, f.as_of])) },
     ...(prices.stale?.length && { stale: prices.stale }),
-    ...(prices.notices?.length && { notices: prices.notices }),
+    ...(notices.length && { notices }),
   };
 }

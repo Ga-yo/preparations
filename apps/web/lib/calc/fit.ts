@@ -18,14 +18,24 @@ const VALUE: Record<Exclude<ConditionKey, "area">, keyof ComplexRow> = {
 
 export function fitScore(c: Conditions, x: ComplexRow, maxBudget: number | null, active: ConditionKey[]): Fit {
   const met = active.filter((k) => meets(c, k, x));
+  const w = (keys: ConditionKey[]) => keys.reduce((s, k) => s + (c.weights?.[k] ?? 1), 0);
   const unmet = active.filter((k) => !met.includes(k));
   const missing = unmet.filter((k) => k !== "area" && x[VALUE[k]] === null);
   return {
-    score: active.length ? Math.round((100 * met.length) / active.length) : 100,
+    score: active.length ? Math.round((100 * w(met)) / w(active)) : 100,
     met, unmet, missing,
     within_budget: x.median_price === null || maxBudget === null ? null : x.median_price <= maxBudget,
   };
 }
+
+// 2단계 생활 조건 정렬(M6-D3). 값이 없는 단지는 뒤로
+const tie = (c: Conditions, a: ComplexRow, b: ComplexRow) => {
+  for (const t of c.ties ?? []) {
+    const x = a[t.field], y = b[t.field];
+    if (x !== y) return x === null ? 1 : y === null ? -1 : (x - y) * t.dir;
+  }
+  return 0;
+};
 
 const budgetOrder = (b: boolean | null) => (b === true ? 0 : b === null ? 1 : 2);
 
@@ -39,6 +49,7 @@ export function rankComplexes(c: Conditions, rows: ComplexRow[], budgets: Region
     .filter((x) => musts.every((k) => meets(c, k, x)))
     .map((x) => ({ ...x, fit: fitScore(c, x, maxBudgetFor(budgets, x), active) }))
     .sort((a, b) => b.fit.score - a.fit.score
+      || tie(c, a, b)
       || budgetOrder(a.fit.within_budget) - budgetOrder(b.fit.within_budget)
       || (a.median_price ?? Infinity) - (b.median_price ?? Infinity)
       || a.complex_id - b.complex_id)

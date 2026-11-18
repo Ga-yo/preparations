@@ -30,6 +30,7 @@ export const compareComplexesTool = defineTool({
         const rpc = await ctx.supabase.rpc("complexes_for_conditions", {
           region_codes: codes, months: MONTHS,
           ...(area_min !== null && { area_min }), ...(area_max !== null && { area_max }),
+          ...(l.commuteCode && { commute_code: l.commuteCode }),
         });
         if (rpc.error) throw new Error(rpc.error.message);
         for (const r of (rpc.data ?? []) as ComplexRow[]) if (missing.includes(r.complex_id)) outside.set(r.complex_id, r);
@@ -50,6 +51,8 @@ export const compareComplexesTool = defineTool({
       const redevelopment = redev.byId[i.complex_id];
       return { ...i, redevelopment, risks: redevelopment.status === "in_zone" ? [...i.risks, "redevelopment_in_zone" as const] : i.risks };
     });
+    // 3단계 "정비사업 관심"이면 정비구역 단지를 앞으로 (안정 정렬이라 나머지는 요청 순서)
+    if (l.redevelopmentInterest) items.sort((a, b) => Number(b.redevelopment.status === "in_zone") - Number(a.redevelopment.status === "in_zone"));
     return {
       data: { ...result, items, rows: inputs.map((i) => i.row), criteria: { months: MONTHS, area_min, area_max } },
       as_of: { ...l.as_of, ...redev.as_of },

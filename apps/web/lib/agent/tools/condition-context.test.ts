@@ -23,3 +23,27 @@ test("offset 1 reads previous set", async () => {
   const { ctx } = mk({ sets: [saved({ id: "old", created_at: "2026-11-01" }), saved({ id: "new", created_at: "2026-11-05" })] });
   expect(await loadConditionContext(ctx, 1)).toMatchObject({ conditionSetId: "old" });
 });
+
+test("stage 2 life prefs become weights ties and parking default", async () => {
+  const { ctx } = mk({ sets: [saved({ uses_transit: true, school_importance: 5, environment_prefs: ["near_park", "quiet"], parking_required: true })] });
+  const r = await loadConditionContext(ctx);
+  if ("error" in r) throw new Error(r.error);
+  expect(r.conditions.weights).toEqual({ station_distance_max: 2, elementary_distance_max: 2 });
+  expect(r.conditions.ties?.map((t) => t.field)).toEqual(["nearest_station_m", "nearest_elementary_m", "nearest_park_m"]);
+  expect(r.conditions.parking_per_household_min).toBe(1);
+  expect(r.notices).toEqual(expect.arrayContaining(["quiet_no_data", "no_park_data"]));
+});
+
+test("commute code reaches rpc with straight-line notice", async () => {
+  const { ctx, calls } = mk({ sets: [saved({ commute_region_code: "1114000000" })] });
+  const r = await loadConditionContext(ctx);
+  expect(calls[0].commute_code).toBe("1114000000");
+  expect(r).toMatchObject({ commuteCode: "1114000000", notices: expect.arrayContaining(["commute_is_straight_line"]) });
+});
+
+test("no commute code sends none", async () => {
+  const { ctx, calls } = mk();
+  const r = await loadConditionContext(ctx);
+  expect(calls[0]).not.toHaveProperty("commute_code");
+  expect((r as { notices?: string[] }).notices ?? []).not.toContain("commute_is_straight_line");
+});

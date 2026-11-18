@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database, Tables } from "@repo/db-types";
 import { z } from "zod";
+import { profileNotices } from "@/lib/calc/preferences";
 import { computeBudget, type BudgetInput } from "@/lib/calc/budget";
 import { TAX_RATES_SOURCE } from "@/lib/calc/tax-rates";
 import type { LoanProduct, LoanRule, RegulatedArea } from "@/lib/calc/types";
@@ -102,13 +103,16 @@ export const getBudget = defineTool({
 
     const result = computeBudget(budgetInput(d, today, regionCode, args.exclusive_area_m2 ?? DEFAULT_AREA_M2));
 
+    // 1단계 목적·시기는 계산에 쓰지 않고 표시·안내만 한다 (M6)
+    const summary = { purpose: d.profile.purpose, timeline: d.profile.timeline, income_is_combined: d.profile.income_is_combined };
+    const notices = [...d.notices, ...profileNotices(summary)];
     // loan.amount가 0이면 binding은 자리표시값이라 LLM에 넘기지 않는다(원인은 diagnoses)
     const { binding, ...loan } = result.loan;
     return {
-      data: { ...result, loan: result.loan.amount === 0 ? loan : { ...loan, binding } },
+      data: { ...result, loan: result.loan.amount === 0 ? loan : { ...loan, binding }, profile_summary: summary },
       as_of: d.as_of,
       ...(d.stale.length && { stale: d.stale }),
-      ...(d.notices.length && { notices: d.notices }),
+      ...(notices.length && { notices }),
     };
   },
 });

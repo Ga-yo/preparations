@@ -4,7 +4,7 @@ import { stage3Row, stage3Schema } from "./actions";
 describe("stage3Schema", () => {
   test("빈 폼은 전부 null/false/[]/{}", () => {
     expect(stage3Schema.parse({ housing_types: [] })).toEqual({
-      housing_types: [], price_min: null, price_max: null, area_min: null, area_max: null,
+      housing_types: [], price_min: null, price_max: null,
       rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null,
       approval_year_min: null, household_count_min: null, parking_per_household_min: null,
       mgmt_fee_per_m2_max: null, floor_area_ratio_max: null, station_distance_max_m: null, elementary_distance_max_m: null,
@@ -28,7 +28,7 @@ describe("stage3Schema", () => {
     const v = stage3Schema.parse({
       household_count_min: "1000", "priority.household_count_min": "must",
       "priority.approval_year_min": "must", // 준공 연도 미입력 → 저장 안 함
-      area_min: "80", "priority.area": "prefer",
+      "priority.area": "prefer", // 면적은 2단계 값이라 여기서는 받아 두고 stage3Row가 판단
     });
     expect(v.priorities).toEqual({ household_count_min: "must", area: "prefer" });
   });
@@ -59,13 +59,27 @@ describe("distance fields parse", () => {
 describe("stage3Row", () => {
   test("최신 행의 2단계 값은 보존하고 3단계 값만 덮는다(id·created_at 제외)", () => {
     const latest = { id: "old", created_at: "x", plan_id: "p1", user_id: "u1", region_codes: ["1168000000"], household_size: 3, area_min: 59, price_max: 1 };
-    const values = stage3Schema.parse({ price_max: "90000", area_min: "84" });
+    const values = stage3Schema.parse({ price_max: "90000", area_min: "84" }); // 3단계는 면적을 받지 않는다(M6-D4)
     const row = stage3Row(latest, values, "p1", "u1");
-    expect(row).toMatchObject({ region_codes: ["1168000000"], household_size: 3, area_min: 84, price_max: 900_000_000, plan_id: "p1", user_id: "u1" });
+    expect(row).toMatchObject({ region_codes: ["1168000000"], household_size: 3, area_min: 59, price_max: 900_000_000, plan_id: "p1", user_id: "u1" });
     expect(row).not.toHaveProperty("id");
     expect(row).not.toHaveProperty("created_at");
   });
   test("이전 행이 없으면 3단계 값만", () => {
     expect(stage3Row(null, stage3Schema.parse({}), "p1", "u1")).toMatchObject({ plan_id: "p1", user_id: "u1", priorities: {} });
+  });
+});
+
+describe("M6-D4 area lives in stage 2", () => {
+  test("stage 3 ignores area fields", () => {
+    expect(stage3Schema.parse({ area_min: "84", area_max: "90" })).not.toHaveProperty("area_min");
+  });
+  test("area priority dropped when stage 2 has no area", () => {
+    const row = stage3Row({ area_min: null, area_max: null }, stage3Schema.parse({ "priority.area": "must" }), "p1", "u1");
+    expect(row.priorities).toEqual({});
+  });
+  test("area priority kept when stage 2 has area", () => {
+    const row = stage3Row({ area_min: 59, area_max: null }, stage3Schema.parse({ "priority.area": "must" }), "p1", "u1");
+    expect(row.priorities).toEqual({ area: "must" });
   });
 });

@@ -3,7 +3,7 @@ import type { Fit, NeighborStats } from "@/lib/calc/fit";
 import type { MgmtFeeResult } from "@/lib/kapt/mgmt-fee";
 import { TipPanel, type Tip } from "../../../_components/TipPanel";
 import { DATASETS } from "../../../_components/ConditionCheckCard";
-import { formatWon } from "../../../_components/format";
+import { formatWon, livingText } from "../../../_components/format";
 import { redevelopmentText } from "../../../_components/redevelopment";
 import type { RedevelopmentInfo } from "@/lib/agent/redevelopment";
 
@@ -12,6 +12,7 @@ type Data = {
     name: string; jibun_address: string | null; road_address: string | null; approval_year: number | null;
     household_count: number | null; building_count: number | null; parking_per_household: number | null;
     floor_area_ratio: number | null; building_coverage_ratio: number | null; land_share_m2: number | null;
+    nearest_park_m: number | null; shop_count_500m: number | null; commute_m: number | null;
   };
   fit: Fit | null;
   redevelopment?: RedevelopmentInfo;
@@ -111,6 +112,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
           <p className="text-xs text-gray-600">직선거리이며 실제 도보 거리는 더 깁니다.</p>
         </>
       ) : <p className="text-gray-600">{hasCoords ? "직선거리 1km 안에 역·학교가 없습니다." : "좌표 정보가 없어 주변 시설을 표시하지 못했습니다."}</p>}
+      {livingText(c) && <p>{livingText(c)}</p>}
       <p className={redevelopment?.status === "in_zone" ? "font-medium" : "text-gray-600"}>정비사업: {redevelopmentText(redevelopment)}</p>
       <TipPanel tips={tips} fieldKey="redevelopment" />
       {asOf.length > 0 && <p className="text-xs text-gray-600">데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}</p>}

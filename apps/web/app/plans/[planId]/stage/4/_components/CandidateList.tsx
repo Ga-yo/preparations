@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { RankedComplex } from "@/lib/calc/fit";
 import { CONDITION_LABELS } from "../../../_components/ConditionCheckCard";
-import { formatWon } from "../../../_components/format";
+import { formatWon, livingText } from "../../../_components/format";
 
 const BUDGET = (b: boolean | null) =>
   b === true ? { text: "예산 안", cls: "bg-green-100 text-green-900" }
@@ -41,6 +41,7 @@ function Row({ x, rank, fav, selected, planId, toggle }: {
         {x.nearest_station_m === null && x.nearest_elementary_m === null ? "위치 정보 없음"
           : `${x.nearest_station_m === null ? "역 정보 없음" : `역 ${x.nearest_station_name ?? "-"} 직선 ${x.nearest_station_m}m`} · ${x.nearest_elementary_m === null ? "초등학교 정보 없음" : `초등학교 직선 ${x.nearest_elementary_m}m`}`}
       </p>
+      {livingText(x) && <p className="text-gray-700">{livingText(x)}</p>}
       <div className="mt-1 flex flex-wrap gap-1 text-xs">
         <span className={`rounded px-1.5 py-0.5 ${b.cls}`}>{b.text}</span>
         {x.fit.met.map((k) => <span key={k} className="rounded bg-green-50 px-1.5 py-0.5 text-green-800">충족 {label(k)}</span>)}

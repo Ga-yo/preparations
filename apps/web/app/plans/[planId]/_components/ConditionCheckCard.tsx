@@ -26,11 +26,15 @@ export const NOTICES: Record<string, string> = {
   location_partial: "좌표가 없는 단지는 거리 조건을 판단하지 못했습니다.",
   no_poi_data: "역·학교 위치나 희망 지역 단지 좌표가 아직 없어 거리 조건을 점검하지 못했습니다.",
   truncated: "단지가 많아 3,000개까지만 점검했습니다. 지역을 좁혀 보세요.",
+  quiet_no_data: "조용한 환경은 판단할 데이터가 없어 반영하지 못했습니다.",
+  no_park_data: "공원 위치 데이터가 아직 없어 공원 인접을 반영하지 못했습니다.",
+  no_shop_data: "생활 상가 데이터가 아직 없어 편의시설 중요도를 반영하지 못했습니다.",
+  commute_is_straight_line: "출퇴근 거리는 직선거리 근사입니다. 실제 이동 시간은 노선·환승에 따라 다릅니다.",
 };
 export const DATASETS: Record<string, string> = {
   "complexes:building_ledger": "건축물대장 단지", "transactions:apartment": "아파트 실거래가",
   "loan_products:bank": "시중은행 상품", regulated_areas: "규제지역", loan_rules: "대출 규제", tax_rates: "세율", policy_loans: "정책대출",
-  "complexes:location": "단지 좌표", "pois:subway_station": "지하철역 위치", "pois:school": "학교 위치", "redevelopment:seoul": "서울 정비사업",
+  "complexes:location": "단지 좌표", "pois:subway_station": "지하철역 위치", "pois:school": "학교 위치", "redevelopment:seoul": "서울 정비사업", "pois:park": "공원 위치", "complexes:shops": "생활 상가",
 };
 const names = (keys: string[]) => keys.map((k) => CONDITION_LABELS[k] ?? k).join(", ");
 

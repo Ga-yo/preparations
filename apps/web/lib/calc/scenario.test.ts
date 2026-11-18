@@ -13,7 +13,7 @@ const C: Conditions & { region_codes: string[] } = {
 const R = (id: number): RankedComplex => ({
   complex_id: id, name: `c${id}`, region_code: "1168010100", approval_year: 2000, household_count: 500,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 30,
-  median_price: 5e8, deal_count: 3, nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null,
+  median_price: 5e8, deal_count: 3, nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null, nearest_park_m: null, shop_count_500m: null, commute_m: null,
   fit: { score: 100, met: [], unmet: [], missing: [], within_budget: null },
 } satisfies ComplexRow & { fit: unknown });
 
@@ -39,5 +39,24 @@ describe("diffRankings", () => {
     expect(d.removed).toEqual([{ complex_id: 3, name: "c3", rank: 3 }]);
     expect(d.moved).toEqual([{ complex_id: 2, name: "c2", from: 2, to: 1 }, { complex_id: 1, name: "c1", from: 1, to: 2 }]);
     expect([d.count_before, d.count_after]).toEqual([3, 3]);
+  });
+});
+
+describe("order-insensitive and stable", () => {
+  it("reordered region codes is no change", () => {
+    const two = { ...C, region_codes: ["1168000000", "1165000000"] };
+    expect(diffConditions(two, { ...two, region_codes: ["1165000000", "1168000000"] })).toEqual([]);
+  });
+  it("same rank is not moved", () => {
+    const d = diffRankings([R(1), R(2)], [R(1), R(3)]);
+    expect(d.moved).toEqual([]);
+  });
+});
+
+describe("scored conditions", () => {
+  it("weights and ties from stage 2 are not condition changes", () => {
+    const a = { ...C, weights: {}, ties: [] };
+    const b = { ...C, weights: {}, ties: [], price_max: 1e9 };
+    expect(diffConditions(a, b)).toEqual(["price_max"]);
   });
 });

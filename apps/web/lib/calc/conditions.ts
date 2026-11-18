@@ -1,4 +1,5 @@
 // 3단계 조건 점검: must 조건 필터링과 하나씩 빼 보기(leave-one-out)로 충돌을 찾는다. 순수 함수.
+import type { TieBreaker } from "./preferences";
 
 export type Priority = "must" | "prefer" | "ignore";
 export type ConditionKey = "price_max" | "area" | "approval_year_min" | "household_count_min"
@@ -11,12 +12,14 @@ export interface Conditions {
   station_distance_max_m: number | null; elementary_distance_max_m: number | null;
   rooms_min: number | null; baths_min: number | null; floor_pref: string | null; direction_pref: string | null;
   priorities: Partial<Record<string, Priority>>;
+  weights?: Partial<Record<ConditionKey, number>>; ties?: TieBreaker[]; // 2단계 생활 조건 (M6-D3)
 }
 export interface ComplexRow {
   complex_id: number; name: string; region_code: string; approval_year: number | null;
   household_count: number | null; parking_per_household: number | null; floor_area_ratio: number | null;
   building_coverage_ratio: number | null; land_share_m2: number | null; median_price: number | null; deal_count: number;
   nearest_station_name: string | null; nearest_station_m: number | null; nearest_elementary_m: number | null;
+  nearest_park_m: number | null; shop_count_500m: number | null; commute_m: number | null;
 }
 // get_region_prices data.regions 행에서 가져온다. max_budget은 1단계 미저장이면 null
 export interface RegionBudget { sigungu_code: string; max_budget: number | null; median_price: number }

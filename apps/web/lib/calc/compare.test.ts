@@ -7,7 +7,7 @@ const X = (id: number, o: Partial<ComplexRow> = {}): ComplexRow => ({
   complex_id: id, name: `c${id}`, region_code: "1168010100", approval_year: 2010, household_count: 500,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 30,
   median_price: 500_000_000, deal_count: 5,
-  nearest_station_name: "역", nearest_station_m: 300, nearest_elementary_m: 400, ...o,
+  nearest_station_name: "역", nearest_station_m: 300, nearest_elementary_m: 400, nearest_park_m: null, shop_count_500m: null, commute_m: null, ...o,
 });
 const F = (score: number): Fit => ({ score, met: [], unmet: [], missing: [], within_budget: null });
 const I = (row: ComplexRow, o: Partial<CompareInput> = {}): CompareInput =>
@@ -74,5 +74,15 @@ describe("riskFlags", () => {
     expect(riskFlags(I(X(1, { nearest_station_m: null, nearest_elementary_m: null })), 2026)).toContain("no_location");
     expect(riskFlags(I(X(1), { max_budget: null }), 2026)).toContain("budget_unknown");
     expect(riskFlags(I(X(1)), 2026)).toEqual([]);
+  });
+});
+
+describe("budget edge cases", () => {
+  it("zero budget gives null ratio", () => {
+    const r = compareComplexes([I(X(1), { max_budget: 0 }), I(X(2))], 2026);
+    expect(r.items[0].budget_ratio).toBeNull(); // 0으로 나누지 않는다
+  });
+  it("unknown price is not over budget", () => {
+    expect(riskFlags(I(X(1, { median_price: null }), { max_budget: 1 }), 2026)).not.toContain("over_budget");
   });
 });

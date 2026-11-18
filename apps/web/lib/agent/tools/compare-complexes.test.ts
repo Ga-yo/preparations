@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { runTool } from "../tool";
 import { compareComplexesTool } from "./compare-complexes";
-import { complex, mk } from "./test-fixtures";
+import { complex, mk, saved } from "./test-fixtures";
 
 type Item = { complex_id: number; fit: { score: number } | null; risks: string[] };
 type Data = { items: Item[]; best: Record<string, number[]>; rows: { complex_id: number }[] } | { error: string };
@@ -65,4 +65,44 @@ test("compare adds redevelopment risk", async () => {
   expect(d.items[0].redevelopment.status).toBe("in_zone");
   expect(d.items[1].risks).not.toContain("redevelopment_in_zone");
   expect(d.items[1].redevelopment).toEqual({ status: "near", dong_zone_count: 1 });
+});
+
+test("non-seoul complex gets not_covered notice", async () => {
+  const { ctx } = mk({ rows: [complex(1), { ...complex(2), region_code: "4113510300" }] });
+  const r = await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx);
+  const d = r.data as { items: { redevelopment: { status: string } }[] };
+  expect(d.items[1].redevelopment.status).toBe("not_covered");
+  expect(r.notices).toContain("redevelopment_not_covered");
+  expect(r.as_of["redevelopment:seoul"]).toBe("2026-06-30");
+});
+
+test("seoul-only compare has no not_covered notice", async () => {
+  const { ctx } = mk({ rows: [complex(1), complex(2)] });
+  expect((await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx)).notices).not.toContain("redevelopment_not_covered");
+});
+
+test("missing id noted but compare still runs", async () => {
+  const { ctx } = mk({ rows: [complex(1), complex(2)] });
+  const r = await compareComplexesTool.run({ complex_ids: [1, 2, 77] }, ctx);
+  expect(items(r.data as Data)).toHaveLength(2);
+  expect(r.notices).toContain("complex_not_found");
+});
+
+test("redevelopment interest puts zone complexes first", async () => {
+  const { ctx } = mk({
+    rows: [complex(1), complex(2)],
+    sets: [saved({ redevelopment_interest: true })],
+    redevelopment: [{ complex_id: 2, region_code: "1168010300", name: "구역", project_type: "reconstruction", stage: "조합설립", stage_date: null }],
+  });
+  const d = (await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx)).data as Data;
+  expect(items(d).map((i) => i.complex_id)).toEqual([2, 1]);
+});
+
+test("without interest keeps requested order", async () => {
+  const { ctx } = mk({
+    rows: [complex(1), complex(2)],
+    redevelopment: [{ complex_id: 2, region_code: "1168010300", name: "구역", project_type: "reconstruction", stage: "조합설립", stage_date: null }],
+  });
+  const d = (await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx)).data as Data;
+  expect(items(d).map((i) => i.complex_id)).toEqual([1, 2]);
 });

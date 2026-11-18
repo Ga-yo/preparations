@@ -32,7 +32,6 @@ export const stage2Schema = z
     school_importance: num(1, 5),
     infra_importance: num(1, 5),
     household_size: num(1, 20),
-    rooms_min: num(1, 10),
     area_min: num(10, 300, false),
     area_max: num(10, 300, false),
     environment_prefs: z.array(z.enum(["quiet", "near_commercial", "near_park"])).default([]),
