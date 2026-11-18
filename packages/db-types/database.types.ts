@@ -285,6 +285,26 @@ isOneToOne: false
       referencedColumns: ["code"]
     }
                   ]
+                },"reports": {
+                  Row: {
+                    "created_at": string,"id": string,"narrative": string | null,"payload": NonNullable<Json>,"plan_id": string,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"id"?: string,"narrative"?: string | null,"payload": NonNullable<Json>,"plan_id": string,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"id"?: string,"narrative"?: string | null,"payload"?: NonNullable<Json>,"plan_id"?: string,"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "reports_plan_id_user_id_fkey"
+      columns: ["plan_id","user_id"]
+isOneToOne: false
+      referencedRelation: "plans"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
                 },"tips": {
                   Row: {
                     "body": string,"caution": string | null,"field_key": string | null,"id": number,"slug": string,"sort_order": number,"source": string | null,"stage": number,"title": string,"updated_at": string
