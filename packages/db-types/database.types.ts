@@ -23,7 +23,27 @@ export type Database = {
           }
         },"public": {
           Tables: {
-            "candidates": {
+            "ai_checks": {
+                  Row: {
+                    "action": Json | null,"created_at": string,"id": string,"input_hash": string,"plan_id": string,"questions": (string)[],"stage": number,"summary": string,"tools": (string)[],"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "action"?: Json | null,"created_at"?: string,"id"?: string,"input_hash": string,"plan_id": string,"questions"?: (string)[],"stage": number,"summary": string,"tools"?: (string)[],"user_id"?: string
+                  }
+                  Update: {
+                    "action"?: Json | null,"created_at"?: string,"id"?: string,"input_hash"?: string,"plan_id"?: string,"questions"?: (string)[],"stage"?: number,"summary"?: string,"tools"?: (string)[],"user_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "ai_checks_plan_id_user_id_fkey"
+      columns: ["plan_id","user_id"]
+isOneToOne: false
+      referencedRelation: "plans"
+      referencedColumns: ["id","user_id"]
+    }
+                  ]
+                },"candidates": {
                   Row: {
                     "complex_id": number,"condition_set_id": string,"cons": NonNullable<Json>,"created_at": string,"fit_score": number | null,"id": string,"is_favorite": boolean,"pros": NonNullable<Json>,"user_id": string
                   }

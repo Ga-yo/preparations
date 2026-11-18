@@ -3,11 +3,11 @@ import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { ChatPanel } from "../../_components/ChatPanel";
+import { AssistantPanel } from "../../_components/AssistantPanel";
 import { CONDITION_LABELS, ConditionCheckCard } from "../../_components/ConditionCheckCard";
 import { StageForm } from "../../_components/StageForm";
 import { TipPanel } from "../../_components/TipPanel";
-import { checkConditionsForPlan, PRIORITY_KEYS, saveStage3Conditions } from "./actions";
+import { checkConditionsForPlan, parsePrefill, PRIORITY_KEYS, saveStage3Conditions } from "./actions";
 
 const LABELS: Record<string, string> = {
   housing_types: "주택 유형", price_min: "희망 최저가", price_max: "희망 최고가(최저 ≤ 최고)",
@@ -26,12 +26,14 @@ const PRIORITIES = { must: "필수", prefer: "선호", ignore: "상관없음" } 
 export const instant = false;
 
 export default async function Stage3({
-  params,
+  params, searchParams,
 }: {
   params: Promise<{ planId: string }>;
+  searchParams: Promise<{ prefill?: string }>;
 }) {
   await connection();
   const { planId } = await params;
+  const prefill = parsePrefill((await searchParams).prefill);
   if (!z.uuid().safeParse(planId).success) notFound();
   const supabase = await createClient();
   const [{ data: c }, { data: tips }, check] = await Promise.all([
@@ -40,7 +42,7 @@ export default async function Stage3({
     checkConditionsForPlan(planId),
   ]);
   const t = tips ?? [];
-  const priorities = (c?.priorities ?? {}) as Record<string, string>;
+  const priorities = { ...(c?.priorities ?? {}) as Record<string, string>, ...(prefill && { [prefill.key]: prefill.value }) };
 
   async function save(form: FormData): Promise<string[]> {
     "use server";
@@ -75,10 +77,15 @@ export default async function Stage3({
   return (
     <main className="mx-auto grid w-full max-w-5xl gap-6 p-4 md:grid-cols-2">
       <StageForm
-        key={c?.id ?? "new"}
+        key={`${c?.id ?? "new"}-${prefill?.key ?? ""}`}
         title="3단계. 주택 선택 기준" labels={LABELS} action={save}
         back={<Link href={`/plans/${planId}/stage/2`} className="text-sm text-blue-700">← 2단계 희망 주거 환경</Link>}
       >
+        {prefill && (
+          <p role="status" className="rounded bg-amber-50 p-2 text-sm">
+            AI 점검 제안으로 「{CONDITION_LABELS[prefill.key]}」 우선순위를 「{PRIORITIES[prefill.value]}」으로 미리 골라 두었습니다. 저장해야 반영됩니다.
+          </p>
+        )}
         <p className="text-sm text-gray-600">조건마다 필수·선호·상관없음을 고르세요. 필수 조건끼리 충돌하면 오른쪽에서 알려 드립니다.</p>
 
         <h2 className="font-semibold">① 주택 기본 조건</h2>
@@ -139,7 +146,7 @@ export default async function Stage3({
       <div className="space-y-6">
         <ConditionCheckCard result={check} tips={t} />
         <Link href={`/plans/${planId}/stage/4`} className="block text-sm text-blue-700">→ 4단계 후보 단지 보기</Link>
-        <ChatPanel planId={planId} />
+        <AssistantPanel planId={planId} stage={3} />
       </div>
     </main>
   );

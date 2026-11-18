@@ -24,6 +24,13 @@ export const PRIORITY_KEYS: ConditionKey[] = ["price_max", "area", "approval_yea
   "station_distance_max", "elementary_distance_max"];
 const priority = z.enum(["must", "prefer", "ignore"]).optional();
 
+// AI 점검 제안(M7-D5): "priority.<key>:prefer|ignore" 하나만 받아 라디오를 미리 선택한다. 저장은 사용자가
+export function parsePrefill(v: string | undefined): { key: string; value: "prefer" | "ignore" } | null {
+  const m = /^priority\.([a-z_]+):(prefer|ignore)$/.exec(v ?? "");
+  return m && (PRIORITY_KEYS as string[]).includes(m[1]) ? { key: m[1], value: m[2] as "prefer" | "ignore" } : null;
+}
+
+
 export const stage3Schema = z
   .object({
     housing_types: z.array(z.enum(["apartment", "officetel", "row_house"])).default([]),
