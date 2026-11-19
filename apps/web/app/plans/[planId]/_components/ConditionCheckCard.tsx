@@ -72,11 +72,14 @@ export function ConditionCheckCard({ result, tips }: { result: ToolResult; tips:
           ) : <p>필수 조건 사이에 충돌이 없습니다.</p>}
           <p>
             희망 지역 단지 {data.counts.total.toLocaleString("ko-KR")}개 중 필수 조건 충족 {data.counts.must.toLocaleString("ko-KR")}개
-            {Object.entries(data.counts.prefer).map(([k, n]) => ` · 그중 ${CONDITION_LABELS[k] ?? k} 충족 ${n}개`).join("")}
+            {/* 선호 조건마다 필수 충족 단지 중에서 따로 센 값이라 누적(깔때기)처럼 이어 쓰지 않는다 */}
+            {Object.keys(data.counts.prefer).length > 0 &&
+              ` 중 선호 조건별 충족(각각 따로 셈): ${Object.entries(data.counts.prefer).map(([k, n]) => `${CONDITION_LABELS[k] ?? k} ${n.toLocaleString("ko-KR")}개`).join(" · ")}`}
           </p>
           {data.notices.filter((n) => NOTICES[n]).map((n) => <p key={n} className="text-gray-600">{NOTICES[n]}</p>)}
           {data.matches.length > 0 && (
             <>
+              <div className="overflow-x-auto">
               <table className="w-full text-left [&_td]:py-0.5 [&_td]:pr-2 [&_th]:pr-2">
                 <thead><tr><th>단지</th><th>준공</th><th>세대</th><th>용적률</th><th>대지지분</th><th>중위가</th></tr></thead>
                 <tbody>
@@ -92,6 +95,7 @@ export function ConditionCheckCard({ result, tips }: { result: ToolResult; tips:
                   ))}
                 </tbody>
               </table>
+              </div>
               <TipPanel tips={tips} fieldKey="land_share" />
               <p className="text-gray-600">
                 중위가는 최근 {data.criteria.months}개월 이 단지 아파트 매매 실거래가(희망 면적, 해제 신고·직거래 제외) 기준입니다.

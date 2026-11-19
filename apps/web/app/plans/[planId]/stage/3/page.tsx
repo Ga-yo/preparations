@@ -75,7 +75,7 @@ export default async function Stage3({
   const man = (v: number | null | undefined) => (v == null ? null : v / 10_000);
 
   return (
-    <main className="mx-auto grid w-full max-w-5xl gap-6 p-4 md:grid-cols-2">
+    <main className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-6 p-4 md:grid-cols-2">
       <StageForm
         key={`${c?.id ?? "new"}-${prefill?.key ?? ""}`}
         title="3단계. 주택 선택 기준" labels={LABELS} action={save}
