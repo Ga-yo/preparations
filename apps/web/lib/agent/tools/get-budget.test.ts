@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { z } from "zod";
 import { fakeDb } from "../fake-db";
 import { defineTool, runTool, toOpenAiTools, type ToolContext } from "../tool";
-import { getBudget } from "./get-budget";
+import { budgetsByRegion, getBudget } from "./get-budget";
 import { getTip } from "./get-tip";
 import { toolsForStage } from "./index";
 
@@ -99,4 +99,24 @@ test("get_budget: 목적·시기·합산 여부와 안내", async () => {
   const r = await getBudget.run({}, mk("2026-11-01", "FSS", true, { ...profile, purpose: "invest", timeline: "2_3y", income_is_combined: true }));
   expect(r.data).toMatchObject({ profile_summary: { purpose: "invest", timeline: "2_3y", income_is_combined: true } });
   expect(r.notices).toEqual(expect.arrayContaining(["invest_not_supported", "recheck_regulation"]));
+});
+
+test("budgetsByRegion: 규제가 같은 지역끼리 묶고 지역 미지정 진단을 내지 않는다", async () => {
+  const ctx = mk("2026-11-01");
+  const db = fakeDb({
+    financial_profiles: [profile],
+    loan_rules: [rule("ltv", 70), { ...rule("ltv", 40), id: 2, area_type: "regulated" }, rule("dsr", 40), rule("stress_rate", 1.5)],
+    regulated_areas: [{ id: 1, region_code: "1100000000", area_type: "speculative_overheated", effective_date: "2025-10-16", end_date: null, source: "s", source_url: null }],
+    loan_products: [product], regions, data_freshness: [],
+  });
+  const groups = await budgetsByRegion(db, "p1", ctx.today, ["11140", "26110", "11290"], 84);
+  expect(groups?.map((g) => g.region_codes)).toEqual([["11140", "11290"], ["26110"]]);
+  type B = { maxPrice: number; diagnoses: string[] };
+  const [seoul, busan] = groups!.map((g) => g.budget.data as B);
+  expect(seoul.maxPrice).toBeLessThan(busan.maxPrice);
+  for (const b of [seoul, busan]) expect(b.diagnoses).not.toContain("region_unspecified");
+});
+
+test("budgetsByRegion: 프로필이 없으면 null", async () => {
+  expect(await budgetsByRegion(fakeDb({ financial_profiles: [] }), "p1", "2026-11-04", ["11140"], null)).toBeNull();
 });

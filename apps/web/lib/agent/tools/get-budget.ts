@@ -101,18 +101,38 @@ export const getBudget = defineTool({
       regionCode = r.code;
     }
 
-    const result = computeBudget(budgetInput(d, today, regionCode, args.exclusive_area_m2 ?? DEFAULT_AREA_M2));
-
-    // 1단계 목적·시기는 계산에 쓰지 않고 표시·안내만 한다 (M6)
-    const summary = { purpose: d.profile.purpose, timeline: d.profile.timeline, income_is_combined: d.profile.income_is_combined };
-    const notices = [...d.notices, ...profileNotices(summary)];
-    // loan.amount가 0이면 binding은 자리표시값이라 LLM에 넘기지 않는다(원인은 diagnoses)
-    const { binding, ...loan } = result.loan;
-    return {
-      data: { ...result, loan: result.loan.amount === 0 ? loan : { ...loan, binding }, profile_summary: summary },
-      as_of: d.as_of,
-      ...(d.stale.length && { stale: d.stale }),
-      ...(notices.length && { notices }),
-    };
+    return budgetResult(d, today, regionCode, args.exclusive_area_m2 ?? DEFAULT_AREA_M2);
   },
 });
+
+function budgetResult(d: BudgetData, today: string, regionCode: string | null, areaM2: number): ToolResult {
+  const result = computeBudget(budgetInput(d, today, regionCode, areaM2));
+  // 1단계 목적·시기는 계산에 쓰지 않고 표시·안내만 한다 (M6)
+  const summary = { purpose: d.profile.purpose, timeline: d.profile.timeline, income_is_combined: d.profile.income_is_combined };
+  const notices = [...d.notices, ...profileNotices(summary)];
+  // loan.amount가 0이면 binding은 자리표시값이라 LLM에 넘기지 않는다(원인은 diagnoses)
+  const { binding, ...loan } = result.loan;
+  return {
+    data: { ...result, loan: result.loan.amount === 0 ? loan : { ...loan, binding }, profile_summary: summary },
+    as_of: d.as_of,
+    ...(d.stale.length && { stale: d.stale }),
+    ...(notices.length && { notices }),
+  };
+}
+
+// 희망 시군구(5자리)마다 예산을 계산하고, 결과가 같은 지역(규제가 같은 지역)끼리 묶는다. 프로필이 없으면 null.
+export async function budgetsByRegion(
+  supabase: SupabaseClient<Database>, planId: string, today: string, sigunguCodes: string[], areaM2: number | null,
+): Promise<{ region_codes: string[]; budget: ToolResult }[] | null> {
+  const d = await loadBudgetData(supabase, planId, today);
+  if (!d) return null;
+  const groups = new Map<string, { region_codes: string[]; budget: ToolResult }>();
+  for (const code of sigunguCodes) {
+    const budget = budgetResult(d, today, `${code.slice(0, 5)}00000`, areaM2 ?? DEFAULT_AREA_M2);
+    const key = JSON.stringify(budget.data);
+    const g = groups.get(key);
+    if (g) g.region_codes.push(code);
+    else groups.set(key, { region_codes: [code], budget });
+  }
+  return [...groups.values()];
+}
