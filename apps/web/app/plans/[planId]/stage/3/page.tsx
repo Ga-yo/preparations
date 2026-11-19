@@ -101,6 +101,8 @@ export default async function Stage3({
           {field("price_min", "희망 최저가 (만원)", numberInput("price_min", man(c?.price_min), 0, 1e9))}
           {field("price_max", "희망 최고가 (만원)", numberInput("price_max", man(c?.price_max), 0, 1e9))}
         </div>
+        {/* 최저가는 예산 충돌 판정에만 쓴다(M3 설계, 2026-11-19 결정). 싼 단지를 빼면 손해일 수 있어 거르지 않는다 */}
+        <p className="text-sm text-gray-600">희망 최저가는 예산과 맞는지만 확인하고 후보를 거르지는 않아요. 필수·선호는 희망 최고가에 적용돼요.</p>
         {priority("price_max")}
         {/* 면적은 2단계에서만 입력한다(M6-D4) */}
         <div>
