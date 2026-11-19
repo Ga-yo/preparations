@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { ToolResult } from "@/lib/agent/tool";
-import { ChatPanel } from "../../_components/ChatPanel";
+import { AssistantPanel } from "../../_components/AssistantPanel";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
 import { TipPanel } from "../../_components/TipPanel";
 import { favoriteComplexIds } from "../4/actions";
@@ -103,7 +103,7 @@ export default async function Stage5({
             <TipPanel tips={tips ?? []} fieldKey="redevelopment" />
           </section>
         </div>
-        <ChatPanel planId={planId} />
+        <AssistantPanel planId={planId} stage={5} />
       </div>
       <p><Link href={`/plans/${planId}/report`} className="text-blue-700">구매 검토 리포트 만들기 →</Link></p>
     </main>

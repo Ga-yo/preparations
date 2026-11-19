@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { stage3Row, stage3Schema } from "./actions";
+import { parsePrefill, stage3Row, stage3Schema } from "./actions";
 
 describe("stage3Schema", () => {
   test("빈 폼은 전부 null/false/[]/{}", () => {
@@ -82,4 +82,12 @@ describe("M6-D4 area lives in stage 2", () => {
     const row = stage3Row({ area_min: 59, area_max: null }, stage3Schema.parse({ "priority.area": "must" }), "p1", "u1");
     expect(row.priorities).toEqual({ area: "must" });
   });
+});
+
+test("parsePrefill: 허용 키·값만 통과", () => {
+  expect(parsePrefill("priority.price_max:prefer")).toEqual({ key: "price_max", value: "prefer" });
+  expect(parsePrefill("priority.rooms_min:prefer")).toBeNull();
+  expect(parsePrefill("priority.price_max:must")).toBeNull();
+  expect(parsePrefill("priority.price_max:prefer&x")).toBeNull();
+  expect(parsePrefill(undefined)).toBeNull();
 });

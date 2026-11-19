@@ -5,7 +5,7 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { RankedComplex } from "@/lib/calc/fit";
 import type { ToolResult } from "@/lib/agent/tool";
-import { ChatPanel } from "../../_components/ChatPanel";
+import { AssistantPanel } from "../../_components/AssistantPanel";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
 import { detailForPlan, favoriteComplexIds, searchForPlan, setFavorite } from "./actions";
 import { enterStage5 } from "../5/actions";
@@ -113,7 +113,7 @@ export default async function Stage4({
       <div className="space-y-6">
         {detail === null && <p role="alert" className="rounded border p-3 text-sm">단지 상세를 불러오지 못했습니다.</p>}
         {detail && <ComplexDetail result={detail} tips={tips ?? []} />}
-        <ChatPanel planId={planId} />
+        <AssistantPanel planId={planId} stage={4} />
       </div>
     </main>
   );

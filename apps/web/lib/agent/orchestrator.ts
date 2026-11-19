@@ -18,10 +18,11 @@ export async function runAgent(p: {
   history: OpenAI.ChatCompletionMessageParam[];
   ctx: ToolContext;
   maxSteps?: number;
+  systemExtra?: string; // AI 점검처럼 채팅 규칙 위에 덧붙일 지시
 }): Promise<{ reply: string; toolCalls: { name: string; args: unknown; result: unknown }[] }> {
   const tools = toolsForStage(p.stage);
   const openAiTools = toOpenAiTools(tools);
-  const messages: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: SYSTEM_PROMPT }, ...p.history];
+  const messages: OpenAI.ChatCompletionMessageParam[] = [{ role: "system", content: SYSTEM_PROMPT + (p.systemExtra ?? "") }, ...p.history];
   const toolCalls: { name: string; args: unknown; result: unknown }[] = [];
 
   for (let step = 0; step < (p.maxSteps ?? 5); step++) {

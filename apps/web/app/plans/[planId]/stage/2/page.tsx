@@ -3,7 +3,7 @@ import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
-import { ChatPanel } from "../../_components/ChatPanel";
+import { AssistantPanel } from "../../_components/AssistantPanel";
 import { RegionPriceCard } from "../../_components/RegionPriceCard";
 import { StageForm } from "../../_components/StageForm";
 import { TipPanel } from "../../_components/TipPanel";
@@ -136,7 +136,7 @@ export default async function Stage2({
       <div className="space-y-6">
         <RegionPriceCard result={prices} />
         <p><Link href={`/plans/${planId}/stage/3`} className="text-blue-700">다음: 3단계 주택 선택 기준 →</Link></p>
-        <ChatPanel planId={planId} />
+        <AssistantPanel planId={planId} stage={2} />
       </div>
     </main>
   );

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { BudgetCard } from "../../_components/BudgetCard";
-import { ChatPanel } from "../../_components/ChatPanel";
+import { AssistantPanel } from "../../_components/AssistantPanel";
 import { formatEokShort } from "../../_components/format";
 import { InputSummary, type Snapshot } from "../../_components/InputSummary";
 import { MoneyInput } from "../../_components/MoneyInput";
@@ -151,7 +151,7 @@ export default async function Stage1({
         </StageForm>
         <div className="space-y-6 lg:sticky lg:top-24">
           <InputSummary formId={FORM_ID} initial={initial} />
-          <ChatPanel planId={planId} />
+          <AssistantPanel planId={planId} stage={1} />
         </div>
       </main>
     </div>
