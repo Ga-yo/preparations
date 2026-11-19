@@ -26,3 +26,11 @@ describe("financialProfileSchema", () => {
     expect([r.is_first_time, r.is_newlywed]).toEqual([true, false]);
   });
 });
+
+test("구매 목적·시기는 필수: 비었거나 없으면 거부", () => {
+  for (const k of ["purpose", "timeline"] as const) {
+    expect(financialProfileSchema.safeParse({ ...base, [k]: "" }).success).toBe(false);
+    const { [k]: _, ...rest } = base;
+    expect(financialProfileSchema.safeParse(rest).success).toBe(false);
+  }
+});

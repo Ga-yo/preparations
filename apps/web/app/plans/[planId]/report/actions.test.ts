@@ -25,6 +25,9 @@ vi.mock("../stage/1/actions", () => ({ getBudgetForPlan: async () => ({ data: { 
 vi.mock("../stage/4/actions", () => ({ favoriteComplexIds: async () => favorites }));
 vi.mock("../stage/5/actions", async (orig) => ({ ...(await orig<typeof import("../stage/5/actions")>()), compareForPlan }));
 
+const budgetsByRegion = vi.fn(async (): Promise<unknown> => null);
+vi.mock("@/lib/agent/tools/get-budget", () => ({ budgetsByRegion }));
+
 const freshCheckSummary = vi.fn(async (): Promise<string | null> => null);
 vi.mock("../_components/assistant", () => ({ freshCheckSummary }));
 
@@ -65,4 +68,23 @@ test("현재 입력의 5단계 AI 점검이 있으면 해설로 담는다", asyn
   await createReport(PLAN);
   expect(freshCheckSummary).toHaveBeenCalledWith(expect.anything(), PLAN, 5);
   expect(inserts[0].row.narrative).toBe("5단계 점검 요약");
+});
+
+test("지역을 저장했으면 지역 기준 예산을 담고 지역 미지정 예산은 쓰지 않는다", async () => {
+  favorites = [];
+  const seoul = { data: { maxPrice: 6 }, as_of: { loan_rules: "2025-10-16" } };
+  budgetsByRegion.mockResolvedValueOnce([{ region_codes: ["1168000000"], budget: seoul }]);
+  await createReport(PLAN);
+  expect(budgetsByRegion).toHaveBeenCalledWith(expect.anything(), PLAN, expect.any(String), ["1168000000"], 85);
+  const p = inserts[0].row.payload as { budget: unknown; region_budgets: unknown };
+  expect(p.budget).toEqual(seoul);
+  expect(p.region_budgets).toEqual([{ region_names: ["서울특별시 강남구"], budget: seoul }]);
+});
+
+test("지역 예산을 못 구하면(프로필 없음) 기존 예산 하나만 담는다", async () => {
+  favorites = [];
+  await createReport(PLAN);
+  const p = inserts[0].row.payload as { budget: unknown; region_budgets?: unknown };
+  expect(p.budget).toMatchObject({ data: { ownFunds: 1 } });
+  expect(p.region_budgets).toBeUndefined();
 });

@@ -14,8 +14,9 @@ const emptyToNull = (v: unknown) => (v === "" ? null : v);
 const check = z.string().optional().transform((s) => s === "on");
 
 export const financialProfileSchema = z.object({
-  purpose: z.preprocess(emptyToNull, z.enum(["live", "invest", "both"]).nullish()).transform((v) => v ?? null),
-  timeline: z.preprocess(emptyToNull, z.enum(["6m", "1y", "2_3y", "undecided"]).nullish()).transform((v) => v ?? null),
+  // 목적·시기는 필수(2026-11-19 결정): 빈 폼이 저장돼 "0원까지예요"가 나오던 문제
+  purpose: z.preprocess(emptyToNull, z.enum(["live", "invest", "both"])),
+  timeline: z.preprocess(emptyToNull, z.enum(["6m", "1y", "2_3y", "undecided"])),
   cash_assets: won,
   annual_income: won,
   income_is_combined: check,

@@ -1,6 +1,7 @@
 import type { Json } from "@repo/db-types";
 import { z } from "zod";
 import { kstToday } from "@/lib/agent/orchestrator";
+import { budgetsByRegion } from "@/lib/agent/tools/get-budget";
 import { assembleReport, conditionsSummary, type ReportPayload } from "@/lib/report/assemble";
 import { freshCheckSummary } from "../_components/assistant";
 import { getBudgetForPlan } from "../stage/1/actions";
@@ -30,16 +31,20 @@ export async function createReport(planId: string): Promise<void> {
   for (const r of [cond, tips]) if (r.error) throw new Error(r.error.message);
   const ids = parseIds(undefined, favorites.map((f) => f.complex_id));
   const codes = cond.data ? [...cond.data.region_codes, ...(cond.data.commute_region_code ? [cond.data.commute_region_code] : [])] : [];
-  const [compare, names, narrative] = await Promise.all([
+  const [compare, names, narrative, groups] = await Promise.all([
     ids.length >= 2 ? compareForPlan(planId, ids) : null,
     codes.length ? supabase.from("regions").select("code, full_name").in("code", codes) : null,
     freshCheckSummary(supabase, planId, 5), // 5단계 AI 점검 = 리포트 AI 해설(M7-D7)
+    // 지역을 저장했으면 "지역 미지정" 예산 대신 희망 지역 기준 예산을 쓴다(2단계 시세 표와 같은 면적 기준)
+    cond.data?.region_codes.length ? budgetsByRegion(supabase, planId, kstToday(), cond.data.region_codes, cond.data.area_max) : null,
   ]);
   if (names?.error) throw new Error(names.error.message);
+  const nameOf = Object.fromEntries((names?.data ?? []).map((r) => [r.code, r.full_name]));
 
   const payload: ReportPayload = assembleReport({
-    generated_on: kstToday(), budget, favorites, compare,
-    conditions: conditionsSummary(cond.data, Object.fromEntries((names?.data ?? []).map((r) => [r.code, r.full_name]))),
+    generated_on: kstToday(), budget: groups?.[0]?.budget ?? budget, favorites, compare,
+    conditions: conditionsSummary(cond.data, nameOf),
+    ...(groups?.length && { region_budgets: groups.map((g) => ({ region_names: g.region_codes.map((c) => nameOf[c] ?? c), budget: g.budget })) }),
     checklist: tips.data ?? [],
   });
   const { error } = await supabase.from("reports").insert({ plan_id: planId, user_id: user.id, payload: payload as unknown as { [key: string]: Json }, narrative });

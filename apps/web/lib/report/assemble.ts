@@ -9,6 +9,8 @@ export interface ReportChecklistItem { field_key: string | null; title: string; 
 export interface ReportPayload {
   version: 1; generated_on: string;
   budget: ToolResult; conditions: ReportConditions | null;
+  // 희망 지역별 예산(규제가 같은 지역끼리 묶음). 없으면(지역 미저장·이전 리포트) budget 하나만 보인다
+  region_budgets?: { region_names: string[]; budget: ToolResult }[];
   favorites: { complex_id: number; name: string }[];
   compare: ToolResult | null; // 관심 단지가 2개 이상일 때만
   checklist: ReportChecklistItem[];
