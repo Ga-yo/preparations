@@ -8,6 +8,7 @@ import { RegionPriceCard } from "../../_components/RegionPriceCard";
 import { StageForm } from "../../_components/StageForm";
 import { TipPanel } from "../../_components/TipPanel";
 import { getRegionPricesForPlan, saveStage2Conditions } from "./actions";
+import { SigunguPicker } from "./_components/SigunguPicker";
 
 const LABELS: Record<string, string> = {
   sigungu_codes: "희망 시군구", dong_names: "희망 동(지역명을 찾지 못했거나 여러 곳과 일치 — 시·구부터 입력해 주세요)",
@@ -44,7 +45,6 @@ export default async function Stage2({
     ? await supabase.from("regions").select("code, full_name").in("code", nameCodes)
     : { data: [] };
   const nameOf = (code: string) => named?.find((r) => r.code === code)?.full_name ?? "";
-  const bySido = Map.groupBy(sigungu ?? [], (s) => s.sido);
 
   async function save(form: FormData): Promise<string[]> {
     "use server";
@@ -87,19 +87,12 @@ export default async function Stage2({
         <h2 className="font-semibold">① 희망 지역</h2>
         <fieldset>
           <legend className="font-medium">희망 시군구 (최대 10곳, 실거래가는 수도권만 제공)</legend>
-          {[...bySido].map(([sido, rows]) => (
-            <details key={sido} open={rows.some((s) => saved.has(`${s.sigungu_code}00000`))} className="mt-1">
-              <summary className="cursor-pointer">{sido}</summary>
-              <div className="grid grid-cols-2 gap-x-2 sm:grid-cols-3">
-                {rows.map((s) => (
-                  <label key={s.sigungu_code} className="flex items-center gap-1 text-sm">
-                    <input type="checkbox" name="sigungu_codes" value={s.sigungu_code ?? ""} defaultChecked={saved.has(`${s.sigungu_code}00000`)} />
-                    {s.full_name.slice(sido.length + 1)}
-                  </label>
-                ))}
-              </div>
-            </details>
-          ))}
+          <SigunguPicker
+            rows={sigungu ?? []}
+            // 희망 동 칸에 시 이름 등을 넣어 저장된 비수도권·상위 코드는 지도에 없으니 뺀다
+            initial={[...saved].filter((x) => x.endsWith("00000")).map((x) => x.slice(0, 5))
+              .filter((code) => sigungu?.some((s) => s.sigungu_code === code))}
+          />
           <TipPanel tips={t} fieldKey="sigungu_codes" />
         </fieldset>
         {field("dong_names", "희망 동 (선택, 쉼표로 구분, 예: 강남구 개포동)",
