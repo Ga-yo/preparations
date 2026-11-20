@@ -30,7 +30,8 @@ export function SigunguPicker({ rows, initial }: { rows: Row[]; initial: string[
       setFull(next === prev && !prev.includes(code)); // 멱등이라 StrictMode 이중 호출에도 안전
       return next;
     });
-  const bySido = Map.groupBy(rows, (r) => r.sido);
+  // Map.groupBy는 Safari 17.4 미만에 없어 클라이언트에서 쓰지 않는다
+  const bySido = [...new Set(rows.map((r) => r.sido))].map((sido) => [sido, rows.filter((r) => r.sido === sido)] as const);
   const box = view === "전체" ? map.viewBox : SIDO_BOX[view];
   const inView = (code: string) => view === "전체" || code.startsWith(PREFIX[view]);
   const fontSize = Number(box.split(" ")[2]) / 34;
@@ -65,8 +66,8 @@ export function SigunguPicker({ rows, initial }: { rows: Row[]; initial: string[
         ))}
       </svg>
       <p className="text-xs text-chb-muted">
-        경계: 통계청 <a href="https://sgis.kostat.go.kr" className="underline">SGIS</a> 행정동 경계(공공누리 제1유형) 가공,{" "}
-        <a href="https://github.com/vuski/admdongkor" className="underline">vuski/admdongkor</a> (CC BY 4.0). 백령도 등 먼 섬은 생략
+        경계: 통계청 <a href="https://sgis.kostat.go.kr" target="_blank" rel="noopener noreferrer" className="underline">SGIS</a> 행정동 경계(공공누리 제1유형) 가공,{" "}
+        <a href="https://github.com/vuski/admdongkor" target="_blank" rel="noopener noreferrer" className="underline">vuski/admdongkor</a> (CC BY 4.0). 백령도 등 먼 섬은 생략
       </p>
       {full && <p role="alert" className="text-sm text-red-700">최대 {MAX_SIGUNGU}곳까지 고를 수 있어요. 다른 곳을 빼고 골라 주세요.</p>}
       <ul className="flex flex-wrap gap-1" aria-label="선택한 시군구">
@@ -81,7 +82,7 @@ export function SigunguPicker({ rows, initial }: { rows: Row[]; initial: string[
       </ul>
       <details className="text-sm">
         <summary className="cursor-pointer text-chb-muted">목록에서 고르기 ({selected.length}/{MAX_SIGUNGU})</summary>
-        {[...bySido].map(([sido, rs]) => (
+        {bySido.map(([sido, rs]) => (
           <fieldset key={sido} className="mt-2">
             <legend className="font-medium">{sido}</legend>
             <div className="grid grid-cols-2 gap-x-2 sm:grid-cols-3">
