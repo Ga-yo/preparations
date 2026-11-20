@@ -11,7 +11,7 @@ export function toggleCode(selected: string[], code: string, max = MAX_SIGUNGU):
 }
 
 type Row = { sigungu_code: string | null; sido: string; full_name: string };
-const VIEWS = ["전체", "서울특별시", "인천광역시", "경기도"] as const;
+const VIEWS = ["서울특별시", "경기도", "인천광역시"] as const;
 const PATHS: Record<string, string> = map.paths;
 const SIDO_BOX: Record<string, string> = map.sido;
 const LABELS: Record<string, number[]> = map.labels;
@@ -20,7 +20,7 @@ const PREFIX: Record<string, string> = { 서울특별시: "11", 인천광역시:
 // 지도는 마우스·터치용이라 스크린리더에서 숨기고, 같은 값을 쓰는 체크박스 목록을 아래에 접어 둔다(키보드·스크린리더용).
 export function SigunguPicker({ rows, initial }: { rows: Row[]; initial: string[] }) {
   const [selected, setSelected] = useState(initial);
-  const [view, setView] = useState<(typeof VIEWS)[number]>("전체");
+  const [view, setView] = useState<(typeof VIEWS)[number]>("서울특별시");
   const [hover, setHover] = useState<string | null>(null);
   const [full, setFull] = useState(false);
   const nameOf = new Map(rows.map((r) => [r.sigungu_code ?? "", r.full_name]));
@@ -32,8 +32,8 @@ export function SigunguPicker({ rows, initial }: { rows: Row[]; initial: string[
     });
   // Map.groupBy는 Safari 17.4 미만에 없어 클라이언트에서 쓰지 않는다
   const bySido = [...new Set(rows.map((r) => r.sido))].map((sido) => [sido, rows.filter((r) => r.sido === sido)] as const);
-  const box = view === "전체" ? map.viewBox : SIDO_BOX[view];
-  const inView = (code: string) => view === "전체" || code.startsWith(PREFIX[view]);
+  const box = SIDO_BOX[view];
+  const inView = (code: string) => code.startsWith(PREFIX[view]);
   const fontSize = Number(box.split(" ")[2]) / 34;
 
   return (
@@ -42,7 +42,7 @@ export function SigunguPicker({ rows, initial }: { rows: Row[]; initial: string[
         {VIEWS.map((v) => (
           <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v}
             className={`rounded-full border px-3 py-1 text-sm ${view === v ? "border-chb-accent bg-chb-accent text-white" : "border-chb-line hover:border-chb-ink"}`}>
-            {v === "전체" ? "수도권 전체" : v.slice(0, 2)}
+            {v.slice(0, 2)}
           </button>
         ))}
       </div>
@@ -57,8 +57,8 @@ export function SigunguPicker({ rows, initial }: { rows: Row[]; initial: string[
             <title>{nameOf.get(code)}</title>
           </path>
         ))}
-        {/* 시·도로 확대했을 때만, 이름이 들어갈 만큼 넓은 곳에만 쓴다(좁은 곳은 마우스를 올리면 위에 표시) */}
-        {view !== "전체" && Object.entries(LABELS).map(([code, [x, y, w]]) => inView(code) && nameOf.has(code) && w > fontSize * 3.5 && (
+        {/* 이름이 들어갈 만큼 넓은 곳에만 쓴다(좁은 곳은 마우스를 올리면 위에 표시) */}
+        {Object.entries(LABELS).map(([code, [x, y, w]]) => inView(code) && nameOf.has(code) && w > fontSize * 3.5 && (
           <text key={code} x={x} y={y} fontSize={fontSize} textAnchor="middle" dominantBaseline="middle" pointerEvents="none"
             className={selected.includes(code) ? "fill-white font-semibold" : "fill-chb-ink"}>
             {nameOf.get(code)!.split(" ").at(-1)}
