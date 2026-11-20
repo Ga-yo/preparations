@@ -5,6 +5,9 @@ import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { ToolResult } from "@/lib/agent/tool";
 import { AssistantPanel } from "../../_components/AssistantPanel";
+import { formatWon } from "../../_components/format";
+import { byMonthly, type ProductPayment } from "../../_components/products";
+import { getBudgetForPlan } from "../1/actions";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
 import { TipPanel } from "../../_components/TipPanel";
 import { favoriteComplexIds } from "../4/actions";
@@ -22,6 +25,7 @@ const COMPARE_NOTICES: Record<string, string> = {
   redevelopment_not_covered: "정비사업 정보는 서울시 자료만 제공합니다. 경기·인천 단지는 해당 지자체에서 확인하세요.",
 };
 
+const RATE_TYPE: Record<string, string> = { fixed: "고정", variable: "변동" };
 const logError = (e: unknown) => console.error("stage5", e instanceof Error ? `${e.name}: ${e.message}` : e);
 
 export default async function Stage5({
@@ -41,10 +45,13 @@ export default async function Stage5({
     favoriteComplexIds(planId).catch((e): { complex_id: number; name: string }[] => (logError(e), [])),
   ]);
   const ids = parseIds(rawIds, favorites.map((f) => f.complex_id));
-  const [compare, changes] = await Promise.all([
+  const [compare, changes, budget] = await Promise.all([
     ids.length >= 2 ? compareForPlan(planId, ids).catch((e): null => (logError(e), null)) : Promise.resolve<ToolResult | null | undefined>(undefined),
     changesForPlan(planId).catch((e): null => (logError(e), null)),
+    getBudgetForPlan(planId).catch((e): null => (logError(e), null)),
   ]);
+  const budgetData = budget?.data as { products?: ProductPayment[]; loan?: { amount: number } } | undefined;
+  const products = byMonthly(budgetData?.products ?? []);
 
   const data = compare?.data as CompareData | { error: string } | undefined;
   const asOf = Object.entries(compare?.as_of ?? {});
@@ -89,6 +96,43 @@ export default async function Stage5({
             {asOf.length > 0 && <p className="text-xs text-gray-600">데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}</p>}
           </section>
         )
+      )}
+
+      {products.length > 0 && (
+        // 상품이 수십 개라 접어 두고, 펼치면 한 줄씩 표로 본다
+        <details className="rounded border p-3 text-sm" aria-label="대출 상품 비교">
+          <summary className="cursor-pointer font-semibold">대출 상품 전체 비교 <span className="font-normal text-gray-600">· {products.length}개, 월 상환액 적은 순</span></summary>
+          <p className="mt-2 text-xs text-gray-600">
+            1단계 예산의 대출 가능액 {formatWon(budgetData?.loan?.amount ?? 0)} 기준이에요. 상품마다 대출액과 기간이 달라 월 상환액만으로 유불리를 판단하기는 어려워요. 순위는 추천이 아닙니다.
+          </p>
+          {budget?.notices?.includes("dummy_data:loan_products:bank") && <p role="alert" className="mt-2 rounded bg-red-50 p-2 font-bold text-red-800">은행 상품 금리는 테스트용 가짜 데이터입니다</p>}
+          <div className="mt-2 max-h-[28rem] overflow-auto">
+            <table className="w-full min-w-[32rem] border-collapse">
+              <thead className="sticky top-0 bg-white">
+                <tr className="text-left text-gray-700">
+                  <th scope="col" className="border-b p-2 font-normal">은행 · 상품</th>
+                  <th scope="col" className="border-b p-2 font-normal">금리</th>
+                  <th scope="col" className="border-b p-2 font-normal">월 상환액</th>
+                  <th scope="col" className="border-b p-2 font-normal">대출 · 기간</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((x) => (
+                  <tr key={x.productId}>
+                    <td className="border-b p-2"><span className="font-semibold">{x.provider}</span> {x.name}</td>
+                    <td className="border-b p-2">{RATE_TYPE[x.rateType ?? ""] ?? "-"}</td>
+                    <td className="border-b p-2 font-semibold whitespace-nowrap">
+                      {x.monthlyAtMin === null ? "-" : formatWon(x.monthlyAtMin)}
+                      {x.monthlyAtMax !== null && x.monthlyAtMax !== x.monthlyAtMin && ` ~ ${formatWon(x.monthlyAtMax)}`}
+                    </td>
+                    <td className="border-b p-2 whitespace-nowrap text-gray-700">{formatWon(x.loanAmount)} · {x.termYears}년</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {budget?.as_of["loan_products:bank"] && <p className="mt-2 text-xs text-gray-600">데이터 기준일: 시중은행 상품 {budget.as_of["loan_products:bank"]}</p>}
+        </details>
       )}
 
       <div className="grid gap-6 md:grid-cols-2">

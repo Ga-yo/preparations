@@ -7,7 +7,8 @@ import { formatWon } from "../../../_components/format";
 import { redevelopmentText } from "../../../_components/redevelopment";
 import { TipPanel, type Tip } from "../../../_components/TipPanel";
 
-type Item = CompareItem & { redevelopment?: RedevelopmentInfo };
+type Costs = { acquisitionTax: number; brokerage: number; total: number; heavy_tax: boolean };
+type Item = CompareItem & { redevelopment?: RedevelopmentInfo; costs?: Costs | null };
 export type CompareData = Omit<CompareResult, "items"> & { items: Item[]; rows: ComplexRow[]; criteria: { months: number; area_min: number | null; area_max: number | null } };
 
 export const RISK_LABELS: Record<string, string> = {
@@ -26,6 +27,7 @@ export function CompareTable({ planId, data, tips }: { planId: string; data: Com
     { key: "price", title: `최근 ${data.criteria.months}개월 중위가`, metric: "median_price", cell: (r) => (r.median_price === null ? "최근 거래 없음" : formatWon(r.median_price)) },
     { key: "gap", title: "최저가 단지와 차이", cell: (_, i) => (i.price_gap_from_min === null ? "-" : i.price_gap_from_min === 0 ? "최저" : `+${formatWon(i.price_gap_from_min)}`) },
     { key: "ratio", title: "예산 대비", cell: (_, i) => (i.budget_ratio === null ? "-" : `${Math.round(i.budget_ratio * 100)}%`) },
+    { key: "costs", title: "부대비용(중위가 기준)", cell: (_, i) => (i.costs ? <Costs c={i.costs} /> : "-") },
     { key: "deals", title: "거래 건수", cell: (r) => `${r.deal_count}건` },
     { key: "fit", title: "적합도", metric: "fit_score", cell: (_, i) => (i.fit ? `${i.fit.score}점` : "현재 조건 밖") },
     { key: "met", title: "조건 충족", cell: (_, i) => (i.fit ? <Chips met={i.fit.met} unmet={i.fit.unmet} missing={i.fit.missing} /> : "-") },
@@ -74,9 +76,19 @@ export function CompareTable({ planId, data, tips }: { planId: string; data: Com
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-gray-600">&lsquo;유리&rsquo;는 항목별로 나은 단지 표시이며 종합 순위가 아닙니다. 관리비는 단지 이름을 눌러 상세에서 확인하세요. 거리는 직선거리입니다.</p>
+      <p className="text-xs text-gray-600">부대비용은 중위가에 샀다고 보고 계산했어요. 중개보수는 상한 요율 기준, 부가세 별도입니다. &lsquo;유리&rsquo;는 항목별로 나은 단지 표시이며 종합 순위가 아닙니다. 관리비는 단지 이름을 눌러 상세에서 확인하세요. 거리는 직선거리입니다.</p>
       <TipPanel tips={tips} fieldKey="risks" />
     </div>
+  );
+}
+
+function Costs({ c }: { c: Costs }) {
+  return (
+    <>
+      {formatWon(c.total)}
+      <span className="block text-xs text-gray-600">취득세 {formatWon(c.acquisitionTax)} · 중개보수 {formatWon(c.brokerage)}</span>
+      {c.heavy_tax && <span className="block text-xs text-red-800">취득세 중과 가능</span>}
+    </>
   );
 }
 

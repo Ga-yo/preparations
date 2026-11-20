@@ -1,15 +1,17 @@
 import { z } from "zod";
+import { costsAt } from "@/lib/calc/budget";
 import { compareComplexes, type CompareInput } from "@/lib/calc/compare";
 import { activeKeys, type ComplexRow } from "@/lib/calc/conditions";
 import { fitScore, maxBudgetFor } from "@/lib/calc/fit";
 import { loadRedevelopment } from "../redevelopment";
 import { defineTool, type ToolContext, type ToolResult } from "../tool";
 import { loadConditionContext, MONTHS } from "./condition-context";
+import { budgetInput, DEFAULT_AREA_M2, loadBudgetData } from "./get-budget";
 
 export const compareComplexesTool = defineTool({
   name: "compare_complexes",
   description:
-    "관심 단지 2~4개를 결정론적으로 비교한다. 단지별 적합도(fit), 위험 요소 코드(risks), 최저가 대비 가격 차이(price_gap_from_min), 예산 대비 비율(budget_ratio), 지표별 유리한 단지(best), 정비사업 정보(redevelopment)를 돌려준다. 현재 조건 밖 단지는 fit이 null이다.",
+    "관심 단지 2~4개를 결정론적으로 비교한다. 단지별 적합도(fit), 중위가에 살 때 부대비용(costs: 취득세·중개보수, 1단계 미저장이면 null), 위험 요소 코드(risks), 최저가 대비 가격 차이(price_gap_from_min), 예산 대비 비율(budget_ratio), 지표별 유리한 단지(best), 정비사업 정보(redevelopment)를 돌려준다. 현재 조건 밖 단지는 fit이 null이다.",
   schema: z.object({ complex_ids: z.array(z.number().int().positive()).min(1).max(4) }),
   async run(args, ctx: ToolContext): Promise<ToolResult> {
     const ids = [...new Set(args.complex_ids)];
@@ -45,11 +47,22 @@ export const compareComplexesTool = defineTool({
     });
     const notices = [...(l.notices ?? []), ...(inputs.length < ids.length ? ["complex_not_found"] : []), "land_share_is_average"];
     if (inputs.length < 2) return { data: { error: "need_two_or_more" }, as_of: l.as_of, ...(l.stale && { stale: l.stale }), notices };
-    const redev = await loadRedevelopment(ctx.supabase, inputs.map((i) => ({ id: i.row.complex_id, region_code: i.row.region_code })));
+    const [redev, budgetData] = await Promise.all([
+      loadRedevelopment(ctx.supabase, inputs.map((i) => ({ id: i.row.complex_id, region_code: i.row.region_code }))),
+      loadBudgetData(ctx.supabase, ctx.planId, ctx.today),
+    ]);
+    const rowById = new Map(inputs.map((i) => [i.row.complex_id, i.row]));
+    // 면적은 지역별 예산(budgetsByRegion)과 같이 희망 최대 면적, 없으면 84㎡
+    const costsOf = (id: number) => {
+      const r = rowById.get(id)!;
+      if (!budgetData || r.median_price === null) return null;
+      const { heavyTax, ...c } = costsAt(budgetInput(budgetData, ctx.today, r.region_code, area_max ?? DEFAULT_AREA_M2), r.median_price);
+      return { ...c, heavy_tax: heavyTax };
+    };
     const result = compareComplexes(inputs, Number(ctx.today.slice(0, 4)));
     const items = result.items.map((i) => {
       const redevelopment = redev.byId[i.complex_id];
-      return { ...i, redevelopment, risks: redevelopment.status === "in_zone" ? [...i.risks, "redevelopment_in_zone" as const] : i.risks };
+      return { ...i, redevelopment, costs: costsOf(i.complex_id), risks: redevelopment.status === "in_zone" ? [...i.risks, "redevelopment_in_zone" as const] : i.risks };
     });
     // 3단계 "정비사업 관심"이면 정비구역 단지를 앞으로 (안정 정렬이라 나머지는 요청 순서)
     if (l.redevelopmentInterest) items.sort((a, b) => Number(b.redevelopment.status === "in_zone") - Number(a.redevelopment.status === "in_zone"));

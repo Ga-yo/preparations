@@ -35,8 +35,11 @@ const ERRORS: Record<string, string> = {
 
 type Data = (Omit<BudgetResult, "loan"> & { loan: { amount: number; binding?: keyof typeof BINDING }; profile_summary?: Summary }) | { error: string };
 
+const LIMIT_DIAGNOSES: Diagnosis[] = ["dsr_binding", "ltv_binding", "cap_binding", "funds_only"];
+
 // flat: 팝업 안에 넣을 때 카드 테두리 없이. income(원): 설명 문장용. 툴 결과에는 소득 원값을 넣지 않아 화면이 따로 넘긴다
-export function BudgetCard({ result, flat = false, income }: { result: ToolResult; flat?: boolean; income?: number | null }) {
+// detail: 리포트용. 부대비용 내역·상품 전체·진단 전체를 펼친다. 1단계는 요약만 두고 나머지는 5단계에서 본다
+export function BudgetCard({ result, flat = false, income, detail = false }: { result: ToolResult; flat?: boolean; income?: number | null; detail?: boolean }) {
   const data = result.data as Data;
   const asOf = Object.entries(result.as_of);
   return (
@@ -64,23 +67,24 @@ export function BudgetCard({ result, flat = false, income }: { result: ToolResul
             </p>
           )}
           {result.notices?.filter((n) => PROFILE_NOTICES[n]).map((n) => <p key={n} className="rounded-xl bg-chb-soft2 p-3 text-chb-ink">{PROFILE_NOTICES[n]}</p>)}
-          {data.products.length > 0 && <ProductList products={data.products} />}
-          <div>
-            <p className="font-semibold">부대비용: 총 {formatWon(data.costs.total)}</p>
-            <ul className="list-disc pl-5">
-              <li>취득세 {formatWon(data.costs.acquisitionTax)}</li>
-              <li>중개보수 {formatWon(data.costs.brokerage)}</li>
-            </ul>
-            <p className="text-chb-muted">중개보수는 상한 요율 기준, 부가세 별도입니다.</p>
-          </div>
+          {data.products.length > 0 && <ProductList products={data.products} all={detail} />}
+          {detail ? (
+            <div>
+              <p className="font-semibold">부대비용: 총 {formatWon(data.costs.total)}</p>
+              <ul className="list-disc pl-5">
+                <li>취득세 {formatWon(data.costs.acquisitionTax)}</li>
+                <li>중개보수 {formatWon(data.costs.brokerage)}</li>
+              </ul>
+              <p className="text-chb-muted">중개보수는 상한 요율 기준, 부가세 별도입니다.</p>
+            </div>
+          ) : (
+            // 예산 계산식이 부대비용을 빼므로 총액은 남긴다. 후보별 내역은 5단계 비교표
+            <p className="text-chb-muted">취득세·중개보수 등 부대비용 약 {formatWon(data.costs.total)}을 빼고 계산했어요. 단지별 금액은 5단계 비교에서 볼 수 있어요.</p>
+          )}
           {data.diagnoses.includes("region_unspecified") && (
             <p role="alert" className="rounded-xl bg-amber-50 p-3 font-semibold text-amber-900">{DIAGNOSES.region_unspecified}</p>
           )}
-          {data.diagnoses.length > 0 && (
-            <ul className="list-disc space-y-1 pl-5 text-chb-muted">
-              {data.diagnoses.filter((d) => d !== "region_unspecified").map((d) => <li key={d}>{DIAGNOSES[d]}</li>)}
-            </ul>
-          )}
+          <Diagnoses list={data.diagnoses.filter((d) => d !== "region_unspecified")} detail={detail} />
         </div>
       )}
       {asOf.length > 0 && (
@@ -89,6 +93,26 @@ export function BudgetCard({ result, flat = false, income }: { result: ToolResul
         </p>
       )}
     </section>
+  );
+}
+
+// 한도를 정한 진단 1개는 보이고, 나머지 주의사항은 접는다(리포트는 모두 펼침)
+function Diagnoses({ list, detail }: { list: Diagnosis[]; detail: boolean }) {
+  if (!list.length) return null;
+  const items = (ds: Diagnosis[]) => <ul className="list-disc space-y-1 pl-5 text-chb-muted">{ds.map((d) => <li key={d}>{DIAGNOSES[d]}</li>)}</ul>;
+  if (detail) return items(list);
+  const main = list.filter((d) => LIMIT_DIAGNOSES.includes(d));
+  const rest = list.filter((d) => !LIMIT_DIAGNOSES.includes(d));
+  return (
+    <div>
+      {items(main)}
+      {rest.length > 0 && (
+        <details className="mt-1">
+          <summary className="cursor-pointer text-chb-muted">주의사항 {rest.length}개 보기</summary>
+          {items(rest)}
+        </details>
+      )}
+    </div>
   );
 }
 
@@ -151,15 +175,16 @@ function ProductItem({ p }: { p: ProductPayment }) {
   );
 }
 
-// 많을 때 한눈에 보이도록 월 상환액 적은 순 3개만 펼치고 나머지는 접는다. 순위는 추천이 아니다
-function ProductList({ products }: { products: ProductPayment[] }) {
+// 1단계는 월 상환액 적은 순 3개만, 나머지는 5단계에서 고른다. all(리포트)이면 나머지를 접어서 함께. 순위는 추천이 아니다
+function ProductList({ products, all }: { products: ProductPayment[]; all: boolean }) {
   const sorted = byMonthly(products);
-  const rest = sorted.slice(TOP);
+  const rest = all ? sorted.slice(TOP) : [];
   return (
     <div>
       <p className="font-semibold">상품별 월 상환액 <span className="font-normal text-chb-muted">· 월 상환액 적은 순</span></p>
       <p className="mb-2 text-xs text-chb-muted">상품마다 대출액과 기간이 달라 월 상환액만으로 유불리를 판단하기는 어려워요.</p>
       <ul className="space-y-2">{sorted.slice(0, TOP).map((p) => <ProductItem key={p.productId} p={p} />)}</ul>
+      {!all && sorted.length > TOP && <p className="mt-2 text-xs text-chb-muted">나머지 {sorted.length - TOP}개 상품은 5단계에서 비교할 수 있어요.</p>}
       {rest.length > 0 && (
         <details className="group mt-2">
           <summary className="cursor-pointer list-none rounded-full py-2 text-center font-semibold text-chb-accent select-none [&::-webkit-details-marker]:hidden">

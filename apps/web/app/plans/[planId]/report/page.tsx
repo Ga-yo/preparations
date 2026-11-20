@@ -70,9 +70,9 @@ export default async function Report({ params }: { params: Promise<{ planId: str
           {p.region_budgets?.length ? p.region_budgets.map((g) => (
             <section key={g.region_names.join(",")} className="space-y-2" aria-label="지역별 예산">
               <h2 className="font-semibold">예산 기준 지역: {g.region_names.join(", ")}</h2>
-              <BudgetCard result={g.budget} />
+              <BudgetCard result={g.budget} detail />
             </section>
-          )) : <BudgetCard result={p.budget} />}
+          )) : <BudgetCard result={p.budget} detail />}
           <section className="space-y-2" aria-label="관심 단지 비교">
             <h2 className="font-semibold">관심 단지 비교 ({p.favorites.map((f) => f.name).join(", ") || "없음"})</h2>
             {compare && !("error" in compare) ? <CompareTable planId={planId} data={compare} tips={[]} />
