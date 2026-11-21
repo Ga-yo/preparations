@@ -35,8 +35,12 @@ const ERRORS: Record<string, string> = {
 
 type Data = (Omit<BudgetResult, "loan"> & { loan: { amount: number; binding?: keyof typeof BINDING }; profile_summary?: Summary }) | { error: string };
 
+// 최대 예산 카드에 "DSR 한도 적용"처럼 이미 나오는 진단. 요약 화면에서는 다시 쓰지 않는다
+const CARD_DIAGNOSES: Diagnosis[] = ["dsr_binding", "ltv_binding", "cap_binding"];
+
 // flat: 팝업 안에 넣을 때 카드 테두리 없이. income(원): 설명 문장용. 툴 결과에는 소득 원값을 넣지 않아 화면이 따로 넘긴다
-export function BudgetCard({ result, flat = false, income }: { result: ToolResult; flat?: boolean; income?: number | null }) {
+// detail: 리포트용. 부대비용 내역·상품 전체·진단 전체를 펼친다. 1단계는 요약만 두고 나머지는 5단계에서 본다
+export function BudgetCard({ result, flat = false, income, detail = false }: { result: ToolResult; flat?: boolean; income?: number | null; detail?: boolean }) {
   const data = result.data as Data;
   const asOf = Object.entries(result.as_of);
   return (
@@ -54,8 +58,14 @@ export function BudgetCard({ result, flat = false, income }: { result: ToolResul
       {"error" in data ? (
         <p className="text-chb-muted">{ERRORS[data.error] ?? "예산을 계산하지 못했습니다."}</p>
       ) : (
-        <div className="space-y-4 text-sm">
+        // 팝업(flat)은 넓은 화면에서 두 칸: 왼쪽은 답(예산·전제), 오른쪽은 근거(상품·부대비용·진단). 스크롤 없이 보이게
+        <div className={`text-sm ${flat ? "grid gap-x-8 gap-y-4 md:grid-cols-2" : "space-y-4"}`}>
+          <div className="space-y-4">
           <BudgetHeadline data={data} income={income} />
+          {/* 헤드라인 숫자의 전제라 숫자 바로 아래에 둔다 */}
+          {data.diagnoses.includes("region_unspecified") && (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-amber-900">{DIAGNOSES.region_unspecified}</p>
+          )}
           {data.profile_summary && (
             <p className="text-chb-muted">
               {[data.profile_summary.purpose && `목적 ${PURPOSE[data.profile_summary.purpose]}`,
@@ -64,23 +74,24 @@ export function BudgetCard({ result, flat = false, income }: { result: ToolResul
             </p>
           )}
           {result.notices?.filter((n) => PROFILE_NOTICES[n]).map((n) => <p key={n} className="rounded-xl bg-chb-soft2 p-3 text-chb-ink">{PROFILE_NOTICES[n]}</p>)}
-          {data.products.length > 0 && <ProductList products={data.products} />}
-          <div>
-            <p className="font-semibold">부대비용: 총 {formatWon(data.costs.total)}</p>
-            <ul className="list-disc pl-5">
-              <li>취득세 {formatWon(data.costs.acquisitionTax)}</li>
-              <li>중개보수 {formatWon(data.costs.brokerage)}</li>
-            </ul>
-            <p className="text-chb-muted">중개보수는 상한 요율 기준, 부가세 별도입니다.</p>
           </div>
-          {data.diagnoses.includes("region_unspecified") && (
-            <p role="alert" className="rounded-xl bg-amber-50 p-3 font-semibold text-amber-900">{DIAGNOSES.region_unspecified}</p>
+          <div className="space-y-4">
+          {data.products.length > 0 && <ProductList products={data.products} all={detail} />}
+          {detail ? (
+            <div>
+              <p className="font-semibold">부대비용: 총 {formatWon(data.costs.total)}</p>
+              <ul className="list-disc pl-5">
+                <li>취득세 {formatWon(data.costs.acquisitionTax)}</li>
+                <li>중개보수 {formatWon(data.costs.brokerage)}</li>
+              </ul>
+              <p className="text-chb-muted">중개보수는 상한 요율 기준, 부가세 별도입니다.</p>
+            </div>
+          ) : (
+            // 예산 계산식이 부대비용을 빼므로 총액은 남긴다. 후보별 내역은 5단계 비교표
+            <p className="text-chb-muted">취득세·중개보수 등 부대비용 약 {formatWon(data.costs.total)}을 빼고 계산했어요. 단지별 금액은 5단계 비교에서 볼 수 있어요.</p>
           )}
-          {data.diagnoses.length > 0 && (
-            <ul className="list-disc space-y-1 pl-5 text-chb-muted">
-              {data.diagnoses.filter((d) => d !== "region_unspecified").map((d) => <li key={d}>{DIAGNOSES[d]}</li>)}
-            </ul>
-          )}
+          <Diagnoses list={data.diagnoses.filter((d) => d !== "region_unspecified")} detail={detail} />
+          </div>
         </div>
       )}
       {asOf.length > 0 && (
@@ -92,36 +103,51 @@ export function BudgetCard({ result, flat = false, income }: { result: ToolResul
   );
 }
 
+// '대출 없이 계산' 안내만 보이고, 카드에 나온 한도 진단은 빼고, 나머지 주의사항은 접는다(리포트는 모두 펼침)
+function Diagnoses({ list, detail }: { list: Diagnosis[]; detail: boolean }) {
+  if (!list.length) return null;
+  const items = (ds: Diagnosis[]) => <ul className="list-disc space-y-1 pl-5 text-chb-muted">{ds.map((d) => <li key={d}>{DIAGNOSES[d]}</li>)}</ul>;
+  if (detail) return items(list);
+  const main = list.filter((d) => d === "funds_only");
+  const rest = list.filter((d) => d !== "funds_only" && !CARD_DIAGNOSES.includes(d));
+  if (!main.length && !rest.length) return null;
+  return (
+    <div>
+      {items(main)}
+      {rest.length > 0 && (
+        <details className="mt-1">
+          <summary className="cursor-pointer text-chb-muted">주의사항 {rest.length}개 보기</summary>
+          {items(rest)}
+        </details>
+      )}
+    </div>
+  );
+}
+
 type Budget = Exclude<Data, { error: string }>;
-const loanText = (n: number) => (n > 0 ? `대출 ${formatWon(n)}` : "대출 없이 내 돈으로만");
+const loanText = (n: number) => (n > 0 ? <>대출 <span className="whitespace-nowrap">{formatWon(n)}</span></> : "대출 없이 내 돈으로만");
 
 // 두 금리 조건의 예산을 나란히: 안정 = 가장 높은 금리 기준(maxRatePrice), 최대 = 가장 낮은 금리 기준(minRatePrice)
 function BudgetHeadline({ data, income }: { data: Budget; income?: number | null }) {
-  const same = data.maxRatePrice === data.minRatePrice;
   const basis = [income ? `연소득 ${formatWon(income)}` : null, `구매에 쓸 수 있는 내 돈 ${formatWon(data.ownFunds)}`].filter(Boolean).join(", ");
-  const pct = data.minRatePrice > 0 ? Math.round((data.maxRatePrice / data.minRatePrice) * 100) : 0;
   return (
     <div>
-      <h2 className="font-display text-3xl leading-tight font-black tracking-tight text-chb-ink">
+      <h2 className="font-display text-2xl sm:text-3xl leading-tight font-black tracking-tight text-chb-ink">
         금리가 올라도 살 수 있는 집값은<br />
-        <span className="text-chb-accent">{formatWon(data.maxRatePrice)}</span>까지예요
+        <span className="whitespace-nowrap text-chb-accent">{formatWon(data.maxRatePrice)}</span>까지예요
       </h2>
       <p className="mt-3 text-base leading-relaxed text-chb-muted">
         {basis} 기준이에요.
-        {!same && ` 가장 낮은 금리를 받으면 ${formatWon(data.minRatePrice)}까지도 가능하지만 매달 갚는 부담이 커져요.`}
       </p>
-      <div className="mt-5 h-3 rounded-full bg-chb-accent/30" aria-hidden="true">
-        <div className="h-full rounded-full bg-chb-accent" style={{ width: `${pct}%` }} />
-      </div>
       <dl className="mt-4 grid grid-cols-2 gap-3">
         <div className="rounded-2xl bg-chb-soft2 p-4">
-          <dt className="flex items-center gap-2 text-chb-muted"><span aria-hidden="true" className="size-3 rounded-sm bg-chb-accent" />안정 예산 <span className="text-xs">높은 금리 기준</span></dt>
-          <dd className="mt-1 font-display text-xl font-black">{formatWon(data.maxRatePrice)}</dd>
+          <dt className="flex flex-wrap items-baseline gap-x-2 text-chb-muted">안정 예산 <span className="text-xs whitespace-nowrap">높은 금리 기준</span></dt>
+          <dd className="mt-1 font-display text-lg sm:text-xl font-black whitespace-nowrap">{formatWon(data.maxRatePrice)}</dd>
           <dd className="text-chb-muted">{loanText(data.maxRateLoan)}</dd>
         </div>
         <div className="rounded-2xl bg-chb-soft2 p-4">
-          <dt className="flex items-center gap-2 text-chb-muted"><span aria-hidden="true" className="size-3 rounded-sm bg-chb-accent/30" />최대 예산 <span className="text-xs">낮은 금리 기준</span></dt>
-          <dd className="mt-1 font-display text-xl font-black">{formatWon(data.minRatePrice)}</dd>
+          <dt className="flex flex-wrap items-baseline gap-x-2 text-chb-muted">최대 예산 <span className="text-xs whitespace-nowrap">낮은 금리 기준</span></dt>
+          <dd className="mt-1 font-display text-lg sm:text-xl font-black whitespace-nowrap">{formatWon(data.minRatePrice)}</dd>
           <dd className="text-chb-muted">
             {loanText(data.loan.amount)}
             {data.loan.binding && data.loan.amount > 0 && <span className="block text-xs">{BINDING[data.loan.binding]} 적용</span>}
@@ -135,38 +161,45 @@ function BudgetHeadline({ data, income }: { data: Budget; income?: number | null
 const TOP = 3;
 const RATE_TYPE: Record<string, string> = { fixed: "고정", variable: "변동" };
 
-function ProductItem({ p }: { p: ProductPayment }) {
+// 대출액·기간이 모든 상품에서 같으면(대부분) 제목에 한 번만 쓰고 줄마다 반복하지 않는다
+function ProductItem({ p, showLoan }: { p: ProductPayment; showLoan: boolean }) {
   return (
-    <li className="rounded-2xl border border-chb-line p-3">
-      <p className="flex items-start justify-between gap-2">
-        <span className="font-semibold">{p.provider} <span className="font-normal">{p.name}</span></span>
-        {p.rateType && <span className="shrink-0 rounded-full bg-chb-accent-soft px-2 py-0.5 text-xs font-semibold text-chb-accent">{RATE_TYPE[p.rateType] ?? p.rateType}</span>}
-      </p>
-      <p className="mt-1 text-base font-bold text-chb-ink">
+    <li className="flex items-center justify-between gap-3 py-2.5">
+      <span className="min-w-0">
+        <span className="font-semibold">{p.provider}</span> {p.name}
+        {p.rateType && <span className="ml-1.5 rounded-full bg-chb-accent-soft px-2 py-0.5 text-xs font-semibold text-chb-accent">{RATE_TYPE[p.rateType] ?? p.rateType}</span>}
+        {showLoan && <span className="block text-chb-muted">대출 {formatWon(p.loanAmount)} · {p.termYears}년</span>}
+      </span>
+      <span className="shrink-0 text-right text-base font-bold whitespace-nowrap text-chb-ink">
         <span className="sr-only">월 상환액 </span>월 {p.monthlyAtMin === null ? "-" : formatWon(p.monthlyAtMin)}
-        {p.monthlyAtMax !== null && p.monthlyAtMax !== p.monthlyAtMin && ` ~ ${formatWon(p.monthlyAtMax)}`}
-      </p>
-      <p className="text-chb-muted">대출 {formatWon(p.loanAmount)} · {p.termYears}년</p>
+        {p.monthlyAtMax !== null && p.monthlyAtMax !== p.monthlyAtMin && <span className="block text-xs font-normal text-chb-muted">최고 금리 {formatWon(p.monthlyAtMax)}</span>}
+      </span>
     </li>
   );
 }
 
-// 많을 때 한눈에 보이도록 월 상환액 적은 순 3개만 펼치고 나머지는 접는다. 순위는 추천이 아니다
-function ProductList({ products }: { products: ProductPayment[] }) {
+// 1단계는 월 상환액 적은 순 3개만, 나머지는 5단계에서 고른다. all(리포트)이면 나머지를 접어서 함께. 순위는 추천이 아니다
+// 상품 대출액은 낮은 금리 기준 대출 가능액(최대 예산 쪽)이라 헤드라인(안정 예산)과 다르다는 것을 제목에 밝힌다
+function ProductList({ products, all }: { products: ProductPayment[]; all: boolean }) {
   const sorted = byMonthly(products);
-  const rest = sorted.slice(TOP);
+  const rest = all ? sorted.slice(TOP) : [];
+  const same = sorted.every((p) => p.loanAmount === sorted[0].loanAmount && p.termYears === sorted[0].termYears);
+  const list = (ps: ProductPayment[]) => <ul className="divide-y divide-chb-line">{ps.map((p) => <ProductItem key={p.productId} p={p} showLoan={!same} />)}</ul>;
   return (
     <div>
-      <p className="font-semibold">상품별 월 상환액 <span className="font-normal text-chb-muted">· 월 상환액 적은 순</span></p>
-      <p className="mb-2 text-xs text-chb-muted">상품마다 대출액과 기간이 달라 월 상환액만으로 유불리를 판단하기는 어려워요.</p>
-      <ul className="space-y-2">{sorted.slice(0, TOP).map((p) => <ProductItem key={p.productId} p={p} />)}</ul>
+      <p className="font-semibold">상품별 월 상환액 <span className="font-normal text-chb-muted">· 적은 순</span></p>
+      <p className="text-xs text-chb-muted">
+        최대 예산 기준{same && ` · 대출 ${formatWon(sorted[0].loanAmount)} · ${sorted[0].termYears}년`}. 상품마다 조건이 달라 월 상환액만으로 유불리를 판단하기는 어려워요.
+      </p>
+      {list(sorted.slice(0, TOP))}
+      {!all && sorted.length > TOP && <p className="text-xs text-chb-muted">나머지 {sorted.length - TOP}개 상품은 5단계에서 비교할 수 있어요.</p>}
       {rest.length > 0 && (
-        <details className="group mt-2">
+        <details className="group">
           <summary className="cursor-pointer list-none rounded-full py-2 text-center font-semibold text-chb-accent select-none [&::-webkit-details-marker]:hidden">
             <span className="group-open:hidden">전체 {sorted.length}개 보기 ▾</span>
             <span className="hidden group-open:inline">접기 ▴</span>
           </summary>
-          <ul className="space-y-2">{rest.map((p) => <ProductItem key={p.productId} p={p} />)}</ul>
+          {list(rest)}
         </details>
       )}
     </div>

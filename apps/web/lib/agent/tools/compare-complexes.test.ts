@@ -106,3 +106,16 @@ test("without interest keeps requested order", async () => {
   const d = (await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx)).data as Data;
   expect(items(d).map((i) => i.complex_id)).toEqual([1, 2]);
 });
+
+test("costs at each complex median price, null without price", async () => {
+  const { brokerageFee } = await import("@/lib/calc/brokerage");
+  const { acquisitionTax } = await import("@/lib/calc/tax");
+  const { ctx } = mk({ rows: [complex(1), { ...complex(2), median_price: null }] });
+  const d = (await compareComplexesTool.run({ complex_ids: [1, 2] }, ctx)).data as { items: { complex_id: number; costs: { acquisitionTax: number; brokerage: number; total: number; heavy_tax: boolean } | null }[] };
+  const [one, two] = d.items;
+  // 픽스처: 8억, 무주택(취득 후 1주택), 희망 최대 면적 90㎡, 규제지역 없음
+  const tax = acquisitionTax({ price: 800_000_000, exclusiveAreaM2: 90, houseCountAfter: 1, inAdjustmentArea: false, isFirstTime: false, date: "2026-11-08" }).total;
+  expect(one.costs).toEqual({ acquisitionTax: tax, brokerage: brokerageFee(800_000_000).fee, total: tax + brokerageFee(800_000_000).fee, heavy_tax: false });
+  expect(two.complex_id).toBe(2);
+  expect(two.costs).toBeNull();
+});
