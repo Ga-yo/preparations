@@ -59,6 +59,10 @@ export function BudgetCard({ result, flat = false, income, detail = false }: { r
       ) : (
         <div className="space-y-4 text-sm">
           <BudgetHeadline data={data} income={income} />
+          {/* 헤드라인 숫자의 전제라 숫자 바로 아래에 둔다 */}
+          {data.diagnoses.includes("region_unspecified") && (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-amber-900">{DIAGNOSES.region_unspecified}</p>
+          )}
           {data.profile_summary && (
             <p className="text-chb-muted">
               {[data.profile_summary.purpose && `목적 ${PURPOSE[data.profile_summary.purpose]}`,
@@ -80,9 +84,6 @@ export function BudgetCard({ result, flat = false, income, detail = false }: { r
           ) : (
             // 예산 계산식이 부대비용을 빼므로 총액은 남긴다. 후보별 내역은 5단계 비교표
             <p className="text-chb-muted">취득세·중개보수 등 부대비용 약 {formatWon(data.costs.total)}을 빼고 계산했어요. 단지별 금액은 5단계 비교에서 볼 수 있어요.</p>
-          )}
-          {data.diagnoses.includes("region_unspecified") && (
-            <p role="alert" className="rounded-xl bg-amber-50 p-3 font-semibold text-amber-900">{DIAGNOSES.region_unspecified}</p>
           )}
           <Diagnoses list={data.diagnoses.filter((d) => d !== "region_unspecified")} detail={detail} />
         </div>
@@ -159,39 +160,45 @@ function BudgetHeadline({ data, income }: { data: Budget; income?: number | null
 const TOP = 3;
 const RATE_TYPE: Record<string, string> = { fixed: "고정", variable: "변동" };
 
-function ProductItem({ p }: { p: ProductPayment }) {
+// 대출액·기간이 모든 상품에서 같으면(대부분) 제목에 한 번만 쓰고 줄마다 반복하지 않는다
+function ProductItem({ p, showLoan }: { p: ProductPayment; showLoan: boolean }) {
   return (
-    <li className="rounded-2xl border border-chb-line p-3">
-      <p className="flex items-start justify-between gap-2">
-        <span className="font-semibold">{p.provider} <span className="font-normal">{p.name}</span></span>
-        {p.rateType && <span className="shrink-0 rounded-full bg-chb-accent-soft px-2 py-0.5 text-xs font-semibold text-chb-accent">{RATE_TYPE[p.rateType] ?? p.rateType}</span>}
-      </p>
-      <p className="mt-1 text-base font-bold text-chb-ink">
+    <li className="flex items-center justify-between gap-3 py-2.5">
+      <span className="min-w-0">
+        <span className="font-semibold">{p.provider}</span> {p.name}
+        {p.rateType && <span className="ml-1.5 rounded-full bg-chb-accent-soft px-2 py-0.5 text-xs font-semibold text-chb-accent">{RATE_TYPE[p.rateType] ?? p.rateType}</span>}
+        {showLoan && <span className="block text-chb-muted">대출 {formatWon(p.loanAmount)} · {p.termYears}년</span>}
+      </span>
+      <span className="shrink-0 text-right text-base font-bold whitespace-nowrap text-chb-ink">
         <span className="sr-only">월 상환액 </span>월 {p.monthlyAtMin === null ? "-" : formatWon(p.monthlyAtMin)}
-        {p.monthlyAtMax !== null && p.monthlyAtMax !== p.monthlyAtMin && ` ~ ${formatWon(p.monthlyAtMax)}`}
-      </p>
-      <p className="text-chb-muted">대출 {formatWon(p.loanAmount)} · {p.termYears}년</p>
+        {p.monthlyAtMax !== null && p.monthlyAtMax !== p.monthlyAtMin && <span className="block text-xs font-normal text-chb-muted">최고 금리 {formatWon(p.monthlyAtMax)}</span>}
+      </span>
     </li>
   );
 }
 
 // 1단계는 월 상환액 적은 순 3개만, 나머지는 5단계에서 고른다. all(리포트)이면 나머지를 접어서 함께. 순위는 추천이 아니다
+// 상품 대출액은 낮은 금리 기준 대출 가능액(최대 예산 쪽)이라 헤드라인(안정 예산)과 다르다는 것을 제목에 밝힌다
 function ProductList({ products, all }: { products: ProductPayment[]; all: boolean }) {
   const sorted = byMonthly(products);
   const rest = all ? sorted.slice(TOP) : [];
+  const same = sorted.every((p) => p.loanAmount === sorted[0].loanAmount && p.termYears === sorted[0].termYears);
+  const list = (ps: ProductPayment[]) => <ul className="divide-y divide-chb-line">{ps.map((p) => <ProductItem key={p.productId} p={p} showLoan={!same} />)}</ul>;
   return (
     <div>
-      <p className="font-semibold">상품별 월 상환액 <span className="font-normal text-chb-muted">· 월 상환액 적은 순</span></p>
-      <p className="mb-2 text-xs text-chb-muted">상품마다 대출액과 기간이 달라 월 상환액만으로 유불리를 판단하기는 어려워요.</p>
-      <ul className="space-y-2">{sorted.slice(0, TOP).map((p) => <ProductItem key={p.productId} p={p} />)}</ul>
-      {!all && sorted.length > TOP && <p className="mt-2 text-xs text-chb-muted">나머지 {sorted.length - TOP}개 상품은 5단계에서 비교할 수 있어요.</p>}
+      <p className="font-semibold">상품별 월 상환액 <span className="font-normal text-chb-muted">· 적은 순</span></p>
+      <p className="text-xs text-chb-muted">
+        최대 예산 기준{same && ` · 대출 ${formatWon(sorted[0].loanAmount)} · ${sorted[0].termYears}년`}. 상품마다 조건이 달라 월 상환액만으로 유불리를 판단하기는 어려워요.
+      </p>
+      {list(sorted.slice(0, TOP))}
+      {!all && sorted.length > TOP && <p className="text-xs text-chb-muted">나머지 {sorted.length - TOP}개 상품은 5단계에서 비교할 수 있어요.</p>}
       {rest.length > 0 && (
-        <details className="group mt-2">
+        <details className="group">
           <summary className="cursor-pointer list-none rounded-full py-2 text-center font-semibold text-chb-accent select-none [&::-webkit-details-marker]:hidden">
             <span className="group-open:hidden">전체 {sorted.length}개 보기 ▾</span>
             <span className="hidden group-open:inline">접기 ▴</span>
           </summary>
-          <ul className="space-y-2">{rest.map((p) => <ProductItem key={p.productId} p={p} />)}</ul>
+          {list(rest)}
         </details>
       )}
     </div>
