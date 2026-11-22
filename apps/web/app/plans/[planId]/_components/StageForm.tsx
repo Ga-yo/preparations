@@ -9,7 +9,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 // resultLabel이 있으면(결과가 한 번이라도 계산됐으면) 화면 아래에 결과를 다시 여는 버튼을 띄운다.
 export function StageForm({
   id, title, back, labels, action, children, result, resultKey, resultLabel, next, pendingText = "저장하는 중이에요…",
-  resultTitle = "결과", resultCaption = "결과 보기",
+  resultTitle = "결과", resultCaption = "결과 보기", wide = false,
 }: {
   id?: string;
   title: string;
@@ -24,6 +24,7 @@ export function StageForm({
   resultTitle?: string; // 팝업 이름(예: "예산 계산 결과")
   resultCaption?: string; // 떠 있는 버튼의 윗줄(예: "내 예산 보기")
   next?: { href: string; label: string };
+  wide?: boolean; // 결과 팝업을 넓게(두 칸 결과용, 1단계 예산)
 }) {
   const [invalid, setInvalid] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -81,7 +82,7 @@ export function StageForm({
           aria-label={resultTitle}
           onClose={close}
           onClick={(e) => { if (e.target === e.currentTarget) close(); }}
-          className="m-auto max-h-[85vh] w-[min(560px,calc(100%-32px))] overflow-auto rounded-3xl bg-white p-0 text-chb-ink shadow-2xl backdrop:bg-chb-ink/40 backdrop:backdrop-blur-sm"
+          className={`m-auto max-h-[85vh] ${wide ? "w-[min(960px,calc(100%-32px))]" : "w-[min(560px,calc(100%-32px))]"} overflow-auto rounded-3xl bg-white p-0 text-chb-ink shadow-2xl backdrop:bg-chb-ink/40 backdrop:backdrop-blur-sm`}
         >
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-chb-line bg-white px-6 py-4">
             <p className="flex items-center gap-2 font-semibold"><span aria-hidden="true" className="text-chb-accent">✓</span>저장했어요. {resultTitle}입니다</p>

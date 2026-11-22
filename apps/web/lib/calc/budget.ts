@@ -91,12 +91,23 @@ export function eligibleProducts(
   );
 }
 
+// 이 가격에 살 때의 취득세·중개보수. 5단계 비교에서 후보 가격마다 다시 부른다
+export function costsAt(input: BudgetInput, price: number): BudgetResult["costs"] & { heavyTax: boolean } {
+  const areaTypes = input.regionCode ? activeAreaTypes(input.regionCode, input.areas, input.date) : [];
+  const tax = acquisitionTax({
+    price, exclusiveAreaM2: input.exclusiveAreaM2, houseCountAfter: input.ownedHouseCount + 1,
+    inAdjustmentArea: areaTypes.includes("adjustment_target"),
+    isFirstTime: buyerTypeOf(input) === "first_time", date: input.date,
+  });
+  const brokerage = brokerageFee(price).fee;
+  return { acquisitionTax: tax.total, brokerage, total: tax.total + brokerage, heavyTax: tax.heavyTax };
+}
+
 export function computeBudget(input: BudgetInput): BudgetResult {
   const ownFunds = ownFundsOf(input.cashAssets, input.extraFunds);
   const buyerType = buyerTypeOf(input);
   const houseCountAfter = input.ownedHouseCount + 1;
   const areaTypes = input.regionCode ? activeAreaTypes(input.regionCode, input.areas, input.date) : [];
-  const inAdjustmentArea = areaTypes.includes("adjustment_target");
   const income = input.annualIncome !== null && input.annualIncome > 0 ? input.annualIncome : null;
 
   const at = (price: number, pick: "min" | "max") => {
@@ -128,14 +139,9 @@ export function computeBudget(input: BudgetInput): BudgetResult {
         }),
       });
     }
-    const tax = acquisitionTax({
-      price, exclusiveAreaM2: input.exclusiveAreaM2, houseCountAfter, inAdjustmentArea,
-      isFirstTime: buyerType === "first_time", date: input.date,
-    });
-    const brokerage = brokerageFee(price).fee;
-    const costs = { acquisitionTax: tax.total, brokerage, total: tax.total + brokerage };
+    const { heavyTax, ...costs } = costsAt(input, price);
     return {
-      price, loan, costs, elig, rate, heavyTax: tax.heavyTax,
+      price, loan, costs, elig, rate, heavyTax,
       used: [ltv, dsr, cap, stress].filter((r): r is LoanRule => r !== null),
       // 스트레스 금리 행이 없으면 가산 0으로 가정하지 않는다(한도 과대 방지)
       ruleMissing: !ltv || !dsr || !stress, noProduct: rate === null,

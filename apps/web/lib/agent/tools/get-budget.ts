@@ -9,7 +9,7 @@ import { resolveRegion } from "../region";
 import { defineTool, type ToolContext, type ToolResult } from "../tool";
 
 export const STALE_DAYS = 7;
-const DEFAULT_AREA_M2 = 84;
+export const DEFAULT_AREA_M2 = 84;
 
 export const day = (s: string) => Date.parse(`${s}T00:00:00Z`);
 
