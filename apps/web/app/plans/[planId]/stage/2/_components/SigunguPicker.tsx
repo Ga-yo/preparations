@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import map from "./sigungu-map.json";
 
 export const MAX_SIGUNGU = 10;
@@ -23,6 +23,13 @@ export function SigunguPicker({ rows, initial }: { rows: Row[]; initial: string[
   const [view, setView] = useState<(typeof VIEWS)[number]>("서울특별시");
   const [hover, setHover] = useState<string | null>(null);
   const [full, setFull] = useState(false);
+  // 체크박스를 React가 바꾸면 DOM input 이벤트가 안 나서, 폼을 지켜보는 입력 요약이 알 수 있게 change를 직접 알린다
+  const root = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    root.current?.dispatchEvent(new Event("change", { bubbles: true }));
+  }, [selected]);
   const nameOf = new Map(rows.map((r) => [r.sigungu_code ?? "", r.full_name]));
   const toggle = (code: string) =>
     setSelected((prev) => {
@@ -37,7 +44,7 @@ export function SigunguPicker({ rows, initial }: { rows: Row[]; initial: string[
   const fontSize = Number(box.split(" ")[2]) / 34;
 
   return (
-    <div className="space-y-2">
+    <div ref={root} className="space-y-2">
       <div className="flex flex-wrap gap-1" role="group" aria-label="지도 범위">
         {VIEWS.map((v) => (
           <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v}

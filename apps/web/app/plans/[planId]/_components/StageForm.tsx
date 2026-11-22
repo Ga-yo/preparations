@@ -9,6 +9,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 // resultLabel이 있으면(결과가 한 번이라도 계산됐으면) 화면 아래에 결과를 다시 여는 버튼을 띄운다.
 export function StageForm({
   id, title, back, labels, action, children, result, resultKey, resultLabel, next, pendingText = "저장하는 중이에요…",
+  resultTitle = "결과", resultCaption = "결과 보기",
 }: {
   id?: string;
   title: string;
@@ -20,6 +21,8 @@ export function StageForm({
   resultKey?: string | null;
   resultLabel?: string;
   pendingText?: string;
+  resultTitle?: string; // 팝업 이름(예: "예산 계산 결과")
+  resultCaption?: string; // 떠 있는 버튼의 윗줄(예: "내 예산 보기")
   next?: { href: string; label: string };
 }) {
   const [invalid, setInvalid] = useState<string[]>([]);
@@ -75,13 +78,13 @@ export function StageForm({
         // Esc는 dialog가 처리하고 close 이벤트로 상태를 맞춘다. 바깥(backdrop) 클릭은 dialog 자신이 target일 때다
         <dialog
           ref={dialog}
-          aria-label="예산 계산 결과"
+          aria-label={resultTitle}
           onClose={close}
           onClick={(e) => { if (e.target === e.currentTarget) close(); }}
           className="m-auto max-h-[85vh] w-[min(560px,calc(100%-32px))] overflow-auto rounded-3xl bg-white p-0 text-chb-ink shadow-2xl backdrop:bg-chb-ink/40 backdrop:backdrop-blur-sm"
         >
           <div className="sticky top-0 z-10 flex items-center justify-between border-b border-chb-line bg-white px-6 py-4">
-            <p className="flex items-center gap-2 font-semibold"><span aria-hidden="true" className="text-chb-accent">✓</span>저장했어요. 예산 계산 결과입니다</p>
+            <p className="flex items-center gap-2 font-semibold"><span aria-hidden="true" className="text-chb-accent">✓</span>저장했어요. {resultTitle}입니다</p>
             <button type="button" onClick={close} aria-label="닫기" className="rounded-full px-2 text-xl text-chb-muted hover:text-chb-ink">×</button>
           </div>
           <div className="px-2">{result}</div>
@@ -99,8 +102,8 @@ export function StageForm({
           className="fixed bottom-6 left-1/2 z-30 flex -translate-x-1/2 items-center gap-5 whitespace-nowrap rounded-full bg-chb-ink py-2.5 pr-2.5 pl-7 text-left text-white shadow-[0_18px_40px_-12px_rgba(20,32,26,0.55)] transition hover:-translate-y-0.5 disabled:cursor-progress"
         >
           <span>
-            <span className="block text-xs text-white/70">{waiting ? "잠시만요" : "내 예산 보기"}</span>
-            <span className="block text-lg font-bold">{waiting ? "예산 계산 중…" : resultLabel}</span>
+            <span className="block text-xs text-white/70">{waiting ? "잠시만요" : resultCaption}</span>
+            <span className="block text-lg font-bold">{waiting ? "계산 중…" : resultLabel}</span>
           </span>
           <span aria-hidden="true" className="grid size-11 place-items-center rounded-full bg-white/15 text-lg">{waiting ? "…" : "⌃"}</span>
         </button>
