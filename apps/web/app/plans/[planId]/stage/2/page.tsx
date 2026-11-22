@@ -1,14 +1,17 @@
-import Link from "next/link";
 import { connection } from "next/server";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { AssistantPanel } from "../../_components/AssistantPanel";
+import { CheckCard, inputClass, labelClass, ScaleChoice, Section, ToggleChips, UnitInput } from "../../_components/Field";
 import { RegionPriceCard } from "../../_components/RegionPriceCard";
 import { StageForm } from "../../_components/StageForm";
+import { StageTabs } from "../../_components/StageTabs";
 import { TipPanel } from "../../_components/TipPanel";
 import { getRegionPricesForPlan, saveStage2Conditions } from "./actions";
 import { SigunguPicker } from "./_components/SigunguPicker";
+import { Stage2Summary, type Stage2Snapshot } from "./_components/Stage2Summary";
 
 const LABELS: Record<string, string> = {
   sigungu_codes: "희망 시군구", dong_names: "희망 동(지역명을 찾지 못했거나 여러 곳과 일치 — 시·구부터 입력해 주세요)",
@@ -50,87 +53,92 @@ export default async function Stage2({
     "use server";
     const r = await saveStage2Conditions(planId, form);
     if (!r.ok) return Object.keys(r.fieldErrors);
-    redirect(`/plans/${planId}/stage/2`);
+    revalidatePath(`/plans/${planId}/stage/2`); // 새 condition_set으로 다시 그린다. 도착은 StageForm이 resultKey(c.id)로 확인한다
+    return [];
   }
 
-  const field = (name: string, label: string, input: React.ReactNode) => (
+  const FORM_ID = "stage2-form";
+  const tip = (key: string) => <TipPanel tips={t} fieldKey={key} />;
+  const textField = (name: string, label: string, defaultValue: string, placeholder?: string, maxLength?: number) => (
     <div>
-      <label htmlFor={name} className="block font-medium">{label}</label>
-      {input}
-      <TipPanel tips={t} fieldKey={name} />
+      <label htmlFor={name} className={labelClass}>{label}</label>
+      <input id={name} name={name} defaultValue={defaultValue} placeholder={placeholder} maxLength={maxLength} className={inputClass} />
+      {tip(name)}
     </div>
   );
-  const numberInput = (name: string, v: number | null | undefined, min: number, max: number, step = 1) => (
-    <input id={name} name={name} type="number" min={min} max={max} step={step} defaultValue={v ?? ""} className="w-full rounded border px-2 py-1" />
-  );
-  const importance = (name: string, v: number | null | undefined) => (
-    <select id={name} name={name} defaultValue={v ?? ""} className="w-full rounded border px-2 py-1">
-      <option value="">선택</option>
-      {[1, 2, 3, 4, 5].map((n) => <option key={n} value={n}>{n}{n === 1 ? " (낮음)" : n === 5 ? " (높음)" : ""}</option>)}
-    </select>
-  );
-  const checkbox = (name: string, label: string, v: boolean | null | undefined) => (
+  const unitField = (name: string, label: string, unit: string, v: number | null | undefined, min: number, max: number, step = 1) => (
     <div>
-      <label className="flex items-center gap-2"><input name={name} type="checkbox" defaultChecked={!!v} /> {label}</label>
-      <TipPanel tips={t} fieldKey={name} />
+      <label htmlFor={name} className={labelClass}>{label}</label>
+      <UnitInput id={name} unit={unit} defaultValue={v} min={min} max={max} step={step} />
+      {tip(name)}
     </div>
   );
+
+  const initialCodes = [...saved].filter((x) => x.endsWith("00000")).map((x) => x.slice(0, 5))
+    .filter((code) => sigungu?.some((s) => s.sigungu_code === code)); // 비수도권·상위 코드는 지도에 없으니 뺀다
+  const names = Object.fromEntries((sigungu ?? []).map((r) => [r.sigungu_code ?? "", r.full_name.slice(r.sido.length + 1) || r.full_name]));
+  const dongText = dongCodes.map(nameOf).join(", ");
+  const commuteText = c?.commute_region_code ? nameOf(c.commute_region_code) : "";
+  const initial: Stage2Snapshot = {
+    sigungu: initialCodes, dong: dongText, commuteRegion: commuteText, commuteMin: c?.commute_minutes_max ?? null,
+    transit: !!c?.uses_transit, school: c?.school_importance ?? null, infra: c?.infra_importance ?? null,
+    household: c?.household_size ?? null, areaMin: c?.area_min ?? null, areaMax: c?.area_max ?? null,
+    parking: !!c?.parking_required, env: c?.environment_prefs ?? [],
+  };
+  const pd = prices.data as { regions?: { affordable?: boolean }[] };
+  const rows = pd.regions ?? [];
+  const known = rows.filter((r) => r.affordable !== undefined);
+  const resultLabel = rows.length === 0 ? undefined
+    : known.length ? `${rows.length}곳 중 ${known.filter((r) => r.affordable).length}곳 예산 내` : `${rows.length}곳 시세`;
 
   return (
-    <main className="mx-auto grid w-full max-w-5xl gap-6 p-4 md:grid-cols-2">
-      <StageForm
-        key={c?.id ?? "new"} // 저장되면 새 condition_set으로 다시 마운트해 정규화된 지역명을 보여 준다
-        title="2단계. 희망하는 주거 환경" labels={LABELS} action={save}
-        back={<Link href={`/plans/${planId}/stage/1`} className="text-sm text-blue-700">← 1단계 나의 구매 상황</Link>}
-      >
-
-        <h2 className="font-semibold">① 희망 지역</h2>
-        <fieldset>
-          <legend className="font-medium">희망 시군구 (최대 10곳, 실거래가는 수도권만 제공)</legend>
-          <SigunguPicker
-            rows={sigungu ?? []}
-            // 희망 동 칸에 시 이름 등을 넣어 저장된 비수도권·상위 코드는 지도에 없으니 뺀다
-            initial={[...saved].filter((x) => x.endsWith("00000")).map((x) => x.slice(0, 5))
-              .filter((code) => sigungu?.some((s) => s.sigungu_code === code))}
-          />
-          <TipPanel tips={t} fieldKey="sigungu_codes" />
-        </fieldset>
-        {field("dong_names", "희망 동 (선택, 쉼표로 구분, 예: 강남구 개포동)",
-          <input id="dong_names" name="dong_names" defaultValue={dongCodes.map(nameOf).join(", ")} className="w-full rounded border px-2 py-1" />)}
-        {field("region_reason", "특정 지역을 선호하는 이유 (선택)",
-          <input id="region_reason" name="region_reason" maxLength={200} defaultValue={c?.region_reason ?? ""} className="w-full rounded border px-2 py-1" />)}
-
-        <h2 className="font-semibold">② 생활 환경</h2>
-        {field("commute_region_name", "직장·주요 이동 지역 (예: 서울특별시 중구)",
-          <input id="commute_region_name" name="commute_region_name" defaultValue={c?.commute_region_code ? nameOf(c.commute_region_code) : ""} className="w-full rounded border px-2 py-1" />)}
-        {field("commute_minutes_max", "희망 출퇴근 시간 (분, 편도)", numberInput("commute_minutes_max", c?.commute_minutes_max, 10, 180))}
-        {checkbox("uses_transit", "대중교통으로 출퇴근합니다", c?.uses_transit)}
-        {field("school_importance", "학교·교육 환경 중요도", importance("school_importance", c?.school_importance))}
-        {field("infra_importance", "주변 편의시설·생활 인프라 중요도", importance("infra_importance", c?.infra_importance))}
-
-        <h2 className="font-semibold">③ 거주 환경</h2>
-        {field("household_size", "예상 거주 인원", numberInput("household_size", c?.household_size, 1, 20))}
-        <div className="grid grid-cols-2 gap-2">
-          {field("area_min", "희망 전용면적 최소 (㎡)", numberInput("area_min", c?.area_min, 10, 300, 0.01))}
-          {field("area_max", "최대 (㎡)", numberInput("area_max", c?.area_max, 10, 300, 0.01))}
+    <div className="flex-1 bg-chb-soft2 pb-28">
+      <StageTabs planId={planId} current={2} />
+      <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <StageForm
+          id={FORM_ID} title="2단계. 희망하는 주거 환경" labels={LABELS} action={save}
+          result={<RegionPriceCard result={prices} flat />} resultKey={c?.id} resultLabel={resultLabel}
+          resultTitle="희망 지역 시세" resultCaption="지역 시세 보기"
+          next={{ href: `/plans/${planId}/stage/3`, label: "3단계로 →" }}
+          pendingText="저장하고 지역 시세를 불러오는 중이에요…"
+        >
+          <p className="-mt-4 text-lg text-chb-muted">살고 싶은 지역과 생활 방식을 알려 주면, 예산과 비교한 지역 시세를 보여 드려요.</p>
+          {/* 저장되면 새 condition_set으로 입력칸만 다시 마운트해 정규화된 지역명을 보여 준다(폼 상태·팝업은 유지) */}
+          <div key={c?.id ?? "new"} className="space-y-8">
+            <Section n={1} heading="희망 지역" desc="지도에서 최대 10곳까지 고를 수 있어요. 실거래가는 수도권만 제공해요.">
+              <fieldset>
+                <legend className={labelClass}>희망 시군구</legend>
+                <SigunguPicker rows={sigungu ?? []} initial={initialCodes} />
+                {tip("sigungu_codes")}
+              </fieldset>
+              {textField("dong_names", "희망 동 (선택)", dongText, "쉼표로 구분, 예: 강남구 개포동")}
+              {textField("region_reason", "특정 지역을 선호하는 이유 (선택)", c?.region_reason ?? "", undefined, 200)}
+            </Section>
+            <Section n={2} heading="생활 환경" desc="출퇴근과 생활 인프라는 지역을 고를 때 가장 많이 따지는 조건이에요.">
+              <div className="grid gap-6 sm:grid-cols-2">
+                {textField("commute_region_name", "직장·주요 이동 지역", commuteText, "예: 서울특별시 중구")}
+                {unitField("commute_minutes_max", "희망 출퇴근 시간 (편도)", "분", c?.commute_minutes_max, 10, 180)}
+              </div>
+              <CheckCard name="uses_transit" text="대중교통으로 출퇴근합니다" defaultChecked={!!c?.uses_transit} tip={tip("uses_transit")} />
+              <ScaleChoice name="school_importance" legend="학교·교육 환경 중요도" value={c?.school_importance} tip={tip("school_importance")} />
+              <ScaleChoice name="infra_importance" legend="주변 편의시설·생활 인프라 중요도" value={c?.infra_importance} tip={tip("infra_importance")} />
+            </Section>
+            <Section n={3} heading="거주 환경" desc="함께 살 사람과 필요한 공간을 알려 주세요.">
+              <div className="grid gap-6 sm:grid-cols-3">
+                {unitField("household_size", "예상 거주 인원", "명", c?.household_size, 1, 20)}
+                {unitField("area_min", "희망 전용면적 최소", "㎡", c?.area_min, 10, 300, 0.01)}
+                {unitField("area_max", "최대", "㎡", c?.area_max, 10, 300, 0.01)}
+              </div>
+              <CheckCard name="parking_required" text="주차 공간이 필요합니다" defaultChecked={!!c?.parking_required} tip={tip("parking_required")} />
+              <ToggleChips name="environment_prefs" legend="선호하는 주거 환경" values={c?.environment_prefs ?? []} options={ENV} tip={tip("environment_prefs")} />
+            </Section>
+          </div>
+        </StageForm>
+        <div className="space-y-6 lg:sticky lg:top-24">
+          <Stage2Summary key={c?.id ?? "new"} formId={FORM_ID} initial={initial} names={names} />
+          <AssistantPanel planId={planId} stage={2} />
         </div>
-        {checkbox("parking_required", "주차 공간이 필요합니다", c?.parking_required)}
-        <fieldset>
-          <legend className="font-medium">선호하는 주거 환경</legend>
-          {Object.entries(ENV).map(([v, label]) => (
-            <label key={v} className="mr-3 inline-flex items-center gap-1">
-              <input type="checkbox" name="environment_prefs" value={v} defaultChecked={c?.environment_prefs.includes(v)} /> {label}
-            </label>
-          ))}
-          <TipPanel tips={t} fieldKey="environment_prefs" />
-        </fieldset>
-        <button type="submit" className="rounded bg-foreground px-4 py-2 text-background">저장하고 지역 시세 보기</button>
-      </StageForm>
-      <div className="space-y-6">
-        <RegionPriceCard result={prices} />
-        <p><Link href={`/plans/${planId}/stage/3`} className="text-blue-700">다음: 3단계 주택 선택 기준 →</Link></p>
-        <AssistantPanel planId={planId} stage={2} />
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }
