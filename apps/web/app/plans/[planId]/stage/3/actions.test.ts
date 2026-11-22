@@ -13,6 +13,8 @@ describe("stage3Schema", () => {
   });
   test("가격은 만원 입력 → 원", () => {
     expect(stage3Schema.parse({ price_max: "90000" }).price_max).toBe(900_000_000);
+    expect(stage3Schema.parse({ price_max: "90,000" }).price_max).toBe(900_000_000); // 입력칸이 붙이는 천 단위 콤마
+    expect(stage3Schema.safeParse({ price_max: "9억" }).success).toBe(false);
   });
   test("price_min > price_max → price_max 오류", () => {
     const r = stage3Schema.safeParse({ price_min: "90000", price_max: "50000" });

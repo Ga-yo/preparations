@@ -11,8 +11,9 @@ const num = (min: number, max: number, int = true) =>
     .optional()
     .transform((s) => (s?.trim() ? Number(s) : null))
     .pipe((int ? z.number().int() : z.number()).min(min).max(max).nullable());
-// 만원 입력 → 원 (1단계와 같은 규칙)
-const won = num(0, 1e9).transform((n) => (n === null ? null : n * 10_000));
+// 만원 입력 → 원 (1단계와 같은 규칙). 입력칸이 붙이는 천 단위 콤마는 뺀다
+const won = z.string().optional().transform((s) => s?.replace(/,/g, "")).pipe(num(0, 1e9))
+  .transform((n) => (n === null ? null : n * 10_000));
 // 100~5000m, 50m 단위 직선거리
 const dist = num(100, 5000).refine((n) => n === null || n % 50 === 0, { message: "50m 단위로 입력하세요" });
 const check = z.string().optional().transform((s) => s === "on");

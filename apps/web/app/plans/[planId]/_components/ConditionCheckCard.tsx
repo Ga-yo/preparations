@@ -50,38 +50,57 @@ function conflictText(c: Conflict): string {
   }
 }
 
-export function ConditionCheckCard({ result, tips }: { result: ToolResult; tips: Tip[] }) {
+// flat: 팝업 안에 넣을 때 카드 테두리 없이
+export function ConditionCheckCard({ result, tips, flat = false }: { result: ToolResult; tips: Tip[]; flat?: boolean }) {
   const data = result.data as Data;
   const asOf = Object.entries(result.as_of);
   return (
-    <section className="rounded border p-4" aria-label="조건 점검">
-      <h2 className="mb-2 font-semibold">조건 점검</h2>
+    <section className={flat ? "p-4" : "rounded-3xl border border-chb-line bg-white p-6"} aria-label="조건 점검">
+      <h2 className="mb-3 font-display text-2xl font-black tracking-tight">조건 점검</h2>
       {!!result.stale?.length && (
-        <p role="alert" className="mb-2 rounded bg-yellow-100 p-2 text-yellow-900">
+        <p role="alert" className="mb-3 rounded-xl bg-amber-50 p-3 text-amber-900">
           오래된 데이터가 포함되어 있습니다: {result.stale.map((k) => DATASETS[k] ?? k).join(", ")}
         </p>
       )}
       {"error" in data ? (
-        <p>{ERRORS[data.error] ?? "조건을 점검하지 못했습니다."}</p>
+        <p className="text-chb-muted">{ERRORS[data.error] ?? "조건을 점검하지 못했습니다."}</p>
       ) : (
-        <div className="space-y-2 text-sm">
+        <div className="space-y-3 text-sm">
           {data.conflicts.length ? (
-            <ul className="list-disc space-y-1 pl-5 text-red-800">
-              {data.conflicts.map((c) => <li key={c.code}>{conflictText(c)}</li>)}
+            <ul className="space-y-2">
+              {data.conflicts.map((c) => (
+                <li key={c.code} role="alert" className="flex gap-2 rounded-2xl bg-red-50 p-4 text-red-900">
+                  <span aria-hidden="true" className="font-bold">!</span><span>{conflictText(c)}</span>
+                </li>
+              ))}
             </ul>
-          ) : <p>필수 조건 사이에 충돌이 없습니다.</p>}
-          <p>
+          ) : <p className="rounded-2xl bg-chb-soft2 p-4 font-semibold text-chb-accent">✓ 필수 조건 사이에 충돌이 없습니다.</p>}
+          <dl className="grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-chb-soft2 p-4">
+              <dt className="text-chb-muted">희망 지역 단지</dt>
+              <dd className="mt-1 font-display text-xl font-black">{data.counts.total.toLocaleString("ko-KR")}곳</dd>
+            </div>
+            <div className="rounded-2xl bg-chb-soft2 p-4">
+              <dt className="text-chb-muted">필수 조건 충족</dt>
+              <dd className="mt-1 font-display text-xl font-black text-chb-accent">{data.counts.must.toLocaleString("ko-KR")}곳</dd>
+            </div>
+          </dl>
+          <p className="text-chb-muted">
             희망 지역 단지 {data.counts.total.toLocaleString("ko-KR")}개 중 필수 조건 충족 {data.counts.must.toLocaleString("ko-KR")}개
             {/* 선호 조건마다 필수 충족 단지 중에서 따로 센 값이라 누적(깔때기)처럼 이어 쓰지 않는다 */}
             {Object.keys(data.counts.prefer).length > 0 &&
               ` 중 선호 조건별 충족(각각 따로 셈): ${Object.entries(data.counts.prefer).map(([k, n]) => `${CONDITION_LABELS[k] ?? k} ${n.toLocaleString("ko-KR")}개`).join(" · ")}`}
           </p>
-          {data.notices.filter((n) => NOTICES[n]).map((n) => <p key={n} className="text-gray-600">{NOTICES[n]}</p>)}
+          {data.notices.filter((n) => NOTICES[n]).length > 0 && (
+            <ul className="list-disc space-y-1 pl-5 text-chb-muted">
+              {data.notices.filter((n) => NOTICES[n]).map((n) => <li key={n}>{NOTICES[n]}</li>)}
+            </ul>
+          )}
           {data.matches.length > 0 && (
             <>
-              <div className="overflow-x-auto">
-              <table className="w-full text-left [&_td]:py-0.5 [&_td]:pr-2 [&_th]:pr-2">
-                <thead><tr><th>단지</th><th>준공</th><th>세대</th><th>용적률</th><th>대지지분</th><th>중위가</th></tr></thead>
+              <div className="overflow-x-auto rounded-2xl border border-chb-line">
+              <table className="w-full text-left [&_td]:border-t [&_td]:border-chb-line [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2">
+                <thead className="bg-chb-soft2 text-chb-muted"><tr><th>단지</th><th>준공</th><th>세대</th><th>용적률</th><th>대지지분</th><th>중위가</th></tr></thead>
                 <tbody>
                   {data.matches.map((m) => (
                     <tr key={m.complex_id}>
@@ -97,7 +116,7 @@ export function ConditionCheckCard({ result, tips }: { result: ToolResult; tips:
               </table>
               </div>
               <TipPanel tips={tips} fieldKey="land_share" />
-              <p className="text-gray-600">
+              <p className="text-chb-muted">
                 중위가는 최근 {data.criteria.months}개월 이 단지 아파트 매매 실거래가(희망 면적, 해제 신고·직거래 제외) 기준입니다.
                 대지지분은 대지면적 ÷ 세대수 평균값입니다.
               </p>
@@ -106,7 +125,7 @@ export function ConditionCheckCard({ result, tips }: { result: ToolResult; tips:
         </div>
       )}
       {asOf.length > 0 && (
-        <p className="mt-3 text-xs text-gray-600">
+        <p className="mt-4 text-xs text-chb-muted">
           데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}
         </p>
       )}
