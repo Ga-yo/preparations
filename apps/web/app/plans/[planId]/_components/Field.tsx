@@ -103,3 +103,18 @@ export function UnitInput({ id, unit, defaultValue, min, max, step = 1 }: {
     </div>
   );
 }
+
+const PRIORITY_OPTIONS = { must: "필수", prefer: "선호", ignore: "상관없음" } as const;
+
+// 조건별 우선순위 세 칸 버튼. 저장값이 없으면 '선호'(값을 입력한 조건의 기본 의미)
+export function PrioritySwitch({ name, label, value }: { name: string; label: string; value: string | undefined }) {
+  return (
+    <div role="radiogroup" aria-label={label} className="mt-2 inline-flex rounded-full border border-chb-line bg-chb-soft2 p-1 text-sm">
+      {Object.entries(PRIORITY_OPTIONS).map(([v, text]) => (
+        <label key={v} className="cursor-pointer rounded-full px-4 py-1.5 font-semibold text-chb-muted transition has-checked:bg-chb-accent has-checked:text-white has-focus-visible:ring-4 has-focus-visible:ring-chb-accent-soft">
+          <input type="radio" name={name} value={v} defaultChecked={(value ?? "prefer") === v} className="sr-only" />{text}
+        </label>
+      ))}
+    </div>
+  );
+}
