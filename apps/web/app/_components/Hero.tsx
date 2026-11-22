@@ -74,6 +74,11 @@ export function Hero({ start }: { start: () => Promise<void> }) {
         <div className="chb-visual">
           <div className="chb-glow" aria-hidden="true" />
           <div className="chb-arch">
+            {/* 채비 로봇. 움직임 줄이기 설정이면 첫 프레임 정지 이미지. hero.mp4가 생기면 영상이 그 위를 덮는다 */}
+            <picture>
+              <source srcSet="/chaebi-robot-still.png" media="(prefers-reduced-motion: reduce)" />
+              <img className="chb-robot" src="/chaebi-robot.gif" alt="" width={512} height={343} />
+            </picture>
             <video ref={video} autoPlay muted loop playsInline preload="auto" aria-hidden="true"
               onLoadedData={() => setHasVideo(true)} onPlay={() => setPaused(false)} onPause={() => setPaused(true)}>
               <source src="/hero.mp4" type="video/mp4" />
