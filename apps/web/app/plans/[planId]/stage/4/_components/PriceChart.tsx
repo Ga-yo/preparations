@@ -22,8 +22,9 @@ export function PriceChart({ series }: { series: MonthPoint[] }) {
       </div>
       <div className="relative">
         {cur && curPt && (
-          <p aria-live="polite" className="pointer-events-none absolute -top-1 z-10 -translate-x-1/2 -translate-y-full whitespace-nowrap rounded-lg bg-chb-ink px-2 py-1 text-xs font-semibold text-white"
-            style={{ left: `${Math.min(85, Math.max(15, (curPt.x / W) * 100))}%` }}>
+          // 점 위치 비율만큼 왼쪽으로 당겨 양 끝에서도 패널 밖으로 잘리지 않게 한다
+          <p aria-live="polite" className="pointer-events-none absolute -top-1 z-10 whitespace-nowrap rounded-lg bg-chb-ink px-2 py-1 text-xs font-semibold text-white"
+            style={{ left: `${(curPt.x / W) * 100}%`, transform: `translate(-${(curPt.x / W) * 100}%, -100%)` }}>
             {cur.month} · {formatWon(cur.median_price!)} · {cur.deal_count}건
           </p>
         )}
