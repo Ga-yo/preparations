@@ -74,6 +74,7 @@ export const getComplexDetail = defineTool({
           parking_per_household: c.parking_count !== null && c.household_count ? round2(c.parking_count / c.household_count) : null,
           floor_area_ratio: c.floor_area_ratio, building_coverage_ratio: c.building_coverage_ratio,
           land_share_m2: c.site_area_m2 !== null && c.household_count ? round2(c.site_area_m2 / c.household_count) : null,
+          median_price: ownRow?.median_price ?? null, deal_count: ownRow?.deal_count ?? 0,
           ...near,
         },
         fit, redevelopment, ...(mgmt_fee && { mgmt_fee }), nearby: nearbyRows, trades: tradeRows, monthly: monthly.data ?? [],

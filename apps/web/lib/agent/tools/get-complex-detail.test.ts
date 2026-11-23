@@ -47,6 +47,7 @@ test("returns detail with neighbors and notices", async () => {
   const r = await getComplexDetail.run({ complex_id: 1 }, ctx);
   const d = r.data as Data;
   expect(d.complex).toMatchObject({ id: 1, approval_year: 2000, land_share_m2: 40 });
+  expect(d.complex).toMatchObject({ median_price: expect.anything(), deal_count: expect.any(Number) });
   expect(d.trades).toHaveLength(1);
   expect(d.monthly).toHaveLength(1);
   expect(d.fit).toMatchObject({ score: 100 });
@@ -69,6 +70,7 @@ test("fit null outside desired region, no_recent_trades when empty", async () =>
   const { ctx } = setup({}, [row(9, { region_code: "1100000000" })], []);
   const r = await getComplexDetail.run({ complex_id: 9 }, ctx);
   expect((r.data as Data).fit).toBeNull();
+  expect((r.data as Data).complex).toMatchObject({ median_price: null, deal_count: 0 });
   expect(r.notices).toContain("no_recent_trades");
 });
 
