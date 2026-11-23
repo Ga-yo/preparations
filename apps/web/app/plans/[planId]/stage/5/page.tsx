@@ -114,7 +114,7 @@ export default async function Stage5({
           )}
         </section>
 
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
           <div className="space-y-6">
             {products.length > 0 && (
               // 상품이 수십 개라 접어 두고, 펼치면 한 줄씩 표로 본다

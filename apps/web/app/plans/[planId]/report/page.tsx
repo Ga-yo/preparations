@@ -49,7 +49,7 @@ export default async function Report({ params }: { params: Promise<{ planId: str
   );
   return (
     <div className="flex-1 bg-chb-soft2 pb-16 print:bg-white print:pb-0">
-      <div className="print:hidden"><StageTabs planId={planId} current={5} /></div>
+      <div className="print:hidden"><StageTabs planId={planId} current="report" /></div>
       <main className="mx-auto w-full max-w-5xl space-y-8 px-6 py-10 print:max-w-none print:space-y-6 print:p-0">
         <header className="rounded-3xl border border-chb-line bg-white p-6 sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-4">
