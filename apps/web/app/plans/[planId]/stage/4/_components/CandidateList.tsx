@@ -1,13 +1,8 @@
 import Link from "next/link";
 import type { RankedComplex } from "@/lib/calc/fit";
-import { CONDITION_LABELS } from "../../../_components/ConditionCheckCard";
 import { formatWon, livingText } from "../../../_components/format";
-
-const BUDGET = (b: boolean | null) =>
-  b === true ? { text: "예산 안", cls: "bg-chb-accent text-white" }
-  : b === false ? { text: "예산 밖", cls: "bg-red-50 text-red-800" }
-  : { text: "예산 판단 불가", cls: "bg-chb-line text-chb-muted" };
-const label = (k: string) => CONDITION_LABELS[k] ?? k;
+import { FavoriteButton } from "./FavoriteButton";
+import { FitChips } from "./FitChips";
 
 type Props = {
   planId: string; candidates: RankedComplex[]; favorites: { complex_id: number; name: string }[]; selected: number | null;
@@ -17,8 +12,6 @@ type Props = {
 function Row({ x, rank, fav, selected, planId, toggle }: {
   x: RankedComplex; rank: number | null; fav: boolean; selected: boolean; planId: string; toggle: Props["toggle"];
 }) {
-  const b = BUDGET(x.fit.within_budget);
-  const unmet = x.fit.unmet.filter((k) => !x.fit.missing.includes(k));
   return (
     <li className={`rounded-3xl border-2 bg-white p-5 text-sm transition ${selected ? "border-chb-accent bg-chb-soft2" : "border-transparent hover:border-chb-line"}`}>
       <div className="flex items-start justify-between gap-3">
@@ -29,14 +22,7 @@ function Row({ x, rank, fav, selected, planId, toggle }: {
             <span className="text-chb-muted">적합도 <b className="text-chb-accent">{x.fit.score}점</b></span>
           </span>
         </Link>
-        <form action={toggle}>
-          <input type="hidden" name="complex_id" value={x.complex_id} />
-          <input type="hidden" name="favorite" value={fav ? "0" : "1"} />
-          <button type="submit" aria-pressed={fav} aria-label={fav ? `${x.name} 관심 해제` : `${x.name} 관심 단지로 저장`}
-            className={`grid size-10 place-items-center rounded-full border text-xl transition ${fav ? "border-chb-accent bg-chb-accent text-white" : "border-chb-line text-chb-muted hover:border-chb-accent hover:text-chb-accent"}`}>
-            {fav ? "★" : "☆"}
-          </button>
-        </form>
+        <FavoriteButton complexId={x.complex_id} name={x.name} fav={fav} toggle={toggle} />
       </div>
       <p className="mt-3 text-chb-muted">
         <span className="mr-1 font-display text-lg font-black text-chb-ink">{x.median_price === null ? "최근 거래 없음" : formatWon(x.median_price)}</span>
@@ -47,12 +33,7 @@ function Row({ x, rank, fav, selected, planId, toggle }: {
           : `${x.nearest_station_m === null ? "역 정보 없음" : `역 ${x.nearest_station_name ?? "-"} 직선 ${x.nearest_station_m}m`} · ${x.nearest_elementary_m === null ? "초등학교 정보 없음" : `초등학교 직선 ${x.nearest_elementary_m}m`}`}
       </p>
       {livingText(x) && <p className="text-chb-muted">{livingText(x)}</p>}
-      <div className="mt-3 flex flex-wrap gap-1.5 text-xs font-semibold">
-        <span className={`rounded-full px-2.5 py-1 ${b.cls}`}>{b.text}</span>
-        {x.fit.met.map((k) => <span key={k} className="rounded-full bg-chb-soft px-2.5 py-1 text-chb-accent">충족 {label(k)}</span>)}
-        {unmet.map((k) => <span key={k} className="rounded-full bg-chb-line px-2.5 py-1 text-chb-muted">맞지 않음 {label(k)}</span>)}
-        {x.fit.missing.map((k) => <span key={k} className="rounded-full border border-dashed border-chb-muted/50 px-2.5 py-1 text-chb-muted">데이터 없음 {label(k)}</span>)}
-      </div>
+      <div className="mt-3"><FitChips fit={x.fit} /></div>
     </li>
   );
 }
