@@ -123,7 +123,7 @@ export default async function Stage4({
           {/* 목록을 내리며 여러 단지를 번갈아 볼 수 있게 상세는 따라오고, 길면 패널 안에서 스크롤한다 */}
           <div className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:rounded-3xl">
             {detail === null && <p role="alert" className={box}>단지 상세를 불러오지 못했습니다.</p>}
-            {detail && <ComplexDetail result={detail} tips={tips ?? []} />}
+            {detail && <ComplexDetail result={detail} tips={tips ?? []} fav={favorites.some((f) => f.complex_id === selected)} toggle={toggle} />}
             {detail === undefined && (
               <p className={`${box} text-center`}>왼쪽에서 단지를 누르면<br />실거래·주변 시설·정비사업 같은 상세가 여기 보여요.</p>
             )}
