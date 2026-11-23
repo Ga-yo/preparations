@@ -6,6 +6,7 @@ import { DATASETS } from "../../../_components/ConditionCheckCard";
 import { formatWon, livingText } from "../../../_components/format";
 import { redevelopmentText } from "../../../_components/redevelopment";
 import type { RedevelopmentInfo } from "@/lib/agent/redevelopment";
+import type { LatestChange, MonthPoint } from "@/lib/calc/area-prices";
 import { DetailTabs } from "./DetailTabs";
 import { FavoriteButton } from "./FavoriteButton";
 import { FitChips } from "./FitChips";
@@ -21,10 +22,13 @@ type Data = {
   redevelopment?: RedevelopmentInfo;
   mgmt_fee?: MgmtFeeResult;
   nearby: { category: string; name: string; lines: string[] | null; distance_m: number }[];
-  trades: { deal_date: string; deal_amount: number; exclusive_area: number; floor: number | null }[];
-  monthly: { month: string; median_price: number; deal_count: number }[];
+  areas: {
+    area: number; label: string; monthly: MonthPoint[]; latest: LatestChange | null;
+    trades: { deal_date: string; deal_amount: number; exclusive_area: number; floor: number | null }[]; trade_total: number;
+  }[];
+  default_area: number | null;
   neighbors: NeighborStats;
-  criteria: { area_min: number | null; area_max: number | null; months: number };
+  criteria: { area_min: number | null; area_max: number | null; chart_months: number };
 };
 const CATEGORY: Record<string, string> = { subway_station: "지하철역", elementary_school: "초등학교", middle_school: "중학교", high_school: "고등학교" };
 const FEE_REASON = { no_kapt_match: "K-apt에서 이 단지를 찾지 못했습니다.", no_recent_fee: "최근 3개월 부과 내역이 없습니다." };
@@ -35,7 +39,8 @@ export function ComplexDetail({ result, tips, fav, toggle }: { result: ToolResul
   if ("error" in (result.data as object)) {
     return <section className="rounded-3xl border border-chb-line bg-white p-6 text-sm text-chb-muted">선택한 단지를 찾을 수 없습니다.</section>;
   }
-  const { complex: c, fit, redevelopment, mgmt_fee: fee, nearby, trades, monthly, neighbors: n, criteria } = result.data as Data;
+  const { complex: c, fit, redevelopment, mgmt_fee: fee, nearby, areas, default_area, neighbors: n, criteria } = result.data as Data;
+  const trades = areas.find((a) => a.area === default_area)?.trades ?? [];
   const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 단지 좌표 유무로 정한다
   const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois|redevelopment):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
@@ -47,17 +52,6 @@ export function ComplexDetail({ result, tips, fav, toggle }: { result: ToolResul
 
   const prices = (
     <>
-      <h3 className={h3}>월별 중위가 (최근 {criteria.months}개월)</h3>
-      {monthly.length ? (
-        <div className="overflow-x-auto rounded-2xl border border-chb-line"><table className={table}>
-          <thead className="bg-chb-soft2 text-chb-muted"><tr><th>월</th><th>중위가</th><th>거래 건수</th></tr></thead>
-          <tbody>{monthly.map((m) => (
-            <tr key={m.month}><td>{m.month}</td><td>{formatWon(m.median_price)}</td><td>{m.deal_count}건</td></tr>
-          ))}</tbody>
-        </table></div>
-      ) : <p className="text-chb-muted">월별 거래 없음</p>}
-      <TipPanel tips={tips} fieldKey="monthly" />
-
       <h3 className={h3}>최근 실거래 사례 ({area})</h3>
       {trades.length ? (
         <div className="overflow-x-auto rounded-2xl border border-chb-line"><table className={table}>
