@@ -1,6 +1,6 @@
 import { expect, test, vi } from "vitest";
 import { runTool } from "../tool";
-import { getComplexDetail } from "./get-complex-detail";
+import { getComplexDetail, loadComplexDetail } from "./get-complex-detail";
 import { complex, mk, saved } from "./test-fixtures";
 
 const fee = { status: "ok", kapt_code: "A10024564", kapt_name: "개포래미안포레스트", month: "2026-09", common: 400, individual: null, total: 400, per_m2: 2, partial: true, fetched_at: "2026-11-12T10:00:00.000Z" };
@@ -68,7 +68,7 @@ test("returns detail with neighbors and notices", async () => {
   expect(d.fit).toMatchObject({ score: 100 });
   expect(d.neighbors).toMatchObject({ basis: "same_dong", count: 2 });
   expect(d.criteria).toEqual({ area_min: 80, area_max: 90.99, chart_months: 12 });
-  expect(calls.complex_area_trades).toEqual({ p_complex_id: 1, area_min: 80, area_max: 90.99, lim_per_area: 50 });
+  expect(calls.complex_area_trades).toEqual({ p_complex_id: 1, area_min: 80, area_max: 90.99, lim_per_area: 5 }); // LLM에는 면적별 5건만
   expect(calls.complex_area_monthly_prices).toMatchObject({ p_complex_id: 1, months: 12 });
   expect(calls).not.toHaveProperty("complex_trades");
   expect(calls).not.toHaveProperty("complex_monthly_prices");
@@ -77,6 +77,13 @@ test("returns detail with neighbors and notices", async () => {
   expect((r.data as { redevelopment: unknown }).redevelopment).toEqual({ status: "none", dong_zone_count: 0 });
   expect(r.notices).not.toContain("no_recent_trades");
   expect(r.as_of).toMatchObject({ "complexes:building_ledger": expect.any(String), "transactions:apartment": expect.any(String) });
+});
+
+test("page loader asks for 50 trades per area", async () => {
+  const { ctx, calls } = setup();
+  const r = await loadComplexDetail(1, ctx, 50);
+  expect(calls.complex_area_trades).toMatchObject({ lim_per_area: 50 });
+  expect((r.data as Data).areas[0].trade_total).toBe(3);
 });
 
 test("complex_not_found", async () => {
@@ -100,7 +107,7 @@ test("조건 미저장이어도 면적 없이 진행, as_of는 직접 조회", a
   const d = r.data as Data;
   expect(d.fit).toBeNull();
   expect(d.criteria.area_min).toBeNull();
-  expect(calls.complex_area_trades).toEqual({ p_complex_id: 1, lim_per_area: 50 });
+  expect(calls.complex_area_trades).toEqual({ p_complex_id: 1, lim_per_area: 5 });
   expect(calls.complex_area_monthly_prices).toEqual({ p_complex_id: 1, months: 12 });
   expect(r.as_of).toMatchObject({ "complexes:building_ledger": "2026-11-02", "transactions:apartment": "2026-11-07" });
 });

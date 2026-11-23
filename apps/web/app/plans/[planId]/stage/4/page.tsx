@@ -131,7 +131,7 @@ export default async function Stage4({
           <AssistantPanel planId={planId} stage={4} />
         </section>
         {/* 목록을 내리며 여러 단지를 번갈아 볼 수 있게 상세는 따라오고, 길면 탭 내용만 패널 안에서 스크롤한다 */}
-        <div className="lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
+        <div className="min-w-0 lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
           {selected === null ? (
             <p className={`${box} text-center`}>왼쪽에서 단지를 누르면<br />실거래·주변 시설·정비사업 같은 상세가 여기 보여요.</p>
           ) : (
