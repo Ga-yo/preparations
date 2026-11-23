@@ -159,11 +159,11 @@ export default async function Stage5({
 
             <ConditionChanges planId={planId} result={changes} />
 
-            {/* 계약 전 확인 서류·구매 절차(정비구역 안내 포함)는 리포트에 담는다. 리포트를 안 만들어도 있는 줄 알게 한 줄 남긴다 */}
+            {/* 계약 전 확인 서류·구매 절차·정비구역 안내는 리포트 화면에 있다(리포트를 만들기 전에도 보인다). 있는 줄 알게 한 줄 남긴다 */}
             <Link href={`/plans/${planId}/report`} className="group flex items-center justify-between gap-4 rounded-3xl border border-chb-line bg-white p-6 transition hover:border-chb-accent">
               <span>
                 <span className="block font-display text-xl font-black tracking-tight text-chb-ink">구매 전에 확인할 것과 다음 절차</span>
-                <span className="mt-1 block text-sm text-chb-muted">계약 전 확인할 서류, 대출 사전 상담, 구매 순서는 구매 검토 리포트에 담겨요. 관심 단지에 정비구역 안 단지가 있으면 정비구역 안내도 함께 넣어요.</span>
+                <span className="mt-1 block text-sm text-chb-muted">계약 전 확인할 서류, 대출 사전 상담, 구매 순서, 정비구역 단지 안내는 리포트 탭에서 바로 볼 수 있어요.</span>
               </span>
               <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-chb-soft text-chb-accent transition group-hover:translate-x-0.5">→</span>
             </Link>

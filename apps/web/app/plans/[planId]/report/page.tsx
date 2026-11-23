@@ -32,6 +32,10 @@ export default async function Report({ params }: { params: Promise<{ planId: str
   const { data: latest } = await supabase.from("reports").select("payload, narrative, created_at")
     .eq("plan_id", planId).order("created_at", { ascending: false }).limit(1).maybeSingle();
   const p = latest?.payload as unknown as ReportPayload | undefined;
+  // 리포트를 만들기 전에도 고정 안내(계약 서류·절차·정비구역)는 바로 보여 준다. 만든 뒤에는 스냅숏 그대로
+  const { data: liveTips } = p ? { data: null } : await supabase.from("tips").select("slug, field_key, title, body, caution")
+    .eq("stage", 5).in("field_key", ["checklist", "next_steps", "redevelopment"]).order("sort_order");
+  const tipsOf = (k: string) => (liveTips ?? []).filter((x) => x.field_key === k);
 
   async function make() {
     "use server";
@@ -69,9 +73,21 @@ export default async function Report({ params }: { params: Promise<{ planId: str
           </p>
         </header>
         {!p ? (
-          <p className="rounded-3xl border border-chb-line bg-white p-6 text-center text-chb-muted">
-            아직 만든 리포트가 없습니다.<br />지금까지 입력한 내용으로 리포트를 만들 수 있습니다.
-          </p>
+          <>
+            <p className="rounded-3xl border border-chb-line bg-white p-6 text-center text-chb-muted">
+              아직 만든 리포트가 없습니다. &lsquo;리포트 만들기&rsquo;를 누르면 희망 조건·예산·관심 단지 비교가 함께 담겨요.<br />
+              그 전에 계약 전 확인할 것과 구매 절차는 아래에서 바로 볼 수 있어요.
+            </p>
+            <Section n={1} heading="구매 전에 확인할 것" desc="계약금을 내기 전에 서류와 실제 대출 한도를 확인해요.">
+              <TipCards tips={tipsOf("checklist")} />
+            </Section>
+            <Section n={2} heading="다음 절차" desc="매물 확인부터 잔금·등기, 전입 신고까지의 순서예요.">
+              <TipCards tips={tipsOf("next_steps")} />
+            </Section>
+            <Section n={3} heading="관심 단지가 정비구역 안에 있다면" desc="재건축·재개발 구역 안 단지는 따로 확인할 것이 있어요. 리포트를 만들면 해당 단지가 있을 때만 담겨요.">
+              <TipCards tips={tipsOf("redevelopment")} />
+            </Section>
+          </>
         ) : (
           <>
             <Section n={1} heading="희망 조건" desc="2·3단계에서 저장한 조건이에요.">
