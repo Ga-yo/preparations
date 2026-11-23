@@ -388,6 +388,16 @@ isOneToOne: false
             "bump_chat_usage":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"complex_area_monthly_prices":
+{ Args: { "area_max"?: number,"area_min"?: number,"months"?: number,"p_complex_id": number }; Returns: {
+              "area": number,"deal_count": number,"median_price": number,"month": string
+            }[]
+                           },
+"complex_area_trades":
+{ Args: { "area_max"?: number,"area_min"?: number,"lim_per_area"?: number,"p_complex_id": number }; Returns: {
+              "area": number,"area_total": number,"deal_amount": number,"deal_date": string,"exclusive_area": number,"floor": number
+            }[]
+                           },
 "complex_monthly_prices":
 { Args: { "area_max"?: number,"area_min"?: number,"months"?: number,"p_complex_id": number }; Returns: {
               "deal_count": number,"median_price": number,"month": string
