@@ -1,11 +1,12 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import type { RankedComplex } from "@/lib/calc/fit";
-import type { ToolResult } from "@/lib/agent/tool";
+import type { Tip } from "../../_components/TipPanel";
 import { AssistantPanel } from "../../_components/AssistantPanel";
 import { StageTabs } from "../../_components/StageTabs";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
@@ -13,6 +14,16 @@ import { detailForPlan, favoriteComplexIds, searchForPlan, setFavorite } from ".
 import { enterStage5 } from "../5/actions";
 import { CandidateList } from "./_components/CandidateList";
 import { ComplexDetail } from "./_components/ComplexDetail";
+import { DetailSkeleton } from "./_components/DetailSkeleton";
+
+// 목록·관심 단지는 상세(K-apt 포함)를 기다리지 않고 먼저 그린다
+async function DetailSection({ planId, complexId, fav, toggle, tips }: {
+  planId: string; complexId: number; fav: boolean; toggle: (f: FormData) => Promise<void>; tips: Tip[];
+}) {
+  const detail = await detailForPlan(planId, complexId).catch((e): null => (logError(e), null));
+  if (!detail) return <p role="alert" className="rounded-3xl border border-chb-line bg-white p-6 text-chb-muted">단지 상세를 불러오지 못했습니다.</p>;
+  return <ComplexDetail result={detail} tips={tips} fav={fav} toggle={toggle} />;
+}
 
 // 요청마다 쿠키·DB로 렌더하는 페이지: cacheComponents 프리렌더 대신 요청 시 렌더
 export const instant = false;
@@ -44,10 +55,9 @@ export default async function Stage4({
 
   const supabase = await createClient();
   const { data: tips } = await supabase.from("tips").select("slug, field_key, title, body, caution").eq("stage", 4).order("sort_order");
-  const [search, favorites, detail] = await Promise.all([
+  const [search, favorites] = await Promise.all([
     searchForPlan(planId).catch((e): null => (logError(e), null)),
     favoriteComplexIds(planId).catch((e): { complex_id: number; name: string }[] => (logError(e), [])),
-    selected ? detailForPlan(planId, selected).catch((e): null => (logError(e), null)) : Promise.resolve<ToolResult | null | undefined>(undefined),
   ]);
 
   async function toggle(form: FormData): Promise<void> {
@@ -118,17 +128,17 @@ export default async function Stage4({
           {!(data && !("error" in data) && data.candidates.length) && favorites.length > 0 && (
             <CandidateList planId={planId} candidates={[]} favorites={favorites} selected={selected} toggle={toggle} />
           )}
-        </section>
-        <div className="space-y-6">
-          {/* 목록을 내리며 여러 단지를 번갈아 볼 수 있게 상세는 따라오고, 길면 패널 안에서 스크롤한다 */}
-          <div className="lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto lg:rounded-3xl">
-            {detail === null && <p role="alert" className={box}>단지 상세를 불러오지 못했습니다.</p>}
-            {detail && <ComplexDetail result={detail} tips={tips ?? []} fav={favorites.some((f) => f.complex_id === selected)} toggle={toggle} />}
-            {detail === undefined && (
-              <p className={`${box} text-center`}>왼쪽에서 단지를 누르면<br />실거래·주변 시설·정비사업 같은 상세가 여기 보여요.</p>
-            )}
-          </div>
           <AssistantPanel planId={planId} stage={4} />
+        </section>
+        {/* 목록을 내리며 여러 단지를 번갈아 볼 수 있게 상세는 따라오고, 길면 탭 내용만 패널 안에서 스크롤한다 */}
+        <div className="lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">
+          {selected === null ? (
+            <p className={`${box} text-center`}>왼쪽에서 단지를 누르면<br />실거래·주변 시설·정비사업 같은 상세가 여기 보여요.</p>
+          ) : (
+            <Suspense key={selected} fallback={<DetailSkeleton />}>
+              <DetailSection planId={planId} complexId={selected} fav={favorites.some((f) => f.complex_id === selected)} toggle={toggle} tips={tips ?? []} />
+            </Suspense>
+          )}
         </div>
       </main>
       {favorites.length > 0 && (
