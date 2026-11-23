@@ -9,7 +9,7 @@ import { formatWon } from "../../_components/format";
 import { byMonthly, type ProductPayment } from "../../_components/products";
 import { getBudgetForPlan } from "../1/actions";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
-import { type Tip } from "../../_components/TipPanel";
+import { TipCards } from "../../_components/TipCards";
 import { Section } from "../../_components/Field";
 import { StageTabs } from "../../_components/StageTabs";
 import { favoriteComplexIds } from "../4/actions";
@@ -162,13 +162,13 @@ export default async function Stage5({
             <ConditionChanges planId={planId} result={changes} />
 
             <Section n={1} heading="구매 전에 확인할 것" desc="계약금을 내기 전에 서류와 실제 대출 한도를 확인해요.">
-              <TipCards tips={tips ?? []} fieldKey="checklist" />
+              <TipCards tips={(tips ?? []).filter((x) => x.field_key === "checklist")} />
             </Section>
             <Section n={2} heading="다음 절차" desc="매물 확인부터 잔금·등기, 전입 신고까지의 순서예요.">
-              <TipCards tips={tips ?? []} fieldKey="next_steps" />
+              <TipCards tips={(tips ?? []).filter((x) => x.field_key === "next_steps")} />
             </Section>
             <Section n={3} heading="정비구역 단지라면" desc="재건축·재개발 구역 안 단지는 따로 살펴볼 것이 있어요.">
-              <TipCards tips={tips ?? []} fieldKey="redevelopment" />
+              <TipCards tips={(tips ?? []).filter((x) => x.field_key === "redevelopment")} />
             </Section>
           </div>
           <div className="lg:sticky lg:top-24">
@@ -190,19 +190,3 @@ export default async function Stage5({
   );
 }
 
-// 이 단계의 확인·절차 TIP은 섹션의 본문이라 접지 않고 펼쳐 둔다
-function TipCards({ tips, fieldKey }: { tips: Tip[]; fieldKey: string }) {
-  const mine = tips.filter((t) => t.field_key === fieldKey);
-  if (!mine.length) return <p className="text-sm text-chb-muted">안내를 불러오지 못했습니다.</p>;
-  return (
-    <div className="space-y-3">
-      {mine.map((t) => (
-        <div key={t.slug} className="rounded-2xl bg-chb-soft2 p-5 text-sm leading-relaxed text-chb-ink">
-          <p className="mb-2 font-bold">{t.title}</p>
-          <p className="whitespace-pre-line">{t.body}</p>
-          {t.caution && <p className="mt-3 font-medium text-chb-accent">알아두기: {t.caution}</p>}
-        </div>
-      ))}
-    </div>
-  );
-}
