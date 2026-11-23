@@ -86,6 +86,25 @@ test("page loader asks for 50 trades per area", async () => {
   expect((r.data as Data).areas[0].trade_total).toBe(3);
 });
 
+test("areas with no deals in the 12 chart months get no tab", async () => {
+  const old = { area: 114, deal_date: "2023-05-01", deal_amount: 1_500_000_000, exclusive_area: 114.5, floor: 9, area_total: 1 };
+  const { ctx } = setup({}, undefined, [...areaTrades, old]);
+  const d = (await getComplexDetail.run({ complex_id: 1 }, ctx)).data as Data;
+  expect(d.areas.map((x) => x.area)).toEqual([59, 84]);
+});
+
+test("only old trades → no areas, no_recent_trades", async () => {
+  const { ctx, calls } = setup();
+  const db = ctx.supabase as unknown as { rpc: (n: string, a: Record<string, unknown>) => Promise<{ data: unknown[] }> };
+  const rpc = db.rpc.bind(db);
+  db.rpc = (n, a) => (n === "complex_area_monthly_prices" ? Promise.resolve({ data: [] }) : rpc(n, a));
+  const r = await getComplexDetail.run({ complex_id: 1 }, ctx);
+  expect((r.data as Data).areas).toEqual([]);
+  expect((r.data as Data).default_area).toBeNull();
+  expect(r.notices).toContain("no_recent_trades");
+  expect(calls.complex_area_trades).toBeDefined();
+});
+
 test("complex_not_found", async () => {
   const { ctx } = setup();
   expect((await getComplexDetail.run({ complex_id: 404 }, ctx)).data).toEqual({ error: "complex_not_found" });

@@ -14,7 +14,6 @@ export function DetailTabs({ tabs }: { tabs: { key: string; label: string; conte
     setActive(next);
     refs.current[next]?.focus();
   };
-  const tab = tabs[active];
   return (
     <>
       <div role="tablist" aria-label="단지 상세 항목" onKeyDown={onKey} className="flex shrink-0 overflow-x-auto border-b border-chb-line">
@@ -26,10 +25,13 @@ export function DetailTabs({ tabs }: { tabs: { key: string; label: string; conte
           </button>
         ))}
       </div>
-      <div role="tabpanel" id={`${id}-panel-${tab.key}`} aria-labelledby={`${id}-tab-${tab.key}`} tabIndex={0}
-        className="min-h-0 flex-1 space-y-4 overflow-y-auto py-5 focus-visible:outline-2 focus-visible:outline-chb-accent">
-        {tab.content}
-      </div>
+      {/* 숨긴 패널도 그려 둔다: 탭을 오가도 고른 면적·펼침이 남고 aria-controls가 실제 요소를 가리킨다 */}
+      {tabs.map((t, i) => (
+        <div key={t.key} role="tabpanel" id={`${id}-panel-${t.key}`} aria-labelledby={`${id}-tab-${t.key}`} tabIndex={0} hidden={i !== active}
+          className="min-h-0 flex-1 space-y-4 overflow-y-auto py-5 focus-visible:outline-2 focus-visible:outline-chb-accent">
+          {t.content}
+        </div>
+      ))}
     </>
   );
 }

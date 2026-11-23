@@ -65,7 +65,8 @@ export async function loadComplexDetail(complexId: number, ctx: ToolContext, tra
     nearest_park_m: ownRow?.nearest_park_m ?? null, shop_count_500m: ownRow?.shop_count_500m ?? null, commute_m: ownRow?.commute_m ?? null };
   const nearbyRows = nearby.data ?? [];
   const keys = monthKeys(ctx.today, CHART_MONTHS);
-  const groups = [...new Set([...(trades.data ?? []), ...(monthly.data ?? [])].map((r) => r.area))].sort((a, b) => a - b);
+  // 최근 12개 달력월에 거래가 있는 면적만 탭으로 둔다(오래된 거래만 있는 면적은 빈 차트가 된다)
+  const groups = [...new Set((monthly.data ?? []).filter((m) => keys.includes(m.month)).map((m) => m.area))].sort((a, b) => a - b);
   const areas = groups.map((g) => {
     const series = monthlySeries((monthly.data ?? []).filter((m) => m.area === g), keys);
     const rows = (trades.data ?? []).filter((t) => t.area === g);

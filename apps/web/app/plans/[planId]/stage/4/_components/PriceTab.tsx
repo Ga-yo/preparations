@@ -75,7 +75,7 @@ export function PriceTab({ areas, defaultArea, areaText, tips, neighborsText }: 
           {a.latest && <PriceChart key={a.area} series={a.monthly} />}
           {tips.monthly}
 
-          <h3 className={h3}>{a.trade_total > a.trades.length ? `최근 ${a.trades.length}건 (전체 ${a.trade_total}건)` : `최근 거래 ${Math.min(SHOWN, a.trades.length)}건`}</h3>
+          <h3 className={h3}>{a.trade_total > a.trades.length ? `최근 ${a.trades.length}건 (전체 ${a.trade_total}건)` : `최근 거래 ${open ? a.trades.length : Math.min(SHOWN, a.trades.length)}건`}</h3>
           {a.trades.length ? (
             <div className="overflow-x-auto rounded-2xl border border-chb-line"><table className={table}>
               <thead className="bg-chb-soft2 text-chb-muted"><tr><th scope="col">거래일</th><th scope="col">거래금액</th><th scope="col">층</th><th scope="col">전용면적</th></tr></thead>
