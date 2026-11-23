@@ -88,3 +88,16 @@ test("지역 예산을 못 구하면(프로필 없음) 기존 예산 하나만 �
   expect(p.budget).toMatchObject({ data: { ownFunds: 1 } });
   expect(p.region_budgets).toBeUndefined();
 });
+
+test("정비구역 안 관심 단지가 있으면 정비구역 안내까지 담고, 없으면 뺀다", async () => {
+  favorites = [{ complex_id: 1, name: "a" }, { complex_id: 2, name: "b" }];
+  const saved = rows.tips;
+  rows.tips = [{ field_key: "checklist", title: "t", body: "b", caution: null }, { field_key: "redevelopment", title: "r", body: "b", caution: null }];
+  try {
+    compareForPlan.mockResolvedValueOnce({ data: { items: [{ risks: ["redevelopment_in_zone"] }] }, as_of: {} } as never);
+    await createReport(PLAN);
+    expect((inserts[0].row.payload as { checklist: { title: string }[] }).checklist.map((t) => t.title)).toEqual(["t", "r"]);
+    await createReport(PLAN);
+    expect((inserts[1].row.payload as { checklist: { title: string }[] }).checklist.map((t) => t.title)).toEqual(["t"]);
+  } finally { rows.tips = saved; }
+});

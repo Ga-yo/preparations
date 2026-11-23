@@ -35,3 +35,10 @@ export function conditionsSummary(row: ConditionRow | null, names: Record<string
     area_min: row.area_min, area_max: row.area_max, price_max: row.price_max, redevelopment_interest: !!row.redevelopment_interest,
   };
 }
+
+// 리포트의 "구매 전 확인과 다음 절차". 정비구역 안내는 비교한 관심 단지 중 정비구역 안 단지가 있을 때만 담는다
+export function pickChecklist<T extends { field_key: string | null }>(tips: T[], compare: Pick<ToolResult, "data"> | null): T[] {
+  const items = (compare?.data as { items?: { risks?: string[] }[] } | undefined)?.items ?? [];
+  const inZone = items.some((i) => i.risks?.includes("redevelopment_in_zone"));
+  return tips.filter((t) => t.field_key !== "redevelopment" || inZone);
+}

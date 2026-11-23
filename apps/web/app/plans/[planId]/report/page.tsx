@@ -102,7 +102,7 @@ export default async function Report({ params }: { params: Promise<{ planId: str
                 : <p className="text-chb-muted">관심 단지가 2개 이상이면 비교 표가 들어가요.</p>}
             </Section>
 
-            <Section n={4} heading="구매 전 확인과 다음 절차" desc="계약 전에 확인할 서류와 구매 순서예요.">
+            <Section n={4} heading="구매 전 확인과 다음 절차" desc="계약 전에 확인할 서류와 구매 순서예요. 관심 단지에 정비구역 안 단지가 있으면 정비구역 안내도 담아요.">
               <TipCards tips={p.checklist} />
             </Section>
 
