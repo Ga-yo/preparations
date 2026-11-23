@@ -6,10 +6,10 @@ import { DATASETS } from "../../../_components/ConditionCheckCard";
 import { formatWon, livingText } from "../../../_components/format";
 import { redevelopmentText } from "../../../_components/redevelopment";
 import type { RedevelopmentInfo } from "@/lib/agent/redevelopment";
-import type { LatestChange, MonthPoint } from "@/lib/calc/area-prices";
 import { DetailTabs } from "./DetailTabs";
 import { FavoriteButton } from "./FavoriteButton";
 import { FitChips } from "./FitChips";
+import { PriceTab, type AreaPrices } from "./PriceTab";
 
 type Data = {
   complex: {
@@ -22,10 +22,7 @@ type Data = {
   redevelopment?: RedevelopmentInfo;
   mgmt_fee?: MgmtFeeResult;
   nearby: { category: string; name: string; lines: string[] | null; distance_m: number }[];
-  areas: {
-    area: number; label: string; monthly: MonthPoint[]; latest: LatestChange | null;
-    trades: { deal_date: string; deal_amount: number; exclusive_area: number; floor: number | null }[]; trade_total: number;
-  }[];
+  areas: AreaPrices[];
   default_area: number | null;
   neighbors: NeighborStats;
   criteria: { area_min: number | null; area_max: number | null; chart_months: number };
@@ -40,7 +37,6 @@ export function ComplexDetail({ result, tips, fav, toggle }: { result: ToolResul
     return <section className="rounded-3xl border border-chb-line bg-white p-6 text-sm text-chb-muted">선택한 단지를 찾을 수 없습니다.</section>;
   }
   const { complex: c, fit, redevelopment, mgmt_fee: fee, nearby, areas, default_area, neighbors: n, criteria } = result.data as Data;
-  const trades = areas.find((a) => a.area === default_area)?.trades ?? [];
   const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 단지 좌표 유무로 정한다
   const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois|redevelopment):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
@@ -50,28 +46,12 @@ export function ComplexDetail({ result, tips, fav, toggle }: { result: ToolResul
   const h3 = "border-t border-chb-line pt-5 font-bold text-chb-ink first:border-t-0 first:pt-0";
   const table = "w-full text-left [&_td]:border-t [&_td]:border-chb-line [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2";
 
+  const neighborsText = `${n.rank === null || n.dong_median === null
+    ? `같은 동 ${n.count}개 단지 중 이 단지의 최근 12개월 거래가 없어 순위를 매기지 못했습니다.`
+    : `같은 동 가격이 있는 ${n.priced}개 단지 중 중위가 낮은 순 ${n.rank}위, 동 중위값 ${formatWon(n.dong_median)}`} (같은 법정동 기준, 거리 기준 아님)`;
   const prices = (
-    <>
-      <h3 className={h3}>최근 실거래 사례 ({area})</h3>
-      {trades.length ? (
-        <div className="overflow-x-auto rounded-2xl border border-chb-line"><table className={table}>
-          <thead className="bg-chb-soft2 text-chb-muted"><tr><th>계약일</th><th>금액</th><th>전용면적</th><th>층</th></tr></thead>
-          <tbody>{trades.map((t, i) => (
-            <tr key={i}><td>{t.deal_date}</td><td>{formatWon(t.deal_amount)}</td><td>{t.exclusive_area}㎡</td><td>{t.floor ?? "-"}층</td></tr>
-          ))}</tbody>
-        </table></div>
-      ) : <p className="text-chb-muted">최근 거래 없음</p>}
-      <TipPanel tips={tips} fieldKey="trades" />
-
-      <h3 className={h3}>같은 동 단지와 비교</h3>
-      <p>
-        {n.rank === null || n.dong_median === null
-          ? `같은 동 ${n.count}개 단지 중 이 단지의 최근 12개월 거래가 없어 순위를 매기지 못했습니다.`
-          : `같은 동 가격이 있는 ${n.priced}개 단지 중 중위가 낮은 순 ${n.rank}위, 동 중위값 ${formatWon(n.dong_median)}`}
-        {" "}(같은 법정동 기준, 거리 기준 아님)
-      </p>
-      <TipPanel tips={tips} fieldKey="neighbors" />
-    </>
+    <PriceTab key={c.id} areas={areas} defaultArea={default_area} areaText={area} neighborsText={neighborsText}
+      tips={{ trades: <TipPanel tips={tips} fieldKey="trades" />, monthly: <TipPanel tips={tips} fieldKey="monthly" />, neighbors: <TipPanel tips={tips} fieldKey="neighbors" /> }} />
   );
 
   const info = (
