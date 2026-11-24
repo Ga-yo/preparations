@@ -51,8 +51,8 @@ test("returns detail with neighbors and notices", async () => {
   expect(d.monthly).toHaveLength(1);
   expect(d.fit).toMatchObject({ score: 100 });
   expect(d.neighbors).toMatchObject({ basis: "same_dong", count: 2 });
-  expect(d.criteria).toEqual({ area_min: 80, area_max: 90, months: 24 });
-  expect(calls.complex_trades).toMatchObject({ p_complex_id: 1, area_min: 80, area_max: 90 });
+  expect(d.criteria).toEqual({ area_min: 80, area_max: 90.99, months: 24 });
+  expect(calls.complex_trades).toMatchObject({ p_complex_id: 1, area_min: 80, area_max: 90.99 });
   expect(r.notices).toEqual(expect.arrayContaining(["no_location_data", "land_share_is_average"]));
   expect(r.notices).not.toContain("no_redevelopment_data");
   expect((r.data as { redevelopment: unknown }).redevelopment).toEqual({ status: "none", dong_zone_count: 0 });

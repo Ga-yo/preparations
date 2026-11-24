@@ -1,5 +1,11 @@
 // 3단계 조건 점검: must 조건 필터링과 하나씩 빼 보기(leave-one-out)로 충돌을 찾는다. 순수 함수.
 import type { TieBreaker } from "./preferences";
+import { RURAL_AREA_LIMIT_M2 } from "./tax-rates";
+
+// 실거래 전용면적은 84.97㎡처럼 소수라 정수 상한(84)이면 그 평형이 다 빠진다 → 84.99까지 넓힌다.
+// 85㎡는 세금·정책대출의 법정 기준이라 넘기지 않는다
+export const widenAreaMax = (v: number | null): number | null =>
+  v !== null && Number.isInteger(v) && v !== RURAL_AREA_LIMIT_M2 ? v + 0.99 : v;
 
 export type Priority = "must" | "prefer" | "ignore";
 export type ConditionKey = "price_max" | "area" | "approval_year_min" | "household_count_min"

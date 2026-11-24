@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { computeBudget } from "@/lib/calc/budget";
+import { widenAreaMax } from "@/lib/calc/conditions";
 import { resolveRegion } from "../region";
 import { defineTool, type ToolContext, type ToolResult } from "../tool";
 import { budgetInput, day, loadBudgetData, STALE_DAYS } from "./get-budget";
@@ -27,7 +28,7 @@ export const getRegionPrices = defineTool({
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
     if (savedError) throw new Error(savedError.message);
     const areaMin = args.area_min ?? saved?.area_min ?? undefined;
-    const areaMax = args.area_max ?? saved?.area_max ?? undefined;
+    const areaMax = args.area_max ?? widenAreaMax(saved?.area_max ?? null) ?? undefined;
     if (areaMin !== undefined && areaMax !== undefined && areaMin > areaMax) {
       return { data: { error: "area_range_invalid" }, as_of: {} };
     }

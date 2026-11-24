@@ -7,7 +7,7 @@ type Data = { conflicts: { code: string }[]; notices: string[]; counts: { total:
 test("저장된 지역·면적으로 RPC 호출, must 필터 결과와 as_of", async () => {
   const { ctx, calls } = mk();
   const r = await checkConditions.run({}, ctx);
-  expect(calls).toEqual([{ region_codes: ["1168000000"], area_min: 80, area_max: 90, months: 12 }]);
+  expect(calls).toEqual([{ region_codes: ["1168000000"], area_min: 80, area_max: 90.99, months: 12 }]);
   const d = r.data as Data;
   expect(d.counts).toMatchObject({ total: 2, must: 1 });
   expect(d.matches.map((m) => m.complex_id)).toEqual([1]);
