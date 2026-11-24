@@ -26,11 +26,11 @@
 - 알려진 한계: 법정동으로 바꾸지 못하는 7곳(관악구 행정동 `보라매동`·`조원동`·`미성동`, `서소문`·`가리봉`처럼 동이 빠진 표기, `청구동`, `한강로160일대`)은 `region_code`가 비어 단지·같은 동 집계에 쓰이지 않는다. 철거되어 건축물대장 단지가 없는 착공 단계 구역은 매칭되지 않는다. 경기·인천 자료는 없다.
 - 갱신: 새 분기 파일을 받아 위 규칙으로 CSV를 다시 만들고 `jobs/redevelopment.py`의 `AS_OF`를 파일 기준일로 고친 뒤 `uv run python main.py redevelopment`(또는 Actions `run_redevelopment`)를 돌린다. CSV에서 빠진 구역은 DB에서 지워진다.
 
-## parks.csv (도시공원, 아직 없음)
+## parks.csv (도시공원)
 
-- 원본: 전국도시공원정보표준데이터(data.go.kr 15012890) 페이지의 CSV 다운로드. OpenAPI(15012890)는 현재 키로 403이라(활용신청 전) 응답 필드를 확인하지 못했다. 2026-11-14 기준 페이지에 나온 항목명은 관리번호, 공원명, 공원구분, 소재지도로명주소, 소재지지번주소, 위도, 경도, 공원면적, 공원보유시설, 지정고시일, 관리기관명, 전화번호다.
-- 추린 규칙: 소재지지번주소(없으면 도로명주소)가 서울·경기·인천으로 시작하는 행만. 열 이름은 `park_id`(관리번호), `name`(공원명), `kind`(공원구분), `lat`(위도), `lon`(경도), `area_m2`(공원면적, ㎡인지 원본 명세에서 확인), `address`(주소), `data_date`(파일 기준일 `YYYY-MM-DD`). 좌표 범위 밖 행은 job(`jobs/parks.py`)이 버린다.
-- 용량 추정: 수도권 약 1만 행 × 약 200B ≈ 3MB(적재 후 실측해 이 줄을 고친다).
+- 원본: 전국도시공원정보표준데이터 OpenAPI(data.go.kr 15012890, `api.data.go.kr/openapi/tn_pubr_public_cty_park_info_api`, type=json). 2026-11-24에 전국 18,376건을 받아 만들었다. 포털 CSV 파일은 CP949라 그대로 열면 한글이 깨진다.
+- 추린 규칙: `lnmadr`(지번주소, 없으면 `rdnmadr`)가 서울특별시·경기도·인천광역시로 시작하는 행만(7,318건). 같은 관리번호가 여러 번 나오면 첫 행만 남긴다(99행 제외 → 7,219건). 열 매핑: `park_id`=manageNo, `name`=parkNm, `kind`=parkSe, `lat`=latitude, `lon`=longitude, `area_m2`=parkAr(㎡), `address`=지번 또는 도로명주소, `data_date`=행별 referenceDate. 좌표 범위 밖 행은 job(`jobs/parks.py`)이 버린다.
+- 용량: 7,219행, CSV 약 0.9MB. DB에는 이름·좌표·종류·면적만 들어가 약 2MB 이하로 예상(적재 후 실측해 이 줄을 고친다).
 - 갱신: CSV를 만든 뒤 `uv run python main.py parks`(또는 Actions `run_parks`). CSV에서 빠진 공원은 DB에서 지워진다.
 
 ## shops job (상가 수, CSV 없음)
