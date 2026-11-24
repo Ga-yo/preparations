@@ -44,21 +44,21 @@ export const getRegionPrices = defineTool({
       if (!prefixes.length) return { data: { error: "region_required" }, as_of: {} };
     }
 
-    const stats = [];
-    for (const sigungu_prefix of prefixes) {
-      const { data, error } = await supabase.rpc("region_price_stats", {
-        sigungu_prefix, housing_type: "apartment", months,
-        ...(areaMin !== undefined && { area_min: areaMin }),
-        ...(areaMax !== undefined && { area_max: areaMax }),
-      });
-      if (error) throw new Error(error.message);
-      stats.push(...(data ?? []));
-    }
-
-    const [budget, fresh] = await Promise.all([
+    // 시군구별 통계·예산·기준일은 서로 기다릴 필요가 없어 함께 부른다
+    const [statsBy, budget, fresh] = await Promise.all([
+      Promise.all(prefixes.map(async (sigungu_prefix) => {
+        const { data, error } = await supabase.rpc("region_price_stats", {
+          sigungu_prefix, housing_type: "apartment", months,
+          ...(areaMin !== undefined && { area_min: areaMin }),
+          ...(areaMax !== undefined && { area_max: areaMax }),
+        });
+        if (error) throw new Error(error.message);
+        return data ?? [];
+      })),
       loadBudgetData(supabase, planId, today),
       supabase.from("data_freshness").select("as_of").eq("dataset", DATASET).maybeSingle(),
     ]);
+    const stats = statsBy.flat();
     if (fresh.error) throw new Error(fresh.error.message);
 
     const rows = stats.map((s) => {
