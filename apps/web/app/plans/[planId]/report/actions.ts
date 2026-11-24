@@ -2,7 +2,7 @@ import type { Json } from "@repo/db-types";
 import { z } from "zod";
 import { kstToday } from "@/lib/agent/orchestrator";
 import { budgetsByRegion } from "@/lib/agent/tools/get-budget";
-import { assembleReport, conditionsSummary, type ReportPayload } from "@/lib/report/assemble";
+import { assembleReport, conditionsSummary, pickChecklist, type ReportPayload } from "@/lib/report/assemble";
 import { freshCheckSummary } from "../_components/assistant";
 import { getBudgetForPlan } from "../stage/1/actions";
 import { favoriteComplexIds } from "../stage/4/actions";
@@ -26,7 +26,7 @@ export async function createReport(planId: string): Promise<void> {
     supabase.from("condition_sets")
       .select("region_codes, region_reason, commute_region_code, area_min, area_max, price_max, redevelopment_interest")
       .eq("plan_id", planId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-    supabase.from("tips").select("field_key, title, body, caution").eq("stage", 5).in("field_key", ["checklist", "next_steps"]).order("sort_order"),
+    supabase.from("tips").select("field_key, title, body, caution").eq("stage", 5).in("field_key", ["checklist", "next_steps", "redevelopment"]).order("sort_order"),
   ]);
   for (const r of [cond, tips]) if (r.error) throw new Error(r.error.message);
   const ids = parseIds(undefined, favorites.map((f) => f.complex_id));
@@ -45,7 +45,7 @@ export async function createReport(planId: string): Promise<void> {
     generated_on: kstToday(), budget: groups?.[0]?.budget ?? budget, favorites, compare,
     conditions: conditionsSummary(cond.data, nameOf),
     ...(groups?.length && { region_budgets: groups.map((g) => ({ region_names: g.region_codes.map((c) => nameOf[c] ?? c), budget: g.budget })) }),
-    checklist: tips.data ?? [],
+    checklist: pickChecklist(tips.data ?? [], compare),
   });
   const { error } = await supabase.from("reports").insert({ plan_id: planId, user_id: user.id, payload: payload as unknown as { [key: string]: Json }, narrative });
   if (error) throw new Error(error.message);
