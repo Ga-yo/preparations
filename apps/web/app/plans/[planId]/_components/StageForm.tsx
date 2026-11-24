@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link, { useLinkStatus } from "next/link";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 // <form action>은 제출 후 입력을 초기화하고, 오류 리다이렉트는 DB 값으로 다시 그려 입력이 사라진다.
@@ -50,6 +50,13 @@ export function StageForm({
     else if (!show && d?.open) d.close();
   }, [show]);
 
+  // cacheComponents는 떠난 화면을 <Activity>로 숨겨 둘 뿐 없애지 않는다. 숨겨질 때 effect가 정리되므로
+  // 여기서 닫지 않으면 열린 모달이 다음 화면 전체를 inert로 만들어 새로고침 전까지 클릭이 안 된다
+  useEffect(() => {
+    const d = dialog.current;
+    return () => d?.close();
+  }, []);
+
   return (
     <form
       id={id}
@@ -92,7 +99,7 @@ export function StageForm({
           <div className="sticky bottom-0 flex justify-end gap-3 border-t border-chb-line bg-white px-6 py-4">
             <button type="button" onClick={close} className="rounded-full border border-chb-line px-5 py-2.5 font-semibold hover:border-chb-ink">닫기</button>
             {next && (
-              <Link href={next.href} className="rounded-full bg-chb-accent px-5 py-2.5 font-semibold text-white hover:brightness-110">{next.label}</Link>
+              <Link href={next.href} className="rounded-full bg-chb-accent px-5 py-2.5 font-semibold text-white hover:brightness-110"><NextLabel label={next.label} /></Link>
             )}
           </div>
         </dialog>
@@ -111,4 +118,15 @@ export function StageForm({
       )}
     </form>
   );
+}
+
+// useLinkStatus는 Link 안에서만 쓸 수 있어 따로 둔다. 다음 단계 화면을 받는 동안 스피너를 보여 준다
+function NextLabel({ label }: { label: string }) {
+  const { pending } = useLinkStatus();
+  return pending ? (
+    <span role="status" className="flex items-center gap-2">
+      <span aria-hidden="true" className="size-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+      이동하는 중…
+    </span>
+  ) : label;
 }
