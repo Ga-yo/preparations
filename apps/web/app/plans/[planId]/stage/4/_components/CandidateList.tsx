@@ -3,6 +3,7 @@ import type { RankedComplex } from "@/lib/calc/fit";
 import { formatWon, livingText } from "../../../_components/format";
 import { FavoriteButton } from "./FavoriteButton";
 import { FitChips } from "./FitChips";
+import { LinkPending } from "./LinkPending";
 
 type Props = {
   planId: string; candidates: RankedComplex[]; favorites: { complex_id: number; name: string }[]; selected: number | null;
@@ -20,6 +21,7 @@ function Row({ x, rank, fav, selected, planId, toggle }: {
           <span className="min-w-0">
             <span className="block text-base font-bold text-chb-ink">{x.name}</span>
             <span className="text-chb-muted">적합도 <b className="text-chb-accent">{x.fit.score}점</b></span>
+            <LinkPending />
           </span>
         </Link>
         <FavoriteButton complexId={x.complex_id} name={x.name} fav={fav} toggle={toggle} />
@@ -61,12 +63,9 @@ export function CandidateList({ planId, candidates, favorites, selected, toggle 
                   <Link href={`/plans/${planId}/stage/4?complex=${f.complex_id}#complex-detail`} className="min-w-0" aria-current={f.complex_id === selected || undefined}>
                     <span className="block text-base font-bold text-chb-ink">{f.name}</span>
                     <span className="text-chb-muted">현재 후보 목록(필수 조건·상위 20개) 밖</span>
+                    <LinkPending />
                   </Link>
-                  <form action={toggle}>
-                    <input type="hidden" name="complex_id" value={f.complex_id} />
-                    <input type="hidden" name="favorite" value="0" />
-                    <button type="submit" aria-pressed aria-label={`${f.name} 관심 해제`} className="grid size-10 place-items-center rounded-full border border-chb-accent bg-chb-accent text-xl text-white">★</button>
-                  </form>
+                  <FavoriteButton complexId={f.complex_id} name={f.name} fav toggle={toggle} />
                 </div>
               </li>
             ))}
