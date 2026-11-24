@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { findConflicts, type ComplexRow, type Conditions, type RegionBudget } from "./conditions";
+import { findConflicts, widenAreaMax, type ComplexRow, type Conditions, type RegionBudget } from "./conditions";
 
 const cond = (o: Partial<Conditions> = {}): Conditions => ({
   housing_types: ["apartment"], price_min: null, price_max: null, area_min: null, area_max: null,
@@ -154,4 +154,11 @@ test("only schools missing: elementary must ignored with no_poi_data, station mu
   expect(r.counts.must).toBe(1);
   expect(r.notices).toContain("no_poi_data");
   expect(r.conflicts.map((x) => x.code)).not.toContain("no_match_for_musts");
+});
+
+test("정수 면적 상한은 소수 평형까지 넓히고 85㎡·소수 입력·null은 그대로", () => {
+  expect(widenAreaMax(84)).toBe(84.99);
+  expect(widenAreaMax(85)).toBe(85);
+  expect(widenAreaMax(84.5)).toBe(84.5);
+  expect(widenAreaMax(null)).toBe(null);
 });

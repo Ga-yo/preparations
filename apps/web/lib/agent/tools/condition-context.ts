@@ -1,4 +1,4 @@
-import type { ComplexRow, Conditions, RegionBudget } from "@/lib/calc/conditions";
+import { widenAreaMax, type ComplexRow, type Conditions, type RegionBudget } from "@/lib/calc/conditions";
 import { applyParkingDefault, lifeNotices, tieBreakers, weightsFor, type LifePrefs } from "@/lib/calc/preferences";
 import type { ToolContext } from "../tool";
 import { getRegionPrices } from "./get-region-prices";
@@ -25,7 +25,7 @@ export async function loadConditionContext(ctx: ToolContext, offset = 0): Promis
   if (!c?.region_codes?.length) return { error: "region_required" };
   const conditions: Conditions = {
     housing_types: c.housing_types, price_min: c.price_min, price_max: c.price_max,
-    area_min: c.area_min, area_max: c.area_max, approval_year_min: c.approval_year_min,
+    area_min: c.area_min, area_max: widenAreaMax(c.area_max), approval_year_min: c.approval_year_min,
     household_count_min: c.household_count_min, parking_per_household_min: c.parking_per_household_min,
     floor_area_ratio_max: c.floor_area_ratio_max, mgmt_fee_per_m2_max: c.mgmt_fee_per_m2_max,
     station_distance_max_m: c.station_distance_max_m, elementary_distance_max_m: c.elementary_distance_max_m,
@@ -50,7 +50,7 @@ export async function loadConditionContext(ctx: ToolContext, offset = 0): Promis
     supabase.rpc("complexes_for_conditions", {
       region_codes: c.region_codes, months: MONTHS,
       ...(c.area_min !== null && { area_min: c.area_min }),
-      ...(c.area_max !== null && { area_max: c.area_max }),
+      ...(conditions.area_max !== null && { area_max: conditions.area_max }),
       ...(commuteCode && { commute_code: commuteCode }),
     }),
     supabase.from("data_freshness").select("dataset, as_of").in("dataset", DATASETS),

@@ -15,7 +15,8 @@ schemas = ["public", "graphql_public"]
 extra_search_path = ["public", "extensions"]
 # The maximum number of rows returns from a view, table, or stored procedure. Limits payload size
 # for accidental or malicious requests.
-max_rows = 1000
+# 조건 점검 RPC(complexes_for_conditions)가 3,000행 + 잘림 확인용 1행을 돌려준다
+max_rows = 3001
 # Controls whether new tables, views, sequences and functions created in the `public` schema by
 # `postgres` are reachable through the Data API roles (`anon`, `authenticated`, `service_role`)
 # without explicit GRANTs, matching the cloud default. Set to `false` to require explicit GRANTs
