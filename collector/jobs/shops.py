@@ -6,6 +6,7 @@ import math
 import os
 from collections import defaultdict
 
+import pandas as pd
 import PublicDataReader as pdr
 import requests
 from PublicDataReader.PublicDataPortal import semas
@@ -15,7 +16,8 @@ from lib import db
 
 SOURCE = "소상공인시장진흥공단 상가(상권)정보 행정동 단위 상가업소 (PublicDataReader SmallShop)"
 RADIUS_M = 500
-PAGE_LIMIT = 99999  # 라이브러리가 numOfRows 99999 한 페이지만 받는다. 이만큼 오면 잘린 것으로 본다
+PAGE_SIZE = 1000  # API가 numOfRows를 1000으로 자른다(2026-11-24 실측). 라이브러리 기본 99999 한 페이지로는 첫 1000건만 온다
+MAX_PAGES = 300  # 시군구 30만 건이면 비정상으로 보고 멈춘다
 EARTH_M = 6_371_000
 
 
@@ -66,13 +68,17 @@ def shop_points(df) -> list[tuple[float, float]]:
 
 
 def fetch(api, sgg: str):
-    try:
-        df = api.get_data("행정동상가", divId="signguCd", key=sgg, translate=False)  # 기본값은 lon/lat를 한글 열 이름으로 바꾼다
-    except Exception as e:
-        raise RuntimeError(f"{sgg}: {type(e).__name__}") from None  # 원본 메시지·URL에 서비스키가 있을 수 있다(원칙 8)
-    if len(df) >= PAGE_LIMIT:
-        raise RuntimeError(f"{sgg}: truncated at {PAGE_LIMIT} rows")
-    return df
+    pages = []
+    for page in range(1, MAX_PAGES + 1):
+        try:
+            df = api.get_data("행정동상가", divId="signguCd", key=sgg, translate=False,  # 기본값은 lon/lat를 한글 열 이름으로 바꾼다
+                              numOfRows=PAGE_SIZE, pageNo=page)
+        except Exception as e:
+            raise RuntimeError(f"{sgg}: {type(e).__name__}") from None  # 원본 메시지·URL에 서비스키가 있을 수 있다(원칙 8)
+        pages.append(df)
+        if len(df) < PAGE_SIZE:
+            return pd.concat(pages, ignore_index=True)
+    raise RuntimeError(f"{sgg}: truncated at {MAX_PAGES} pages")
 
 
 def complex_points(sgg: str) -> list[tuple[int, float, float]]:

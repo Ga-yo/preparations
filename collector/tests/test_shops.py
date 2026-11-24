@@ -28,7 +28,18 @@ class _Fail:
 
 class _Big:
     def get_data(self, *a, **kw):
-        return pd.DataFrame({"lon": ["127"] * shops.PAGE_LIMIT, "lat": ["37.5"] * shops.PAGE_LIMIT})
+        return pd.DataFrame({"lon": ["127"] * shops.PAGE_SIZE, "lat": ["37.5"] * shops.PAGE_SIZE})
+
+
+class _Paged:
+    # 2,500건을 1,000건씩 나눠 준다
+    def __init__(self):
+        self.pages = []
+
+    def get_data(self, *a, numOfRows, pageNo, **kw):
+        self.pages.append(pageNo)
+        n = max(0, min(numOfRows, 2500 - (pageNo - 1) * numOfRows))
+        return pd.DataFrame({"lon": ["127"] * n, "lat": ["37.5"] * n})
 
 
 def test_fetch_hides_url():
@@ -37,9 +48,15 @@ def test_fetch_hides_url():
     assert "SECRET" not in str(e.value) and e.value.__cause__ is None and "11680" in str(e.value)
 
 
-def test_fetch_refuses_truncated_page():
+def test_fetch_refuses_truncated_page(monkeypatch):
+    monkeypatch.setattr(shops, "MAX_PAGES", 3)
     with pytest.raises(RuntimeError, match="truncated"):
         shops.fetch(_Big(), "11680")
+
+
+def test_fetch_reads_every_page():
+    api = _Paged()
+    assert len(shops.fetch(api, "11680")) == 2500 and api.pages == [1, 2, 3]
 
 
 class _Translating:
