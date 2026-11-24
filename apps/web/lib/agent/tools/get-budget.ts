@@ -30,15 +30,16 @@ const must = <T>(r: { data: T; error: { message: string } | null }): T => {
 
 // 예산 계산에 필요한 프로필·규제·상품과 기준일. 프로필이 없으면 null.
 export async function loadBudgetData(supabase: SupabaseClient<Database>, planId: string, today: string): Promise<BudgetData | null> {
-  const profile = must(await supabase.from("financial_profiles").select("*").eq("plan_id", planId).maybeSingle());
-  if (!profile) return null;
-
-  const [rules, areas, productsRes, fresh] = await Promise.all([
+  // 프로필이 없으면 나머지는 버리지만, 기다리는 시간을 줄이려고 함께 부른다
+  const [profileRes, rules, areas, productsRes, fresh] = await Promise.all([
+    supabase.from("financial_profiles").select("*").eq("plan_id", planId).maybeSingle(),
     supabase.from("loan_rules").select("*"),
     supabase.from("regulated_areas").select("*"),
     supabase.from("loan_products").select("*"),
     supabase.from("data_freshness").select("dataset, as_of, source").in("dataset", ["loan_products:bank", "regulated_areas"]),
   ]);
+  const profile = must(profileRes);
+  if (!profile) return null;
   const ruleRows = must(rules) ?? [];
   const productRows = must(productsRes) ?? [];
 

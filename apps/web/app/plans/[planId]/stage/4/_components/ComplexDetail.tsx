@@ -32,7 +32,7 @@ const FEE_REASON = { no_kapt_match: "K-apt에서 이 단지를 찾지 못했습�
 const kstTime = (iso: string) => new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "short", timeStyle: "short" });
 const dash = (v: number | null, unit = "") => (v === null ? "-" : `${v.toLocaleString("ko-KR")}${unit}`);
 
-export function ComplexDetail({ result, tips, fav, toggle }: { result: ToolResult; tips: Tip[]; fav: boolean; toggle: (f: FormData) => Promise<void> }) {
+export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[] }) {
   if ("error" in (result.data as object)) {
     return <section className="rounded-3xl border border-chb-line bg-white p-6 text-sm text-chb-muted">선택한 단지를 찾을 수 없습니다.</section>;
   }
@@ -112,7 +112,7 @@ export function ComplexDetail({ result, tips, fav, toggle }: { result: ToolResul
       <div className="shrink-0 space-y-2 pb-4">
         <div className="flex items-start justify-between gap-3">
           <h2 className="font-display text-2xl font-black tracking-tight">{c.name}</h2>
-          <FavoriteButton complexId={c.id} name={c.name} fav={fav} toggle={toggle} />
+          <FavoriteButton complexId={c.id} name={c.name} />
         </div>
         <p className="text-chb-muted">{c.road_address ?? c.jibun_address ?? "주소 정보 없음"}</p>
         <p className="text-chb-muted">

@@ -32,14 +32,17 @@ export const getComplexDetail = defineTool({
 
 export async function loadComplexDetail(complexId: number, ctx: ToolContext, tradesPerArea: number): Promise<ToolResult> {
   const { supabase } = ctx;
-  const { data: c, error } = await supabase.from("complexes")
-    .select("id, name, region_code, jibun_address, road_address, kapt_code, approval_date, household_count, building_count, parking_count, site_area_m2, floor_area_ratio, building_coverage_ratio, location")
-    .eq("id", complexId).maybeSingle();
+  // 조건 맥락은 단지 행과 무관해 같이 시작한다
+  const [{ data: c, error }, l] = await Promise.all([
+    supabase.from("complexes")
+      .select("id, name, region_code, jibun_address, road_address, kapt_code, approval_date, household_count, building_count, parking_count, site_area_m2, floor_area_ratio, building_coverage_ratio, location")
+      .eq("id", complexId).maybeSingle(),
+    loadConditionContext(ctx),
+  ]);
   if (error) throw new Error(error.message);
   if (!c) return { data: { error: "complex_not_found" }, as_of: {} };
 
   const { getMgmtFee } = await import("@/lib/kapt/mgmt-fee"); // server-only: 툴 목록을 import하는 테스트가 깨지지 않게 지연 로드
-  const l = await loadConditionContext(ctx);
   const ok = !("error" in l);
   const area_min = ok ? l.conditions.area_min : null;
   const area_max = ok ? l.conditions.area_max : null;
