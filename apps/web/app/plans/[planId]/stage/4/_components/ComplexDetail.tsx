@@ -6,10 +6,14 @@ import { DATASETS } from "../../../_components/ConditionCheckCard";
 import { formatWon, livingText } from "../../../_components/format";
 import { redevelopmentText } from "../../../_components/redevelopment";
 import type { RedevelopmentInfo } from "@/lib/agent/redevelopment";
+import { DetailTabs } from "./DetailTabs";
+import { FavoriteButton } from "./FavoriteButton";
+import { FitChips } from "./FitChips";
+import { PriceTab, type AreaPrices } from "./PriceTab";
 
 type Data = {
   complex: {
-    name: string; jibun_address: string | null; road_address: string | null; approval_year: number | null;
+    id: number; name: string; median_price: number | null; deal_count: number; jibun_address: string | null; road_address: string | null; approval_year: number | null;
     household_count: number | null; building_count: number | null; parking_per_household: number | null;
     floor_area_ratio: number | null; building_coverage_ratio: number | null; land_share_m2: number | null;
     nearest_park_m: number | null; shop_count_500m: number | null; commute_m: number | null;
@@ -18,34 +22,40 @@ type Data = {
   redevelopment?: RedevelopmentInfo;
   mgmt_fee?: MgmtFeeResult;
   nearby: { category: string; name: string; lines: string[] | null; distance_m: number }[];
-  trades: { deal_date: string; deal_amount: number; exclusive_area: number; floor: number | null }[];
-  monthly: { month: string; median_price: number; deal_count: number }[];
+  areas: AreaPrices[];
+  default_area: number | null;
   neighbors: NeighborStats;
-  criteria: { area_min: number | null; area_max: number | null; months: number };
+  criteria: { area_min: number | null; area_max: number | null; chart_months: number };
 };
 const CATEGORY: Record<string, string> = { subway_station: "지하철역", elementary_school: "초등학교", middle_school: "중학교", high_school: "고등학교" };
 const FEE_REASON = { no_kapt_match: "K-apt에서 이 단지를 찾지 못했습니다.", no_recent_fee: "최근 3개월 부과 내역이 없습니다." };
 const kstTime = (iso: string) => new Date(iso).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", dateStyle: "short", timeStyle: "short" });
 const dash = (v: number | null, unit = "") => (v === null ? "-" : `${v.toLocaleString("ko-KR")}${unit}`);
 
-export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[] }) {
+export function ComplexDetail({ result, tips, fav, toggle }: { result: ToolResult; tips: Tip[]; fav: boolean; toggle: (f: FormData) => Promise<void> }) {
   if ("error" in (result.data as object)) {
     return <section className="rounded-3xl border border-chb-line bg-white p-6 text-sm text-chb-muted">선택한 단지를 찾을 수 없습니다.</section>;
   }
-  const { complex: c, fit, redevelopment, mgmt_fee: fee, nearby, trades, monthly, neighbors: n, criteria } = result.data as Data;
+  const { complex: c, fit, redevelopment, mgmt_fee: fee, nearby, areas, default_area, neighbors: n, criteria } = result.data as Data;
   const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 단지 좌표 유무로 정한다
   const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois|redevelopment):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
     : criteria.area_max === null ? `전용 ${criteria.area_min}㎡ 이상`
     : criteria.area_min === null ? `전용 ${criteria.area_max}㎡ 이하`
     : `전용 ${criteria.area_min}~${criteria.area_max}㎡`;
-  return (
-    <section id="complex-detail" className="space-y-4 rounded-3xl border border-chb-line bg-white p-6 text-sm" aria-label="단지 상세">
-      <div className="flex items-start justify-between gap-3">
-        <h2 className="font-display text-2xl font-black tracking-tight">{c.name}</h2>
-        {fit && <span className="shrink-0 rounded-full bg-chb-accent px-3 py-1 text-sm font-bold text-white">적합도 {fit.score}점</span>}
-      </div>
-      <p className="text-chb-muted">{c.road_address ?? c.jibun_address ?? "주소 정보 없음"}</p>
+  const h3 = "border-t border-chb-line pt-5 font-bold text-chb-ink first:border-t-0 first:pt-0";
+  const table = "w-full text-left [&_td]:border-t [&_td]:border-chb-line [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2";
+
+  const neighborsText = `${n.rank === null || n.dong_median === null
+    ? `같은 동 ${n.count}개 단지 중 이 단지의 최근 12개월 거래가 없어 순위를 매기지 못했습니다.`
+    : `같은 동 가격이 있는 ${n.priced}개 단지 중 중위가 낮은 순 ${n.rank}위, 동 중위값 ${formatWon(n.dong_median)}`} (같은 법정동 기준, 거리 기준 아님)`;
+  const prices = (
+    <PriceTab key={c.id} areas={areas} defaultArea={default_area} areaText={area} neighborsText={neighborsText}
+      tips={{ trades: <TipPanel tips={tips} fieldKey="trades" />, monthly: <TipPanel tips={tips} fieldKey="monthly" />, neighbors: <TipPanel tips={tips} fieldKey="neighbors" /> }} />
+  );
+
+  const info = (
+    <>
       <ul className="grid grid-cols-2 gap-2 [&_li]:rounded-xl [&_li]:bg-chb-soft2 [&_li]:px-3 [&_li]:py-2">
         <li>승인연도 {`${c.approval_year ?? "-"}년`}</li>
         <li>세대수 {dash(c.household_count, "세대")}</li>
@@ -55,8 +65,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
         <li>건폐율 {dash(c.building_coverage_ratio, "%")}</li>
         <li>대지지분 {c.land_share_m2 === null ? "-" : `약 ${c.land_share_m2}㎡(단지 평균)`}</li>
       </ul>
-
-      {fee && <h3 className="border-t border-chb-line pt-5 font-bold text-chb-ink">관리비 (K-apt{fee.status === "ok" ? `, ${fee.month} 부과분` : ""})</h3>}
+      {fee && <h3 className={h3}>관리비 (K-apt{fee.status === "ok" ? `, ${fee.month} 부과분` : ""})</h3>}
       {!fee ? null : fee.status === "ok" ? (
         <div>
           <p>{fee.partial ? "공용관리비 합계 (개별사용료 미포함)" : "관리비 합계"} {formatWon(fee.total)} <span className="text-chb-muted">(단지 전체 월 부과 합계)</span></p>
@@ -69,42 +78,15 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
       ) : (
         <p className="text-chb-muted">관리비 정보를 찾지 못했습니다. {fee.status === "not_found" ? FEE_REASON[fee.reason] : "K-apt 조회 중 오류가 났습니다. 잠시 후 다시 열어 보세요."}</p>
       )}
+    </>
+  );
 
-      <h3 className="border-t border-chb-line pt-5 font-bold text-chb-ink">최근 실거래 사례 ({area})</h3>
-      {trades.length ? (
-        <div className="overflow-x-auto rounded-2xl border border-chb-line"><table className="w-full text-left [&_td]:border-t [&_td]:border-chb-line [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2">
-          <thead className="bg-chb-soft2 text-chb-muted"><tr><th>계약일</th><th>금액</th><th>전용면적</th><th>층</th></tr></thead>
-          <tbody>{trades.map((t, i) => (
-            <tr key={i}><td>{t.deal_date}</td><td>{formatWon(t.deal_amount)}</td><td>{t.exclusive_area}㎡</td><td>{t.floor ?? "-"}층</td></tr>
-          ))}</tbody>
-        </table></div>
-      ) : <p className="text-chb-muted">최근 거래 없음</p>}
-      <TipPanel tips={tips} fieldKey="trades" />
-
-      <h3 className="border-t border-chb-line pt-5 font-bold text-chb-ink">월별 중위가 (최근 {criteria.months}개월)</h3>
-      {monthly.length ? (
-        <div className="overflow-x-auto rounded-2xl border border-chb-line"><table className="w-full text-left [&_td]:border-t [&_td]:border-chb-line [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2">
-          <thead className="bg-chb-soft2 text-chb-muted"><tr><th>월</th><th>중위가</th><th>거래 건수</th></tr></thead>
-          <tbody>{monthly.map((m) => (
-            <tr key={m.month}><td>{m.month}</td><td>{formatWon(m.median_price)}</td><td>{m.deal_count}건</td></tr>
-          ))}</tbody>
-        </table></div>
-      ) : <p className="text-chb-muted">월별 거래 없음</p>}
-      <TipPanel tips={tips} fieldKey="monthly" />
-
-      <h3 className="border-t border-chb-line pt-5 font-bold text-chb-ink">같은 동 단지와 비교</h3>
-      <p>
-        {n.rank === null || n.dong_median === null
-          ? `같은 동 ${n.count}개 단지 중 이 단지의 최근 12개월 거래가 없어 순위를 매기지 못했습니다.`
-          : `같은 동 가격이 있는 ${n.priced}개 단지 중 중위가 낮은 순 ${n.rank}위, 동 중위값 ${formatWon(n.dong_median)}`}
-        {" "}(같은 법정동 기준, 거리 기준 아님)
-      </p>
-      <TipPanel tips={tips} fieldKey="neighbors" />
-
-      <h3 className="border-t border-chb-line pt-5 font-bold text-chb-ink">주변 시설 (직선거리 1km 이내)</h3>
+  const around = (
+    <>
+      <h3 className={h3}>주변 시설 (직선거리 1km 이내)</h3>
       {nearby.length ? (
         <>
-          <div className="overflow-x-auto rounded-2xl border border-chb-line"><table aria-label="주변 시설 (직선거리 1km 이내)" className="w-full text-left [&_td]:border-t [&_td]:border-chb-line [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2">
+          <div className="overflow-x-auto rounded-2xl border border-chb-line"><table aria-label="주변 시설 (직선거리 1km 이내)" className={table}>
             <thead className="bg-chb-soft2 text-chb-muted"><tr><th scope="col">구분</th><th scope="col">이름</th><th scope="col">노선</th><th scope="col">직선거리</th></tr></thead>
             <tbody>{nearby.map((p, i) => (
               <tr key={i}><td>{CATEGORY[p.category] ?? "기타"}</td><td>{p.name}</td>
@@ -115,9 +97,43 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
         </>
       ) : <p className="text-chb-muted">{hasCoords ? "직선거리 1km 안에 역·학교가 없습니다." : "좌표 정보가 없어 주변 시설을 표시하지 못했습니다."}</p>}
       {livingText(c) && <p>{livingText(c)}</p>}
+    </>
+  );
+
+  const redev = (
+    <>
       <p className={redevelopment?.status === "in_zone" ? "font-medium" : "text-chb-muted"}>정비사업: {redevelopmentText(redevelopment)}</p>
       <TipPanel tips={tips} fieldKey="redevelopment" />
-      {asOf.length > 0 && <p className="text-xs text-chb-muted">데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}</p>}
+    </>
+  );
+
+  return (
+    <section id="complex-detail" className="flex min-h-0 flex-1 flex-col rounded-3xl border border-chb-line bg-white p-6 pb-4 text-sm" aria-label="단지 상세">
+      <div className="shrink-0 space-y-2 pb-4">
+        <div className="flex items-start justify-between gap-3">
+          <h2 className="font-display text-2xl font-black tracking-tight">{c.name}</h2>
+          <FavoriteButton complexId={c.id} name={c.name} fav={fav} toggle={toggle} />
+        </div>
+        <p className="text-chb-muted">{c.road_address ?? c.jibun_address ?? "주소 정보 없음"}</p>
+        <p className="text-chb-muted">
+          {c.median_price === null
+            ? <span className="font-display text-3xl font-black text-chb-ink">최근 거래 없음</span>
+            : <><span className="mr-2 font-display text-3xl font-black text-chb-ink">{formatWon(c.median_price)}</span>최근 12개월 중위가 · 거래 {c.deal_count}건</>}
+        </p>
+        {fit && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="rounded-full bg-chb-accent px-2.5 py-1 text-xs font-bold text-white">적합도 {fit.score}점</span>
+            <FitChips fit={fit} />
+          </div>
+        )}
+      </div>
+      <DetailTabs tabs={[
+        { key: "prices", label: "시세·실거래", content: prices },
+        { key: "info", label: "단지 정보", content: info },
+        { key: "around", label: "주변·교통", content: around },
+        { key: "redevelopment", label: "정비사업", content: redev },
+      ]} />
+      {asOf.length > 0 && <p className="shrink-0 border-t border-chb-line pt-3 text-xs text-chb-muted">데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}</p>}
     </section>
   );
 }

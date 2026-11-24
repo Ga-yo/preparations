@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { kstToday } from "@/lib/agent/orchestrator";
 import type { ToolResult } from "@/lib/agent/tool";
-import { getComplexDetail } from "@/lib/agent/tools/get-complex-detail";
+import { loadComplexDetail, PAGE_TRADES_PER_AREA } from "@/lib/agent/tools/get-complex-detail";
 import { loadConditionContext } from "@/lib/agent/tools/condition-context";
 import { searchComplexes } from "@/lib/agent/tools/search-complexes";
 import { activeKeys } from "@/lib/calc/conditions";
@@ -63,5 +63,5 @@ export async function searchForPlan(planId: string): Promise<ToolResult> {
 }
 
 export async function detailForPlan(planId: string, complexId: number): Promise<ToolResult> {
-  return getComplexDetail.run({ complex_id: complexId }, await ctxOf(planId));
+  return loadComplexDetail(complexId, await ctxOf(planId), PAGE_TRADES_PER_AREA);
 }
