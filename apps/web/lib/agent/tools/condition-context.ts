@@ -1,5 +1,6 @@
 import { widenAreaMax, type ComplexRow, type Conditions, type RegionBudget } from "@/lib/calc/conditions";
 import { applyParkingDefault, lifeNotices, tieBreakers, weightsFor, type LifePrefs } from "@/lib/calc/preferences";
+import { commuteTarget, type CommuteTarget } from "@/lib/route/commute";
 import type { ToolContext } from "../tool";
 import { getRegionPrices } from "./get-region-prices";
 
@@ -11,7 +12,7 @@ const MAX_ROWS = 3000; // RPC는 잘림을 알리려고 한 행 더 준다
 // complexes_for_conditions에 넘기는 출퇴근 기준: 지역 코드 또는 지하철역 이름(둘 중 하나)
 export type CommuteArgs = { commute_code?: string; commute_station?: string };
 export type ConditionContext = {
-  conditions: Conditions; conditionSetId: string; regionCodes: string[]; commute: CommuteArgs; redevelopmentInterest: boolean;
+  conditions: Conditions; conditionSetId: string; regionCodes: string[]; commute: CommuteArgs; commuteTarget: CommuteTarget | null; redevelopmentInterest: boolean;
   budgets: RegionBudget[]; rows: ComplexRow[]; truncated: boolean;
   as_of: Record<string, string>; stale?: string[]; notices?: string[];
 };
@@ -69,7 +70,9 @@ export async function loadConditionContext(ctx: ToolContext, offset = 0): Promis
   const notices = [...(prices.notices ?? []), ...lifeNotices(prefs, all), ...(hasCommute ? ["commute_is_straight_line"] : [])];
   return {
     conditions: scored, conditionSetId: c.id, regionCodes: c.region_codes, budgets,
-    commute, redevelopmentInterest: c.redevelopment_interest ?? false,
+    commute,
+    commuteTarget: commuteTarget({ uses_transit: c.uses_transit ?? null, commute_station: c.commute_station ?? null, commute_region_code: c.commute_region_code ?? null }),
+    redevelopmentInterest: c.redevelopment_interest ?? false,
     rows: all.slice(0, MAX_ROWS), truncated: all.length > MAX_ROWS,
     as_of: { ...prices.as_of, ...Object.fromEntries((fresh.data ?? []).map((f) => [f.dataset, f.as_of])) },
     ...(prices.stale?.length && { stale: prices.stale }),

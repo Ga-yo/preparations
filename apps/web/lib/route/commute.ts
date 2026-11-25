@@ -24,6 +24,13 @@ export function commuteTarget(c: {
   return null;
 }
 
+export function commuteText(t: CommuteTarget, r: CommuteResult): string {
+  if (r.status === "near") return `가까워서 걸어갈 수 있는 거리예요 (약 도보 ${r.walkMinutes}분)`;
+  if (r.status === "unavailable") return "소요시간을 확인하지 못했어요";
+  if (r.mode === "car") return `${t.label}까지 자차 ${r.minutes}분 (평일 오전 8시 출발 기준)`;
+  return `${t.label}까지 대중교통 ${r.minutes}분 · ${r.transfers === 0 ? "환승 없음" : `환승 ${r.transfers}회`}`;
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Json = any;
 

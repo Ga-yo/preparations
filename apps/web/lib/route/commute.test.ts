@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
 import { walkMinutes } from "@/lib/calc/walk";
 import {
-  cacheKey, commuteTarget, nextWeekday0800Kst, parseKakao, parseOdsay,
+  cacheKey, commuteTarget, commuteText, nextWeekday0800Kst, parseKakao, parseOdsay,
   readCache, straightMeters, writeCache,
 } from "./commute";
 
@@ -76,4 +76,14 @@ test("readCache: 깨진 JSON·이상한 모양은 null", () => {
   expect(readCache("x")).toBeNull();
   expect(readCache("y")).toBeNull();
   expect(readCache("z")).toBeNull();
+});
+
+test("commuteText: 네 가지 문구", () => {
+  const st = { mode: "transit", key: "station:강남역", label: "강남역" } as const;
+  const car = { mode: "car", key: "region:11680", label: "출퇴근 지역" } as const;
+  expect(commuteText(st, { status: "ok", mode: "transit", minutes: 28, transfers: 2 })).toBe("강남역까지 대중교통 28분 · 환승 2회");
+  expect(commuteText(st, { status: "ok", mode: "transit", minutes: 20, transfers: 0 })).toBe("강남역까지 대중교통 20분 · 환승 없음");
+  expect(commuteText(car, { status: "ok", mode: "car", minutes: 25, transfers: null })).toBe("출퇴근 지역까지 자차 25분 (평일 오전 8시 출발 기준)");
+  expect(commuteText(st, { status: "near", walkMinutes: 7 })).toBe("가까워서 걸어갈 수 있는 거리예요 (약 도보 7분)");
+  expect(commuteText(st, { status: "unavailable" })).toBe("소요시간을 확인하지 못했어요");
 });
