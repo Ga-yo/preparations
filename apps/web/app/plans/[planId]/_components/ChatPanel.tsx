@@ -32,6 +32,13 @@ export function ChatPanel({ planId, stage, initial, runCheck }: {
   const [seen, setSeen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // 새 대화·점검 결과가 오면 맨 아래(최신)로 내린다
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [log.length, pending, check, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -99,57 +106,69 @@ export function ChatPanel({ planId, stage, initial, runCheck }: {
       </button>
       {open && <div aria-hidden="true" onClick={close} className="fixed inset-0 z-40 bg-chb-ink/30 sm:hidden" />}
       <section id="ai-chat" hidden={!open} aria-label="AI 상담"
-        className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-3xl border border-chb-line bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-[0_24px_60px_-12px_rgba(20,32,26,0.35)] sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[400px] sm:max-h-[min(640px,calc(100vh-8rem))] sm:rounded-3xl print:hidden">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <h2 className="flex items-center gap-2 font-semibold"><span aria-hidden="true" className="size-2 rounded-full bg-chb-accent" />AI 상담</h2>
-        <div className="flex items-center gap-1">
-          <button type="button" onClick={startCheck} disabled={checking}
-            className="rounded-full border border-chb-accent px-3 py-1.5 text-sm font-semibold text-chb-accent disabled:opacity-50">
-            {checking ? "점검하는 중…" : check?.fresh ? "AI 점검 다시 보기" : "AI 점검 받기"}
-          </button>
-          <button type="button" onClick={close} aria-label="AI 상담 닫기" className="grid size-9 place-items-center rounded-full text-xl text-chb-muted hover:bg-chb-soft2 hover:text-chb-ink">×</button>
+        className="fixed inset-x-0 bottom-0 z-50 flex h-[85vh] flex-col overflow-hidden rounded-t-3xl border border-chb-line bg-white shadow-[0_24px_60px_-12px_rgba(20,32,26,0.35)] [&[hidden]]:hidden sm:inset-x-auto sm:right-6 sm:bottom-24 sm:h-[min(720px,calc(100vh-8rem))] sm:w-[460px] sm:rounded-3xl lg:w-[500px] print:hidden">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-chb-line px-6 py-4">
+          <h2 className="flex items-center gap-2 text-lg font-bold"><span aria-hidden="true" className="size-2 rounded-full bg-chb-accent" />AI 상담</h2>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={startCheck} disabled={checking}
+              className="rounded-full border border-chb-accent px-3 py-1.5 text-sm font-semibold text-chb-accent disabled:opacity-50">
+              {checking ? "점검하는 중…" : check?.fresh ? "AI 점검 다시 보기" : "AI 점검 받기"}
+            </button>
+            <button type="button" onClick={close} aria-label="AI 상담 닫기" className="grid size-9 place-items-center rounded-full text-xl text-chb-muted hover:bg-chb-soft2 hover:text-chb-ink">×</button>
+          </div>
         </div>
-      </div>
-      {checking && <p role="status" className="mb-3 text-sm text-chb-muted">AI가 {stage}단계 입력을 보고 필요한 계산을 직접 골라 확인하고 있어요. 30초쯤 걸릴 수 있어요.</p>}
-      {checkError && <p role="alert" className="mb-3 text-sm text-red-700">{checkError}</p>}
-      {check && (
-        <div className="mb-4 rounded-2xl bg-chb-soft p-4 text-sm" aria-label="AI 점검 결과">
-          <p className="mb-1 font-semibold">AI 점검</p>
-          {!check.fresh && <p className="mb-2 text-xs text-chb-muted">입력이 바뀌었거나 날짜가 지나 예전 점검입니다. 다시 받아 보세요.</p>}
-          <p className="whitespace-pre-line">{check.summary}</p>
-          {check.tools.length > 0 && (
-            <p className="mt-2 text-xs text-chb-muted">AI가 확인한 것: {check.tools.map((t) => TOOL_LABELS[t] ?? t).join(" → ")}</p>
+        <div ref={scrollRef} className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-5 text-[15px] leading-relaxed">
+          {!check && !log.length && !checking && (
+            <p className="rounded-2xl bg-chb-soft2 p-4 text-sm text-chb-muted">
+              이 단계에서 궁금한 것을 물어보세요. &lsquo;AI 점검 받기&rsquo;를 누르면 AI가 {stage}단계 입력을 살펴보고 확인할 점을 알려 드려요.
+            </p>
           )}
-          {check.action && check.fresh && (
-            <Link href={`/plans/${planId}/stage/3?prefill=${encodeURIComponent(`${check.action.field}:${check.action.value}`)}`}
-              className="mt-3 inline-block rounded-full bg-chb-accent px-3 py-1.5 font-semibold text-white">{check.action.label}</Link>
+          {checking && <p role="status" className="text-sm text-chb-muted">AI가 {stage}단계 입력을 보고 필요한 계산을 직접 골라 확인하고 있어요. 30초쯤 걸릴 수 있어요.</p>}
+          {checkError && <p role="alert" className="text-sm text-red-700">{checkError}</p>}
+          {check && (
+            <div className="rounded-2xl bg-chb-soft p-4" aria-label="AI 점검 결과">
+              <p className="mb-1 font-semibold">AI 점검</p>
+              {!check.fresh && <p className="mb-2 text-xs text-chb-muted">입력이 바뀌었거나 날짜가 지나 예전 점검입니다. 다시 받아 보세요.</p>}
+              <p className="whitespace-pre-line">{check.summary}</p>
+              {check.tools.length > 0 && (
+                <p className="mt-2 text-xs text-chb-muted">AI가 확인한 것: {check.tools.map((t) => TOOL_LABELS[t] ?? t).join(" → ")}</p>
+              )}
+              {check.action && check.fresh && (
+                <Link href={`/plans/${planId}/stage/3?prefill=${encodeURIComponent(`${check.action.field}:${check.action.value}`)}`}
+                  className="mt-3 inline-block rounded-full bg-chb-accent px-3 py-1.5 text-sm font-semibold text-white">{check.action.label}</Link>
+              )}
+            </div>
           )}
+          {log.length > 0 && (
+            <ul className="space-y-4" aria-label="대화">
+              {log.map((m, i) => (
+                <li key={i}>
+                  <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-chb-accent px-4 py-2.5 text-white"><span className="sr-only">나: </span>{m.q}</p>
+                  <p className="mt-2 w-fit max-w-[90%] whitespace-pre-line rounded-2xl rounded-bl-md bg-chb-soft2 px-4 py-2.5"><span className="sr-only">AI: </span>{m.a}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+          {pending && <p role="status" className="w-fit rounded-2xl rounded-bl-md bg-chb-soft2 px-4 py-2.5 text-chb-muted">답변을 준비하고 있어요…</p>}
         </div>
-      )}
-      <ul className="mb-3 space-y-3 text-sm">
-        {log.map((m, i) => (
-          <li key={i}>
-            <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-md bg-chb-accent px-3 py-2 text-white"><span className="sr-only">나: </span>{m.q}</p>
-            <p className="mt-2 w-fit max-w-[85%] whitespace-pre-line rounded-2xl rounded-bl-md bg-chb-soft2 px-3 py-2"><span className="sr-only">AI: </span>{m.a}</p>
-          </li>
-        ))}
-      </ul>
-      {suggestions.length > 0 && (
-        <div className="mb-3 flex flex-wrap gap-2" aria-label="추천 질문">
-          {suggestions.map((s) => (
-            <button key={s} type="button" disabled={pending} onClick={() => send(null, s)}
-              className="rounded-full bg-chb-accent-soft px-3 py-1.5 text-left text-xs text-chb-ink disabled:opacity-50">{s}</button>
-          ))}
+        <div className="shrink-0 space-y-3 border-t border-chb-line px-6 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:pb-5">
+          {suggestions.length > 0 && (
+            <div className="flex flex-wrap gap-2" aria-label="추천 질문">
+              {suggestions.map((s) => (
+                <button key={s} type="button" disabled={pending} onClick={() => send(null, s)}
+                  className="rounded-full bg-chb-accent-soft px-3 py-1.5 text-left text-sm text-chb-ink disabled:opacity-50">{s}</button>
+              ))}
+            </div>
+          )}
+          <form onSubmit={send} className="flex gap-2">
+            <label className="sr-only" htmlFor="chat-message">질문</label>
+            <input ref={inputRef} id="chat-message" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000}
+              placeholder={`예: ${suggestions[0] ?? "LTV가 뭐야?"}`} className="min-w-0 flex-1 rounded-full border border-chb-line px-4 py-3 outline-none focus:border-chb-accent focus:ring-4 focus:ring-chb-accent-soft" />
+            <button type="submit" disabled={pending} className="rounded-full bg-chb-accent px-5 py-3 font-semibold text-white disabled:opacity-50">
+              {pending ? "..." : "보내기"}
+            </button>
+          </form>
         </div>
-      )}
-      <form onSubmit={send} className="flex gap-2">
-        <label className="sr-only" htmlFor="chat-message">질문</label>
-        <input ref={inputRef} id="chat-message" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000}
-          placeholder={`예: ${suggestions[0] ?? "LTV가 뭐야?"}`} className="min-w-0 flex-1 rounded-full border border-chb-line px-4 py-2.5 outline-none focus:border-chb-accent focus:ring-4 focus:ring-chb-accent-soft" />
-        <button type="submit" disabled={pending} className="rounded-full bg-chb-accent px-4 py-2.5 font-semibold text-white disabled:opacity-50">
-          {pending ? "..." : "보내기"}
-        </button>
-      </form>
       </section>
     </>
   );
