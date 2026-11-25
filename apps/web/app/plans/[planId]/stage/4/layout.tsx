@@ -70,6 +70,10 @@ export default async function Stage4Layout({ children, params }: { children: Rea
                 필수 조건을 통과한 <b className="text-chb-ink">{data.total.toLocaleString("ko-KR")}곳</b> 중 적합도 순으로 보여 드려요. 아래로 내리면 더 불러와요. 마음에 드는 단지는 ☆를 눌러 관심 단지로 모아 두세요.
               </p>
             )}
+            {/* 목록이 무한 스크롤이라 아래에 두면 닿지 않는다 */}
+            {data && !("error" in data) && data.candidates.length > 0 && (
+              <p className="-mt-2 text-xs text-chb-muted">중위가는 최근 {data.criteria.months}개월 이 단지 아파트 매매 실거래가(희망 면적, 해제 신고·직거래 제외) 기준입니다.</p>
+            )}
             <FavoriteError />
             {!data ? (
               <p role="alert" className={box}>후보를 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.</p>
@@ -92,7 +96,6 @@ export default async function Stage4Layout({ children, params }: { children: Rea
                     {search.notices.filter((n) => NOTICES[n]).map((n) => <li key={n}>{NOTICES[n]}</li>)}
                   </ul>
                 )}
-                <p className="text-xs text-chb-muted">중위가는 최근 {data.criteria.months}개월 이 단지 아파트 매매 실거래가(희망 면적, 해제 신고·직거래 제외) 기준입니다.</p>
                 {asOf.length > 0 && <p className="text-xs text-chb-muted">데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}</p>}
               </>
             )}
