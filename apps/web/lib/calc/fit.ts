@@ -42,7 +42,7 @@ const budgetOrder = (b: boolean | null) => (b === true ? 0 : b === null ? 1 : 2)
 export const maxBudgetFor = (budgets: RegionBudget[], x: ComplexRow) =>
   budgets.find((b) => b.sigungu_code === x.region_code.slice(0, 5))?.max_budget ?? null;
 
-export function rankComplexes(c: Conditions, rows: ComplexRow[], budgets: RegionBudget[], limit: number): RankedComplex[] {
+export function rankComplexes(c: Conditions, rows: ComplexRow[], budgets: RegionBudget[], limit: number, offset = 0): RankedComplex[] {
   const active = activeKeys(c, rows);
   const musts = active.filter((k) => priorityOf(c, k) === "must");
   return rows
@@ -53,7 +53,7 @@ export function rankComplexes(c: Conditions, rows: ComplexRow[], budgets: Region
       || budgetOrder(a.fit.within_budget) - budgetOrder(b.fit.within_budget)
       || (a.median_price ?? Infinity) - (b.median_price ?? Infinity)
       || a.complex_id - b.complex_id)
-    .slice(0, limit);
+    .slice(offset, offset + limit);
 }
 
 export function neighborStats(targetId: number, rows: ComplexRow[]): NeighborStats {

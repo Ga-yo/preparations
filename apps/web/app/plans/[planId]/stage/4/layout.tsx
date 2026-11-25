@@ -11,7 +11,7 @@ import { StageTabs } from "../../_components/StageTabs";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
 import { favoriteComplexIds, searchForPlan, setFavorite } from "./actions";
 import { enterStage5 } from "../5/actions";
-import { CandidateList } from "./_components/CandidateList";
+import { CandidateList, candidateItems } from "./_components/CandidateList";
 import { CompareBar, FavoriteError, FavoritesProvider, type Fav } from "./_components/Favorites";
 
 const logError = (e: unknown) => console.error("stage4", e instanceof Error ? `${e.name}: ${e.message}` : e);
@@ -37,6 +37,14 @@ export default async function Stage4Layout({ children, params }: { children: Rea
     return r.ok ? null : r.error;
   }
 
+  // 무한 스크롤: 같은 정렬로 offset부터 20개를 다시 계산해 행을 그려 보낸다
+  async function loadMore(offset: number) {
+    "use server";
+    if (!z.number().int().min(0).max(3000).safeParse(offset).success) return [];
+    const d = (await searchForPlan(planId, offset)).data as SearchData;
+    return "error" in d ? [] : candidateItems(planId, d.candidates, offset);
+  }
+
   async function toStage5(): Promise<void> {
     "use server";
     await enterStage5(planId).catch(logError); // 단계 기록 실패해도 비교 화면은 연다
@@ -59,7 +67,7 @@ export default async function Stage4Layout({ children, params }: { children: Rea
             <h1 className="font-display text-3xl font-black tracking-tight text-chb-ink">4단계. 후보 단지</h1>
             {data && !("error" in data) && data.candidates.length > 0 && (
               <p className="-mt-2 text-lg text-chb-muted">
-                필수 조건을 통과한 <b className="text-chb-ink">{data.total.toLocaleString("ko-KR")}곳</b> 중 적합도 순 상위 {data.candidates.length}곳이에요. 마음에 드는 단지는 ☆를 눌러 관심 단지로 모아 두세요.
+                필수 조건을 통과한 <b className="text-chb-ink">{data.total.toLocaleString("ko-KR")}곳</b> 중 적합도 순으로 보여 드려요. 아래로 내리면 더 불러와요. 마음에 드는 단지는 ☆를 눌러 관심 단지로 모아 두세요.
               </p>
             )}
             <FavoriteError />
@@ -78,7 +86,7 @@ export default async function Stage4Layout({ children, params }: { children: Rea
             ) : (
               <>
                 {search?.stale?.length ? <p role="alert" className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">오래된 데이터가 포함되어 있습니다: {search.stale.map((k) => DATASETS[k] ?? k).join(", ")}</p> : null}
-                <CandidateList planId={planId} candidates={data.candidates} />
+                <CandidateList planId={planId} candidates={data.candidates} total={data.total} loadMore={loadMore} />
                 {!!search?.notices?.filter((n) => NOTICES[n]).length && (
                   <ul className="list-disc space-y-1 pl-5 text-xs text-chb-muted">
                     {search.notices.filter((n) => NOTICES[n]).map((n) => <li key={n}>{NOTICES[n]}</li>)}
