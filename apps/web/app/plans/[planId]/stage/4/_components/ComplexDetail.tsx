@@ -61,6 +61,7 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
         <li>건폐율 {dash(c.building_coverage_ratio, "%")}</li>
         <li>대지지분 {c.land_share_m2 === null ? "-" : `약 ${c.land_share_m2}㎡(단지 평균)`}</li>
       </ul>
+      <p className="text-xs text-chb-muted">대지지분은 대지면적 ÷ 세대수 평균값입니다.</p>
     </>
   );
 

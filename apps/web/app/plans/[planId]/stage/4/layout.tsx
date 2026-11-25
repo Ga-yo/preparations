@@ -16,7 +16,7 @@ import { CompareBar, FavoriteError, FavoritesProvider, type Fav } from "./_compo
 
 const logError = (e: unknown) => console.error("stage4", e instanceof Error ? `${e.name}: ${e.message}` : e);
 
-type SearchData = { candidates: RankedComplex[]; total: number; blocking?: string[] } | { error: string };
+type SearchData = { candidates: RankedComplex[]; total: number; blocking?: string[]; criteria: { months: number } } | { error: string };
 
 // 후보 목록은 layout에 둔다: 주소의 ?complex=만 바뀌면 layout은 다시 그리지 않아, 단지를 골라도 검색을 다시 하지 않는다
 export default async function Stage4Layout({ children, params }: { children: ReactNode; params: Promise<{ planId: string }> }) {
@@ -92,6 +92,7 @@ export default async function Stage4Layout({ children, params }: { children: Rea
                     {search.notices.filter((n) => NOTICES[n]).map((n) => <li key={n}>{NOTICES[n]}</li>)}
                   </ul>
                 )}
+                <p className="text-xs text-chb-muted">중위가는 최근 {data.criteria.months}개월 이 단지 아파트 매매 실거래가(희망 면적, 해제 신고·직거래 제외) 기준입니다.</p>
                 {asOf.length > 0 && <p className="text-xs text-chb-muted">데이터 기준일: {asOf.map(([k, v]) => `${DATASETS[k] ?? k} ${v}`).join(" · ")}</p>}
               </>
             )}

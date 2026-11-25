@@ -82,7 +82,7 @@ export default async function Stage3({
       <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
         <StageForm
           id={FORM_ID} title="3단계. 주택 선택 기준" labels={LABELS} action={save}
-          result={<ConditionCheckCard result={check} tips={t} flat />} resultKey={c?.id} resultLabel={resultLabel}
+          result={<ConditionCheckCard result={check} flat />} resultKey={c?.id} resultLabel={resultLabel}
           resultTitle="조건 점검 결과" resultCaption="조건 점검 보기"
           next={{ href: `/plans/${planId}/stage/4`, label: "4단계로 →" }}
           pendingText="저장하고 조건을 점검하는 중이에요…"
@@ -140,6 +140,10 @@ export default async function Stage3({
             </Section>
             <Section n={3} heading="주택 가치 조건" desc="재건축·재개발 가능성을 볼 때 참고하는 지표예요.">
               {unitField("floor_area_ratio_max", "용적률 상한", "% 이하", c?.floor_area_ratio_max, 0, 2000, 0.01, "floor_area_ratio_max")}
+              <div>
+                <p className="text-sm text-chb-muted">대지지분은 조건으로 거르지 않고 4·5단계에서 단지 평균값으로 보여 드려요.</p>
+                {tip("land_share")}
+              </div>
               <CheckCard name="redevelopment_interest" text="재건축·재개발 가능성에 관심이 있습니다" defaultChecked={!!c?.redevelopment_interest} tip={tip("redevelopment_interest")} />
             </Section>
             <Section n={4} heading="교통·교육 조건" desc="단지에서 직선거리로 따져요. 실제 걷는 거리는 더 길어요.">
