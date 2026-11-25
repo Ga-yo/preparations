@@ -10,12 +10,12 @@ export const searchComplexes = defineTool({
   name: "search_complexes",
   description:
     "저장된 지역·주택 조건으로 필수 조건을 통과한 후보 단지를 적합도(fit) 순으로 돌려준다. fit.met/unmet/missing이 추천 근거이고 within_budget은 참고값이다. 후보가 없으면 blocking에 막는 조건이 담긴다.",
-  schema: z.object({ limit: z.number().int().min(1).max(50).default(20) }),
+  schema: z.object({ limit: z.number().int().min(1).max(50).default(20), offset: z.number().int().min(0).max(3000).default(0) }),
   async run(args, ctx: ToolContext): Promise<ToolResult> {
     const l = await loadConditionContext(ctx);
     if ("error" in l) return { data: { error: l.error }, as_of: {} };
     const { conflicts, notices, counts } = findConflicts(l.conditions, l.budgets, l.rows, l.truncated);
-    const candidates = rankComplexes(l.conditions, l.rows, l.budgets, args.limit ?? 20);
+    const candidates = rankComplexes(l.conditions, l.rows, l.budgets, args.limit ?? 20, args.offset ?? 0);
     const blocking = candidates.length
       ? undefined
       : conflicts.find((c) => c.code === "no_match_for_musts")?.blocking;

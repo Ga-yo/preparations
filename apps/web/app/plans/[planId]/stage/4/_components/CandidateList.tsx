@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { RankedComplex } from "@/lib/calc/fit";
 import { formatWon, livingText } from "../../../_components/format";
-import { CandidateGroups } from "./CandidateGroups";
+import { CandidateGroups, type CandidateItem } from "./CandidateGroups";
 import { FavoriteButton } from "./FavoriteButton";
 import { FitChips } from "./FitChips";
 import { LinkPending } from "./LinkPending";
@@ -35,7 +35,12 @@ function RowBody({ x, rank, planId }: { x: RankedComplex; rank: number; planId: 
   );
 }
 
-export function CandidateList({ planId, candidates }: { planId: string; candidates: RankedComplex[] }) {
-  const items = candidates.map((x, i) => ({ id: x.complex_id, node: <RowBody x={x} rank={i + 1} planId={planId} /> }));
-  return <CandidateGroups planId={planId} items={items} />;
+// 더 불러오기(server action)도 같은 행을 서버에서 그려 보낸다
+export const candidateItems = (planId: string, candidates: RankedComplex[], start = 0) =>
+  candidates.map((x, i) => ({ id: x.complex_id, node: <RowBody x={x} rank={start + i + 1} planId={planId} /> }));
+
+export function CandidateList({ planId, candidates, total = 0, loadMore }: {
+  planId: string; candidates: RankedComplex[]; total?: number; loadMore?: (offset: number) => Promise<CandidateItem[]>;
+}) {
+  return <CandidateGroups planId={planId} items={candidateItems(planId, candidates)} total={total} loadMore={loadMore} />;
 }

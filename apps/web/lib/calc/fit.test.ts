@@ -70,6 +70,11 @@ describe("rankComplexes", () => {
   it("respects limit", () => {
     expect(rankComplexes(C, [X(1), X(2), X(3)], B(null), 2)).toHaveLength(2);
   });
+  it("pages with offset in the same order", () => {
+    const rows = [X(1), X(2), X(3)];
+    const all = rankComplexes(C, rows, B(null), 10).map((x) => x.complex_id);
+    expect(rankComplexes(C, rows, B(null), 2, 2).map((x) => x.complex_id)).toEqual(all.slice(2));
+  });
 });
 
 describe("neighborStats", () => {

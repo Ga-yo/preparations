@@ -58,8 +58,8 @@ export async function favoriteComplexIds(planId: string): Promise<{ complex_id: 
   return [...byId].map(([complex_id, name]) => ({ complex_id, name }));
 }
 
-export async function searchForPlan(planId: string): Promise<ToolResult> {
-  return searchComplexes.run({}, await ctxOf(planId));
+export async function searchForPlan(planId: string, offset = 0): Promise<ToolResult> {
+  return searchComplexes.run({ offset }, await ctxOf(planId));
 }
 
 export async function detailForPlan(planId: string, complexId: number): Promise<ToolResult> {
