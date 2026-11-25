@@ -58,7 +58,7 @@ export default async function Stage1({
     firstTime: !!p?.is_first_time, newlywed: !!p?.is_newlywed, newborn: !!p?.has_newborn,
   };
   // 보유 여부는 저장하지 않으므로 저장된 금액에서 되살린다(처음이면 미선택)
-  const hasDebt = p ? ((p.existing_debt ?? 0) > 0 || (p.existing_debt_annual_payment ?? 0) > 0 ? "yes" : "no") : undefined;
+  const hasDebt = (p?.existing_debt ?? 0) > 0 || (p?.existing_debt_annual_payment ?? 0) > 0;
   const b = budget.data as { maxRatePrice?: number; minRatePrice?: number };
   const resultLabel = b.maxRatePrice != null && b.minRatePrice != null ? `${formatEokShort(b.maxRatePrice)} ~ ${formatEokShort(b.minRatePrice)}` : undefined;
 
@@ -112,12 +112,10 @@ export default async function Stage1({
               </div>
             </div>
             {checkbox("income_is_combined", "연 소득은 부부 합산 소득입니다", p?.income_is_combined)}
-            {/* 있음을 고를 때만 부채 입력칸을 보여 준다. 없음이면 서버가 0으로 저장한다 */}
+            {/* 체크할 때만 부채 입력칸을 보여 준다. 체크 안 하면 서버가 0으로 저장한다 */}
             <div className="group/debt space-y-6">
-              <ChoiceCards name="has_debt" legend="기존 대출·부채가 있나요?" value={hasDebt} cols="grid-cols-2" options={[
-                ["no", "없어요"], ["yes", "있어요", "대출 금액과 상환액을 알려 주세요"],
-              ]} />
-              <div className="hidden gap-6 group-has-[input[value=yes]:checked]/debt:grid sm:grid-cols-2">
+              {checkbox("has_debt", "기존 대출·부채가 있습니다", hasDebt)}
+              <div className="hidden gap-6 group-has-[input[type=checkbox]:checked]/debt:grid sm:grid-cols-2">
                 {money("existing_debt", "기존 대출·부채 총액", p?.existing_debt)}
                 {money("existing_debt_annual_payment", "기존 대출 연간 원리금 상환액", p?.existing_debt_annual_payment)}
               </div>

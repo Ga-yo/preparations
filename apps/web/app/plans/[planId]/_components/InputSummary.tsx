@@ -19,8 +19,8 @@ const man = (v: FormDataEntryValue | null) => {
 };
 function read(form: HTMLFormElement): Snapshot {
   const f = new FormData(form);
-  // 부채 "없음"이면 숨은 입력칸 값 대신 0(서버 저장 규칙과 같음), 아직 안 골랐으면 비어 있음
-  const debtOf = (k: string) => (f.get("has_debt") === "yes" ? man(f.get(k)) : f.get("has_debt") === "no" ? 0 : null);
+  // 부채 체크를 안 했으면 숨은 입력칸 값 대신 0(서버 저장 규칙과 같음)
+  const debtOf = (k: string) => (f.has("has_debt") ? man(f.get(k)) : 0);
   return {
     purpose: String(f.get("purpose") ?? ""), timeline: String(f.get("timeline") ?? ""),
     cash: man(f.get("cash_assets")), income: man(f.get("annual_income")), debt: debtOf("existing_debt"),
