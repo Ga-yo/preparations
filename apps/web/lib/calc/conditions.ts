@@ -26,6 +26,7 @@ export interface ComplexRow {
   building_coverage_ratio: number | null; land_share_m2: number | null; median_price: number | null; deal_count: number;
   nearest_station_name: string | null; nearest_station_m: number | null; nearest_elementary_m: number | null;
   nearest_park_m: number | null; shop_count_500m: number | null; commute_m: number | null;
+  nearest_park_name: string | null;
 }
 // get_region_prices data.regions 행에서 가져온다. max_budget은 1단계 미저장이면 null
 export interface RegionBudget { sigungu_code: string; max_budget: number | null; median_price: number }

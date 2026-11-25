@@ -12,7 +12,7 @@ const cx = (o: Partial<ComplexRow> = {}): ComplexRow => ({
   complex_id: nextId++, name: "단지", region_code: "1168010300", approval_year: 2000, household_count: 500,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 40,
   median_price: 800_000_000, deal_count: 3,
-  nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null, nearest_park_m: null, shop_count_500m: null, commute_m: null, ...o,
+  nearest_station_name: null, nearest_station_m: null, nearest_elementary_m: null, nearest_park_m: null, nearest_park_name: null, shop_count_500m: null, commute_m: null, ...o,
 });
 const budget = (max_budget: number | null, median_price = 800_000_000, sigungu_code = "11680"): RegionBudget =>
   ({ sigungu_code, max_budget, median_price });

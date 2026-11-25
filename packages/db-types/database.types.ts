@@ -400,6 +400,9 @@ isOneToOne: false
             "bump_chat_usage":
 { Args: Record<PropertyKey, never>; Returns: number
                            },
+"commute_point_of":
+{ Args: { "commute_code": string,"commute_station": string }; Returns: unknown
+                           },
 "complex_area_monthly_prices":
 { Args: { "area_max"?: number,"area_min"?: number,"months"?: number,"p_complex_id": number }; Returns: {
               "area": number,"deal_count": number,"median_price": number,"month": string
@@ -432,7 +435,7 @@ isOneToOne: false
                            },
 "complexes_for_conditions":
 { Args: { "area_max"?: number,"area_min"?: number,"commute_code"?: string,"commute_station"?: string,"months"?: number,"region_codes": (string)[] }; Returns: {
-              "approval_year": number,"building_coverage_ratio": number,"commute_m": number,"complex_id": number,"deal_count": number,"floor_area_ratio": number,"household_count": number,"land_share_m2": number,"median_price": number,"name": string,"nearest_elementary_m": number,"nearest_park_m": number,"nearest_station_m": number,"nearest_station_name": string,"parking_per_household": number,"region_code": string,"shop_count_500m": number
+              "approval_year": number,"building_coverage_ratio": number,"commute_m": number,"complex_id": number,"deal_count": number,"floor_area_ratio": number,"household_count": number,"land_share_m2": number,"median_price": number,"name": string,"nearest_elementary_m": number,"nearest_park_m": number,"nearest_park_name": string,"nearest_station_m": number,"nearest_station_name": string,"parking_per_household": number,"region_code": string,"shop_count_500m": number
             }[]
                            },
 "complexes_missing_location":
@@ -451,6 +454,11 @@ isOneToOne: false
 "region_price_stats":
 { Args: { "area_max"?: number,"area_min"?: number,"housing_type": string,"months": number,"sigungu_prefix": string }; Returns: {
               "deal_count": number,"latest_deal_date": string,"median_price": number,"sigungu_code": string,"sigungu_name": string
+            }[]
+                           },
+"route_points":
+{ Args: { "commute_code"?: string,"commute_station"?: string,"p_complex_id": number }; Returns: {
+              "from_lat": number,"from_lon": number,"to_lat": number,"to_lon": number
             }[]
                            },
 "set_complex_locations":
