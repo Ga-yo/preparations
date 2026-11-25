@@ -138,9 +138,9 @@ export default async function Stage2({
         </StageForm>
         <div className="space-y-6 lg:sticky lg:top-24">
           <Stage2Summary key={c?.id ?? "new"} formId={FORM_ID} initial={initial} names={names} />
-          <AssistantPanel planId={planId} stage={2} />
         </div>
       </main>
+      <AssistantPanel planId={planId} stage={2} />
     </div>
     </TipPicks>
   );

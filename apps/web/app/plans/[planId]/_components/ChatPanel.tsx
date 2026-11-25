@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AiCheck, ChatTurn, CheckError } from "./assistant";
 
 // "AI가 확인한 것"에 보일 툴 이름 (M7-D2)
@@ -27,6 +27,24 @@ export function ChatPanel({ planId, stage, initial, runCheck }: {
   const [suggestions, setSuggestions] = useState(initial.suggestions);
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
+  // 화면 구석에 떠 있는 상담 창. 닫아도 숨기기만 해서 대화·점검 결과가 남는다
+  const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState(false);
+  const toggleRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    inputRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") close(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
+  function close() {
+    setOpen(false);
+    toggleRef.current?.focus();
+  }
 
   async function startCheck() {
     if (checking) return;
@@ -66,14 +84,31 @@ export function ChatPanel({ planId, stage, initial, runCheck }: {
     setPending(false);
   }
 
+  const badge = !open && ((check && !seen) || checking);
   return (
-    <section className="rounded-3xl border border-chb-line bg-white p-6" aria-label="AI 채팅">
+    <>
+      <button ref={toggleRef} type="button" aria-expanded={open} aria-controls="ai-chat"
+        onClick={() => { if (open) close(); else { setOpen(true); setSeen(true); } }}
+        className="fixed right-4 bottom-24 z-40 flex items-center gap-2 rounded-full bg-chb-accent p-4 font-bold text-white shadow-[0_18px_40px_-12px_rgba(20,32,26,0.55)] transition hover:-translate-y-0.5 sm:right-6 sm:bottom-6 sm:px-5 sm:py-3.5 print:hidden">
+        <svg aria-hidden="true" viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v7a1.5 1.5 0 0 1-1.5 1.5H9l-3.5 3v-3H4A1.5 1.5 0 0 1 2.5 13V6A1.5 1.5 0 0 1 4 4.5Z" />
+          <path d="M6.5 9.5h.01M10 9.5h.01M13.5 9.5h.01" strokeWidth="2.4" />
+        </svg>
+        <span className="sr-only sm:not-sr-only">{open ? "AI 상담 닫기" : "AI 상담"}</span>
+        {badge && <span className="absolute top-1 right-1 size-3 rounded-full border-2 border-white bg-amber-400"><span className="sr-only">{checking ? " · 점검하는 중" : " · 새 점검 결과"}</span></span>}
+      </button>
+      {open && <div aria-hidden="true" onClick={close} className="fixed inset-0 z-40 bg-chb-ink/30 sm:hidden" />}
+      <section id="ai-chat" hidden={!open} aria-label="AI 상담"
+        className="fixed inset-x-0 bottom-0 z-50 max-h-[85vh] overflow-y-auto rounded-t-3xl border border-chb-line bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:pb-6 shadow-[0_24px_60px_-12px_rgba(20,32,26,0.35)] sm:inset-x-auto sm:right-6 sm:bottom-24 sm:w-[400px] sm:max-h-[min(640px,calc(100vh-8rem))] sm:rounded-3xl print:hidden">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-semibold"><span aria-hidden="true" className="size-2 rounded-full bg-chb-accent" />AI 상담</h2>
-        <button type="button" onClick={startCheck} disabled={checking}
-          className="rounded-full border border-chb-accent px-3 py-1.5 text-sm font-semibold text-chb-accent disabled:opacity-50">
-          {checking ? "점검하는 중…" : check?.fresh ? "AI 점검 다시 보기" : "AI 점검 받기"}
-        </button>
+        <div className="flex items-center gap-1">
+          <button type="button" onClick={startCheck} disabled={checking}
+            className="rounded-full border border-chb-accent px-3 py-1.5 text-sm font-semibold text-chb-accent disabled:opacity-50">
+            {checking ? "점검하는 중…" : check?.fresh ? "AI 점검 다시 보기" : "AI 점검 받기"}
+          </button>
+          <button type="button" onClick={close} aria-label="AI 상담 닫기" className="grid size-9 place-items-center rounded-full text-xl text-chb-muted hover:bg-chb-soft2 hover:text-chb-ink">×</button>
+        </div>
       </div>
       {checking && <p role="status" className="mb-3 text-sm text-chb-muted">AI가 {stage}단계 입력을 보고 필요한 계산을 직접 골라 확인하고 있어요. 30초쯤 걸릴 수 있어요.</p>}
       {checkError && <p role="alert" className="mb-3 text-sm text-red-700">{checkError}</p>}
@@ -109,12 +144,13 @@ export function ChatPanel({ planId, stage, initial, runCheck }: {
       )}
       <form onSubmit={send} className="flex gap-2">
         <label className="sr-only" htmlFor="chat-message">질문</label>
-        <input id="chat-message" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000}
+        <input ref={inputRef} id="chat-message" value={message} onChange={(e) => setMessage(e.target.value)} maxLength={2000}
           placeholder={`예: ${suggestions[0] ?? "LTV가 뭐야?"}`} className="min-w-0 flex-1 rounded-full border border-chb-line px-4 py-2.5 outline-none focus:border-chb-accent focus:ring-4 focus:ring-chb-accent-soft" />
         <button type="submit" disabled={pending} className="rounded-full bg-chb-accent px-4 py-2.5 font-semibold text-white disabled:opacity-50">
           {pending ? "..." : "보내기"}
         </button>
       </form>
-    </section>
+      </section>
+    </>
   );
 }

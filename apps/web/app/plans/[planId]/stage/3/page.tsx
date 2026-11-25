@@ -156,9 +156,9 @@ export default async function Stage3({
         </StageForm>
         <div className="space-y-6 lg:sticky lg:top-24">
           <Stage3Summary key={`${c?.id ?? "new"}-${prefill?.key ?? ""}`} formId={FORM_ID} areaText={areaText} />
-          <AssistantPanel planId={planId} stage={3} />
         </div>
       </main>
+      <AssistantPanel planId={planId} stage={3} />
     </div>
     </TipPicks>
   );

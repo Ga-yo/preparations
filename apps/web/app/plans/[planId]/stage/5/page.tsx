@@ -116,7 +116,7 @@ export default async function Stage5({
           )}
         </section>
 
-        <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[minmax(0,1fr)_380px]">
+        <div className="space-y-6">
           <div className="space-y-6">
             {products.length > 0 && (
               // 상품이 수십 개라 접어 두고, 펼치면 한 줄씩 표로 본다
@@ -172,11 +172,9 @@ export default async function Stage5({
               <span aria-hidden="true" className="grid size-10 shrink-0 place-items-center rounded-full bg-chb-soft text-chb-accent transition group-hover:translate-x-0.5">→</span>
             </Link>
           </div>
-          <div className="lg:sticky lg:top-24">
-            <AssistantPanel planId={planId} stage={5} />
-          </div>
         </div>
       </main>
+      <AssistantPanel planId={planId} stage={5} />
       <div className="fixed bottom-6 left-1/2 z-30 -translate-x-1/2">
         <Link href={`/plans/${planId}/report`}
           className="flex items-center gap-5 whitespace-nowrap rounded-full bg-chb-ink py-2.5 pr-2.5 pl-7 text-white shadow-[0_18px_40px_-12px_rgba(20,32,26,0.55)] transition hover:-translate-y-0.5">

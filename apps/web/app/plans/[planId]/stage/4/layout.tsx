@@ -101,12 +101,12 @@ export default async function Stage4Layout({ children, params }: { children: Rea
             )}
             {/* 후보가 없거나 불러오지 못해도 저장한 관심 단지는 열고 해제할 수 있어야 한다 */}
             {!(data && !("error" in data) && data.candidates.length) && <CandidateList planId={planId} candidates={[]} />}
-            <AssistantPanel planId={planId} stage={4} />
           </section>
           {/* 목록을 내리며 여러 단지를 번갈아 볼 수 있게 상세는 따라오고, 길면 탭 내용만 패널 안에서 스크롤한다 */}
           <div className="min-w-0 lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col">{children}</div>
         </main>
         <CompareBar toStage5={toStage5} />
+        <AssistantPanel planId={planId} stage={4} />
       </div>
     </FavoritesProvider>
     </TipPicks>
