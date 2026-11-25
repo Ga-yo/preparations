@@ -6,7 +6,7 @@ import { LLM_MODEL } from "./orchestrator";
 export type TipPick = { slug: string; note: string };
 
 // 금액은 보내지 않고 입력했는지만 보낸다(원칙 9). 선호 이유는 LLM에 보내지 않는다(2단계 정의)
-const MONEY = new Set(["cash_assets", "annual_income", "existing_debt", "existing_debt_annual_payment", "extra_funds", "price_max", "price_min", "mgmt_fee_per_m2_max"]);
+const MONEY = new Set(["cash_assets", "annual_income", "existing_debt", "existing_debt_annual_payment", "extra_funds", "price_max", "price_min"]);
 const DROP = new Set(["id", "plan_id", "user_id", "created_at", "updated_at", "region_reason", "commute_region_code", "commute_station"]);
 
 export function tipSituation(rows: (Record<string, unknown> | null)[]): Record<string, unknown> {
