@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { stageTipPicks } from "../../_components/assistant";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -11,7 +12,7 @@ import { InputSummary, type Snapshot } from "../../_components/InputSummary";
 import { MoneyInput } from "../../_components/MoneyInput";
 import { StageForm } from "../../_components/StageForm";
 import { StageTabs } from "../../_components/StageTabs";
-import { TipPanel } from "../../_components/TipPanel";
+import { TipPanel, TipPicks } from "../../_components/TipPanel";
 import { getBudgetForPlan, saveFinancialProfile } from "./actions";
 
 const LABELS: Record<string, string> = {
@@ -75,7 +76,9 @@ export default async function Stage1({
     <CheckCard name={name} text={text} defaultChecked={!!v} tip={tip(name)} />
   );
 
+  const tipPicks = stageTipPicks(planId, 1).catch((e): null => (console.error("tip picks failed", e), null)); // 기다리지 않는다: TIP만 나중에 나타난다
   return (
+    <TipPicks value={tipPicks}>
     <div className="flex-1 bg-chb-soft2 pb-28">
       <StageTabs planId={planId} current={1} />
       <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -132,5 +135,6 @@ export default async function Stage1({
         </div>
       </main>
     </div>
+    </TipPicks>
   );
 }

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { stageTipPicks } from "../../_components/assistant";
+import { TipPicks } from "../../_components/TipPanel";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { z } from "zod";
@@ -58,7 +60,9 @@ export default async function Stage5({
   const stage = (n: number) => <Link href={`/plans/${planId}/stage/${n}`} className="font-semibold text-chb-accent hover:underline">{n}단계</Link>;
   const box = "rounded-3xl border border-chb-line bg-white p-6 text-chb-muted";
   const compared = data && !("error" in data) ? data.items.length : 0;
+  const tipPicks = stageTipPicks(planId, 5).catch((e): null => (console.error("tip picks failed", e), null)); // 기다리지 않는다: TIP만 나중에 나타난다
   return (
+    <TipPicks value={tipPicks}>
     <div className="flex-1 bg-chb-soft2 pb-28">
       <StageTabs planId={planId} current={5} />
       <main className="mx-auto w-full max-w-6xl space-y-8 px-6 py-10">
@@ -184,6 +188,7 @@ export default async function Stage5({
         </Link>
       </div>
     </div>
+    </TipPicks>
   );
 }
 

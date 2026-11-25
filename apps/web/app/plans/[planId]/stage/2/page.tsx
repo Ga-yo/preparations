@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { stageTipPicks } from "../../_components/assistant";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -8,7 +9,7 @@ import { CheckCard, inputClass, labelClass, ScaleChoice, Section, UnitInput } fr
 import { RegionPriceCard } from "../../_components/RegionPriceCard";
 import { StageForm } from "../../_components/StageForm";
 import { StageTabs } from "../../_components/StageTabs";
-import { TipPanel } from "../../_components/TipPanel";
+import { TipPanel, TipPicks } from "../../_components/TipPanel";
 import { stationLabel } from "@/lib/agent/region";
 import { getRegionPricesForPlan, saveStage2Conditions } from "./actions";
 import { SigunguPicker } from "./_components/SigunguPicker";
@@ -91,7 +92,9 @@ export default async function Stage2({
   const resultLabel = rows.length === 0 ? undefined
     : known.length ? `${rows.length}곳 중 ${known.filter((r) => r.affordable).length}곳 예산 내` : `${rows.length}곳 시세`;
 
+  const tipPicks = stageTipPicks(planId, 2).catch((e): null => (console.error("tip picks failed", e), null)); // 기다리지 않는다: TIP만 나중에 나타난다
   return (
+    <TipPicks value={tipPicks}>
     <div className="flex-1 bg-chb-soft2 pb-28">
       <StageTabs planId={planId} current={2} />
       <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -139,5 +142,6 @@ export default async function Stage2({
         </div>
       </main>
     </div>
+    </TipPicks>
   );
 }

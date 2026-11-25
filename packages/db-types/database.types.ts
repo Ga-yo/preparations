@@ -325,6 +325,18 @@ isOneToOne: false
       referencedColumns: ["id","user_id"]
     }
                   ]
+                },"tip_picks": {
+                  Row: {
+                    "created_at": string,"input_hash": string,"plan_id": string,"stage": number,"tips": Json,"user_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"input_hash": string,"plan_id": string,"stage": number,"tips"?: Json,"user_id"?: string
+                  }
+                  Update: {
+                    "created_at"?: string,"input_hash"?: string,"plan_id"?: string,"stage"?: number,"tips"?: Json,"user_id"?: string
+                  }
+                  Relationships: []
                 },"tips": {
                   Row: {
                     "body": string,"caution": string | null,"field_key": string | null,"id": number,"slug": string,"sort_order": number,"source": string | null,"stage": number,"title": string,"updated_at": string

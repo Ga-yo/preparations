@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { stageTipPicks } from "../../_components/assistant";
+import { TipPicks } from "../../_components/TipPanel";
 import { Suspense } from "react";
 import { connection } from "next/server";
 import { notFound, redirect } from "next/navigation";
@@ -90,7 +92,9 @@ export default async function Stage4({
   const asOf = Object.entries(search?.as_of ?? {});
   const stage = (n: number) => <Link href={`/plans/${planId}/stage/${n}`} className="font-semibold text-chb-accent hover:underline">{n}단계</Link>;
   const box = "rounded-3xl border border-chb-line bg-white p-6 text-chb-muted";
+  const tipPicks = stageTipPicks(planId, 4).catch((e): null => (console.error("tip picks failed", e), null)); // 기다리지 않는다: TIP만 나중에 나타난다
   return (
+    <TipPicks value={tipPicks}>
     <div className="flex-1 bg-chb-soft2 pb-28">
       <StageTabs planId={planId} current={4} />
       <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_440px]">
@@ -156,5 +160,6 @@ export default async function Stage4({
         </form>
       )}
     </div>
+    </TipPicks>
   );
 }

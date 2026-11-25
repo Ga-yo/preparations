@@ -7,6 +7,7 @@ import { DAILY_CHAT_LIMIT } from "@/app/api/chat/route";
 import { inputHash, runCheck, type CheckAction } from "@/lib/agent/check";
 import { kstToday, LLM_BASE_URL } from "@/lib/agent/orchestrator";
 import { ruleQuestions } from "@/lib/agent/suggestions";
+import { pickTips, tipSituation, type TipPick } from "@/lib/agent/tip-picks";
 import { PRIORITY_KEYS } from "../stage/3/actions";
 
 type Db = SupabaseClient<Database>;
@@ -55,6 +56,42 @@ async function latestCheck(supabase: Db, planId: string, stage: number) {
 export async function freshCheckSummary(supabase: Db, planId: string, stage: number): Promise<string | null> {
   const [inputs, row] = await Promise.all([planInputs(supabase, planId), latestCheck(supabase, planId, stage)]);
   return row && row.input_hash === inputs.hash ? row.summary : null;
+}
+
+// 단계 페이지를 열 때 AI가 보여 줄 TIP을 고른다. null이면 화면은 TIP을 모두 보여 준다.
+// 입력이 같으면 저장해 둔 결과를 쓰고(날짜는 해시에서 뺀다), 새로 부를 때만 채팅과 같은 하루 한도를 쓴다
+export async function stageTipPicks(planId: string, stage: number): Promise<TipPick[] | null> {
+  z.uuid().parse(planId); Stage.parse(stage);
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  const supabase = await client();
+  const [inputs, cached, options] = await Promise.all([
+    planInputs(supabase, planId),
+    supabase.from("tip_picks").select("input_hash, tips").eq("plan_id", planId).eq("stage", stage).maybeSingle(),
+    supabase.from("tips").select("slug, title").eq("stage", stage).not("field_key", "is", null).order("sort_order"),
+  ]);
+  for (const r of [cached, options]) if (r.error) throw new Error(r.error.message);
+  if (!inputs.profile && !inputs.cond) return null; // 아직 입력이 없으면 고를 근거가 없다
+  const hash = inputHash({ profile: inputs.profile, cond: inputs.cond, favoriteIds: inputs.favoriteIds, today: "" });
+  const orNull = (t: TipPick[]) => (t.length ? t : null);
+  if (cached.data?.input_hash === hash) return orNull(cached.data.tips as TipPick[]);
+
+  const { data: used, error: usageErr } = await supabase.rpc("bump_chat_usage");
+  if (usageErr) throw new Error(usageErr.message);
+  if (used > DAILY_CHAT_LIMIT) return null;
+  let tips: TipPick[];
+  try {
+    tips = await pickTips({
+      client: new OpenAI({ apiKey, baseURL: LLM_BASE_URL, timeout: 15_000, maxRetries: 0 }),
+      stage, options: options.data ?? [], situation: tipSituation([inputs.profile, inputs.cond]),
+    });
+  } catch (e) {
+    console.error("tip picks llm failed", e instanceof OpenAI.APIError ? e.status : e);
+    return null;
+  }
+  const { error } = await supabase.from("tip_picks").upsert({ plan_id: planId, stage, input_hash: hash, tips: tips as Json });
+  if (error) throw new Error(error.message);
+  return orNull(tips);
 }
 
 export async function loadAssistant(planId: string, stage: number): Promise<{ check: AiCheck | null; suggestions: string[]; history: ChatTurn[] }> {
