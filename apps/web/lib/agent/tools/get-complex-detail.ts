@@ -88,7 +88,7 @@ export async function loadComplexDetail(complexId: number, ctx: ToolContext, tra
         median_price: ownRow?.median_price ?? null, deal_count: ownRow?.deal_count ?? 0,
         ...near,
       },
-      fit, redevelopment, commute: ok ? l.commuteTarget : null, nearby: nearbyRows, areas, default_area,
+      fit, redevelopment, nearby: nearbyRows, areas, default_area,
       neighbors: { ...neighborStats(c.id, (nb.data ?? []) as ComplexRow[]), basis: "same_dong" },
       criteria: { area_min, area_max, chart_months: CHART_MONTHS },
     },

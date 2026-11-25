@@ -2,7 +2,6 @@ import { z } from "zod";
 import { kstToday } from "@/lib/agent/orchestrator";
 import type { ToolResult } from "@/lib/agent/tool";
 import { compareComplexesTool } from "@/lib/agent/tools/compare-complexes";
-import { commuteTarget, type CommuteTarget } from "@/lib/route/commute";
 import { compareConditionChanges } from "@/lib/agent/tools/compare-condition-changes";
 
 const MAX_COMPARE = 4;
@@ -23,15 +22,6 @@ export function parseIds(raw: string | string[] | undefined, favorites: number[]
 
 export async function compareForPlan(planId: string, ids: number[]): Promise<ToolResult> {
   return compareComplexesTool.run({ complex_ids: ids }, await ctxOf(planId));
-}
-
-// 비교표 출퇴근 줄용: 최신 조건 세트의 출퇴근지만 읽는다(비교 툴이 읽는 세트와 같다)
-export async function commuteForPlan(planId: string): Promise<CommuteTarget | null> {
-  const { data, error } = await (await client()).from("condition_sets")
-    .select("uses_transit, commute_station, commute_region_code").eq("plan_id", planId)
-    .order("created_at", { ascending: false }).limit(1).maybeSingle();
-  if (error) throw new Error(error.message);
-  return data ? commuteTarget(data) : null;
 }
 
 export async function changesForPlan(planId: string): Promise<ToolResult> {

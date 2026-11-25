@@ -10,9 +10,10 @@ import {
 const UNAVAILABLE: CommuteResult = { status: "unavailable" };
 
 async function fetchTransit(planId: string, complexId: number): Promise<CommuteResult> {
-  const p = await commutePoints(planId, complexId);
   const key = process.env.NEXT_PUBLIC_ODSAY_API_KEY;
-  if (!p || !key) return UNAVAILABLE;
+  if (!key) return UNAVAILABLE;
+  const p = await commutePoints(planId, complexId);
+  if (!p) return UNAVAILABLE;
   const res = await fetch(
     `https://api.odsay.com/v1/api/searchPubTransPathT?SX=${p.from_lon}&SY=${p.from_lat}&EX=${p.to_lon}&EY=${p.to_lat}&apiKey=${encodeURIComponent(key)}`,
   );

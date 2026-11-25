@@ -183,11 +183,7 @@ test("detail carries park shop and commute values", async () => {
   expect(d.complex).toMatchObject({ nearest_park_m: 210, shop_count_500m: 42, commute_m: 3100 });
 });
 
-test("출퇴근지가 있으면 data.commute에 방식·키, 없으면 null", async () => {
-  const withTarget = setup({ sets: [saved({ uses_transit: true, commute_station: "강남" })] });
-  const a = (await getComplexDetail.run({ complex_id: 1 }, withTarget.ctx)).data as { commute: { mode: string; key: string } | null };
-  expect(a.commute).toMatchObject({ mode: "transit", key: "station:강남" });
-  const none = setup();
-  const b = (await getComplexDetail.run({ complex_id: 1 }, none.ctx)).data as { commute: unknown };
-  expect(b.commute).toBeNull();
+test("툴 결과에는 출퇴근지(commute)가 없다(원칙 9)", async () => {
+  const { ctx } = setup({ sets: [saved({ uses_transit: true, commute_station: "강남" })] });
+  expect((await getComplexDetail.run({ complex_id: 1 }, ctx)).data).not.toHaveProperty("commute");
 });

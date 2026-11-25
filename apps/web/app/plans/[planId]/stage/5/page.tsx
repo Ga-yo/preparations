@@ -13,7 +13,8 @@ import { getBudgetForPlan } from "../1/actions";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
 import { StageTabs } from "../../_components/StageTabs";
 import { favoriteComplexIds } from "../4/actions";
-import { changesForPlan, commuteForPlan, compareForPlan, parseIds } from "./actions";
+import { changesForPlan, compareForPlan, parseIds } from "./actions";
+import { commuteForPlan } from "../../commute-target";
 import { CompareTable, type CompareData } from "./_components/CompareTable";
 import { ConditionChanges } from "./_components/ConditionChanges";
 
