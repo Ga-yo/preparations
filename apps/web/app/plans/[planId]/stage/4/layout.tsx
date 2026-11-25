@@ -16,7 +16,7 @@ import { CompareBar, FavoriteError, FavoritesProvider, type Fav } from "./_compo
 
 const logError = (e: unknown) => console.error("stage4", e instanceof Error ? `${e.name}: ${e.message}` : e);
 
-type SearchData = { candidates: RankedComplex[]; total: number; blocking?: string[] } | { error: string };
+type SearchData = { candidates: RankedComplex[]; total: number; blocking?: string[]; criteria: { months: number } } | { error: string };
 
 // 후보 목록은 layout에 둔다: 주소의 ?complex=만 바뀌면 layout은 다시 그리지 않아, 단지를 골라도 검색을 다시 하지 않는다
 export default async function Stage4Layout({ children, params }: { children: ReactNode; params: Promise<{ planId: string }> }) {
@@ -69,6 +69,10 @@ export default async function Stage4Layout({ children, params }: { children: Rea
               <p className="-mt-2 text-lg text-chb-muted">
                 필수 조건을 통과한 <b className="text-chb-ink">{data.total.toLocaleString("ko-KR")}곳</b> 중 적합도 순으로 보여 드려요. 아래로 내리면 더 불러와요. 마음에 드는 단지는 ☆를 눌러 관심 단지로 모아 두세요.
               </p>
+            )}
+            {/* 목록이 무한 스크롤이라 아래에 두면 닿지 않는다 */}
+            {data && !("error" in data) && data.candidates.length > 0 && (
+              <p className="-mt-2 text-xs text-chb-muted">중위가는 최근 {data.criteria.months}개월 이 단지 아파트 매매 실거래가(희망 면적, 해제 신고·직거래 제외) 기준입니다.</p>
             )}
             <FavoriteError />
             {!data ? (
