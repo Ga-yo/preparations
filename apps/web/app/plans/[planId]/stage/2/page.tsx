@@ -1,26 +1,27 @@
 import { connection } from "next/server";
+import { stageTipPicks } from "../../_components/assistant";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { AssistantPanel } from "../../_components/AssistantPanel";
-import { CheckCard, inputClass, labelClass, ScaleChoice, Section, ToggleChips, UnitInput } from "../../_components/Field";
+import { CheckCard, inputClass, labelClass, ScaleChoice, Section, UnitInput } from "../../_components/Field";
 import { RegionPriceCard } from "../../_components/RegionPriceCard";
 import { StageForm } from "../../_components/StageForm";
 import { StageTabs } from "../../_components/StageTabs";
-import { TipPanel } from "../../_components/TipPanel";
+import { TipPanel, TipPicks } from "../../_components/TipPanel";
+import { stationLabel } from "@/lib/agent/region";
 import { getRegionPricesForPlan, saveStage2Conditions } from "./actions";
 import { SigunguPicker } from "./_components/SigunguPicker";
 import { Stage2Summary, type Stage2Snapshot } from "./_components/Stage2Summary";
 
 const LABELS: Record<string, string> = {
   sigungu_codes: "희망 시군구", dong_names: "희망 동(지역명을 찾지 못했거나 여러 곳과 일치 — 시·구부터 입력해 주세요)",
-  commute_region_name: "직장·주요 이동 지역(지역명을 찾지 못했거나 여러 곳과 일치 — 시·구부터 입력해 주세요)",
+  commute_region_name: "직장·주요 이동 지역(지역명·역 이름을 찾지 못했거나 여러 곳과 일치 — 시·구부터 쓰거나 다른 역 이름을 입력해 주세요)",
   commute_minutes_max: "희망 출퇴근 시간(10~180분)", school_importance: "교육 환경 중요도", infra_importance: "편의시설 중요도",
   household_size: "거주 인원", area_min: "희망 전용면적", area_max: "희망 전용면적(최소 ≤ 최대)",
-  environment_prefs: "선호 환경", region_reason: "선호 이유(200자 이내)", plan: "계획(접근 권한 없음 또는 존재하지 않음)",
+  region_reason: "선호 이유(200자 이내)", plan: "계획(접근 권한 없음 또는 존재하지 않음)",
 };
-const ENV = { quiet: "조용한 환경", near_commercial: "상권 인접", near_park: "공원 인접" } as const;
 // 요청마다 쿠키·DB로 렌더하는 페이지: cacheComponents 프리렌더 대신 요청 시 렌더
 export const instant = false;
 
@@ -78,12 +79,12 @@ export default async function Stage2({
     .filter((code) => sigungu?.some((s) => s.sigungu_code === code)); // 비수도권·상위 코드는 지도에 없으니 뺀다
   const names = Object.fromEntries((sigungu ?? []).map((r) => [r.sigungu_code ?? "", r.full_name.slice(r.sido.length + 1) || r.full_name]));
   const dongText = dongCodes.map(nameOf).join(", ");
-  const commuteText = c?.commute_region_code ? nameOf(c.commute_region_code) : "";
+  const commuteText = c?.commute_station ? stationLabel(c.commute_station) : c?.commute_region_code ? nameOf(c.commute_region_code) : "";
   const initial: Stage2Snapshot = {
     sigungu: initialCodes, dong: dongText, commuteRegion: commuteText, commuteMin: c?.commute_minutes_max ?? null,
     transit: !!c?.uses_transit, school: c?.school_importance ?? null, infra: c?.infra_importance ?? null,
     household: c?.household_size ?? null, areaMin: c?.area_min ?? null, areaMax: c?.area_max ?? null,
-    parking: !!c?.parking_required, env: c?.environment_prefs ?? [],
+    parking: !!c?.parking_required,
   };
   const pd = prices.data as { regions?: { affordable?: boolean }[] };
   const rows = pd.regions ?? [];
@@ -91,7 +92,9 @@ export default async function Stage2({
   const resultLabel = rows.length === 0 ? undefined
     : known.length ? `${rows.length}곳 중 ${known.filter((r) => r.affordable).length}곳 예산 내` : `${rows.length}곳 시세`;
 
+  const tipPicks = stageTipPicks(planId, 2).catch((e): null => (console.error("tip picks failed", e), null)); // 기다리지 않는다: TIP만 나중에 나타난다
   return (
+    <TipPicks value={tipPicks}>
     <div className="flex-1 bg-chb-soft2 pb-28">
       <StageTabs planId={planId} current={2} />
       <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -116,7 +119,7 @@ export default async function Stage2({
             </Section>
             <Section n={2} heading="생활 환경" desc="출퇴근과 생활 인프라는 지역을 고를 때 가장 많이 따지는 조건이에요.">
               <div className="grid gap-6 sm:grid-cols-2">
-                {textField("commute_region_name", "직장·주요 이동 지역", commuteText, "예: 서울특별시 중구")}
+                {textField("commute_region_name", "직장·주요 이동 지역", commuteText, "예: 서울특별시 중구 또는 강남역")}
                 {unitField("commute_minutes_max", "희망 출퇴근 시간 (편도)", "분", c?.commute_minutes_max, 10, 180)}
               </div>
               <CheckCard name="uses_transit" text="대중교통으로 출퇴근합니다" defaultChecked={!!c?.uses_transit} tip={tip("uses_transit")} />
@@ -130,7 +133,6 @@ export default async function Stage2({
                 {unitField("area_max", "최대", "㎡", c?.area_max, 10, 300, 0.01)}
               </div>
               <CheckCard name="parking_required" text="주차 공간이 필요합니다" defaultChecked={!!c?.parking_required} tip={tip("parking_required")} />
-              <ToggleChips name="environment_prefs" legend="선호하는 주거 환경" values={c?.environment_prefs ?? []} options={ENV} tip={tip("environment_prefs")} />
             </Section>
           </div>
         </StageForm>
@@ -140,5 +142,6 @@ export default async function Stage2({
         </div>
       </main>
     </div>
+    </TipPicks>
   );
 }

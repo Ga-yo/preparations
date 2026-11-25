@@ -11,6 +11,6 @@ select is((select array_agg(distinct field_key order by field_key) from public.t
   array['checklist', 'next_steps', 'redevelopment', 'risks'], '5단계 TIP은 화면 섹션 이름에 연결');
 select is((select count(*)::int from public.tips where caution like '%정비사업 진행 데이터가 없%'), 0, '정비사업 데이터 적재 후 "데이터 없음" 문구 제거');
 select results_eq($$select field_key from public.tips where slug in ('commute-straight-line', 'living-data') order by field_key$$,
-  $$values ('commute_minutes_max'::text), ('environment_prefs')$$, 'M6 2단계 TIP 2개');
+  $$values ('commute_minutes_max'::text), ('infra_importance')$$, 'M6 2단계 TIP 2개');
 select * from finish();
 rollback;

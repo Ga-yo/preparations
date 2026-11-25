@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { ComplexRow, Conditions } from "./conditions";
 import { applyParkingDefault, lifeNotices, profileNotices, tieBreakers, weightsFor, type LifePrefs } from "./preferences";
 
-const P: LifePrefs = { uses_transit: null, school_importance: null, infra_importance: null, environment_prefs: [], parking_required: null };
+const P: LifePrefs = { uses_transit: null, school_importance: null, infra_importance: null, parking_required: null };
 const row = (o: Partial<ComplexRow>) => ({ nearest_park_m: null, shop_count_500m: null, ...o }) as ComplexRow;
 
 describe("weightsFor", () => {
@@ -15,13 +15,9 @@ describe("weightsFor", () => {
 
 describe("tieBreakers", () => {
   it("orders by stated preferences", () => {
-    expect(tieBreakers({ ...P, uses_transit: true, school_importance: 5, infra_importance: 4, environment_prefs: ["near_park"] })).toEqual([
-      { field: "nearest_station_m", dir: 1 }, { field: "nearest_elementary_m", dir: 1 },
-      { field: "shop_count_500m", dir: -1 }, { field: "nearest_park_m", dir: 1 },
+    expect(tieBreakers({ ...P, uses_transit: true, school_importance: 5, infra_importance: 4 })).toEqual([
+      { field: "nearest_station_m", dir: 1 }, { field: "nearest_elementary_m", dir: 1 }, { field: "shop_count_500m", dir: -1 },
     ]);
-  });
-  it("near_commercial uses shop count once", () => {
-    expect(tieBreakers({ ...P, infra_importance: 5, environment_prefs: ["near_commercial"] })).toEqual([{ field: "shop_count_500m", dir: -1 }]);
   });
   it("none when nothing important", () => expect(tieBreakers({ ...P, school_importance: 2 })).toEqual([]));
 });
@@ -38,10 +34,9 @@ describe("applyParkingDefault", () => {
 });
 
 describe("lifeNotices", () => {
-  it("quiet has no data", () => expect(lifeNotices({ ...P, environment_prefs: ["quiet"] }, [])).toEqual(["quiet_no_data"]));
-  it("park and shop data missing", () => {
-    expect(lifeNotices({ ...P, infra_importance: 5, environment_prefs: ["near_park"] }, [row({})])).toEqual(["no_park_data", "no_shop_data"]);
-    expect(lifeNotices({ ...P, environment_prefs: ["near_park"] }, [row({ nearest_park_m: 300 })])).toEqual([]);
+  it("shop data missing", () => {
+    expect(lifeNotices({ ...P, infra_importance: 5 }, [row({})])).toEqual(["no_shop_data"]);
+    expect(lifeNotices({ ...P, infra_importance: 5 }, [row({ shop_count_500m: 3 })])).toEqual([]);
   });
 });
 

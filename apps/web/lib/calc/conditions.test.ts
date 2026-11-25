@@ -4,7 +4,7 @@ import { findConflicts, widenAreaMax, type ComplexRow, type Conditions, type Reg
 const cond = (o: Partial<Conditions> = {}): Conditions => ({
   housing_types: ["apartment"], price_min: null, price_max: null, area_min: null, area_max: null,
   approval_year_min: null, household_count_min: null, parking_per_household_min: null,
-  floor_area_ratio_max: null, mgmt_fee_per_m2_max: null, station_distance_max_m: null, elementary_distance_max_m: null, rooms_min: null, baths_min: null,
+  floor_area_ratio_max: null, station_distance_max_m: null, elementary_distance_max_m: null, rooms_min: null, baths_min: null,
   floor_pref: null, direction_pref: null, priorities: {}, ...o,
 });
 let nextId = 1;
@@ -104,9 +104,15 @@ test("단지 데이터가 없으면 충돌 없이 no_complex_data", () => {
 
 test("데이터 없는 조건과 잘림 안내", () => {
   const r = findConflicts(cond({
-    housing_types: ["apartment", "officetel"], mgmt_fee_per_m2_max: 3000, rooms_min: 3,
+    housing_types: ["apartment", "officetel"], rooms_min: 3,
   }), [], [cx()], true);
-  expect(r.notices).toEqual(["no_data_for_type", "data_unavailable:mgmt_fee", "unit_level_condition", "truncated", "land_share_is_average"]);
+  expect(r.notices).toEqual(["no_data_for_type", "unit_level_condition", "truncated", "land_share_is_average"]);
+});
+
+test("희망 향은 단지 데이터에 없어 거르지 않고 세대 단위 조건 안내만 낸다", () => {
+  const r = findConflicts(cond({ direction_pref: "south" }), [], [cx()], false);
+  expect(r.counts.must).toBe(1);
+  expect(r.notices).toContain("unit_level_condition");
 });
 
 test("matches는 최대 20개", () => {

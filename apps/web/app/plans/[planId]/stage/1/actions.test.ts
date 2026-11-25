@@ -34,3 +34,22 @@ test("구매 목적·시기는 필수: 비었거나 없으면 거부", () => {
     expect(financialProfileSchema.safeParse(rest).success).toBe(false);
   }
 });
+
+describe("부채 보유 여부 체크박스", () => {
+  const debt = { existing_debt: "5000", existing_debt_annual_payment: "600" };
+  test("체크 안 하면 숨은 부채 입력칸 값은 버리고 0으로 저장", () => {
+    const r = financialProfileSchema.parse({ ...base, ...debt });
+    expect([r.existing_debt, r.existing_debt_annual_payment]).toEqual([0, 0]);
+  });
+  test("체크하면(on) 입력값을 쓴다", () => {
+    const r = financialProfileSchema.parse({ ...base, has_debt: "on", ...debt });
+    expect([r.existing_debt, r.existing_debt_annual_payment]).toEqual([50_000_000, 6_000_000]);
+  });
+  test("체크했는데 연간 원리금 상환액이 비면 거부(DSR에 필요)", () => {
+    const r = financialProfileSchema.safeParse({ ...base, has_debt: "on", existing_debt: "5000" });
+    expect(r.error?.issues[0].path).toEqual(["existing_debt_annual_payment"]);
+  });
+  test("has_debt는 DB 컬럼이 아니라 결과에 남지 않는다", () => {
+    expect(financialProfileSchema.parse({ ...base, has_debt: "on", ...debt })).not.toHaveProperty("has_debt");
+  });
+});

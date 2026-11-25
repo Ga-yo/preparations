@@ -94,7 +94,7 @@ export function CompareTable({ planId, data, tips }: { planId: string; data: Com
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-chb-muted">부대비용은 중위가에 샀다고 보고 계산했어요. 중개보수는 상한 요율 기준, 부가세 별도입니다. &lsquo;유리&rsquo;는 항목별로 나은 단지 표시이며 종합 순위가 아닙니다. 관리비는 단지 이름을 눌러 상세에서 확인하세요. 거리는 직선거리입니다.</p>
+      <p className="text-xs text-chb-muted">부대비용은 중위가에 샀다고 보고 계산했어요. 중개보수는 상한 요율 기준, 부가세 별도입니다. &lsquo;유리&rsquo;는 항목별로 나은 단지 표시이며 종합 순위가 아닙니다. 거리는 직선거리입니다.</p>
       <TipPanel tips={tips} fieldKey="risks" />
     </div>
   );

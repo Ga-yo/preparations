@@ -6,7 +6,7 @@ import { diffConditions, diffRankings } from "./scenario";
 const C: Conditions & { region_codes: string[] } = {
   housing_types: ["apartment"], price_min: null, price_max: 900_000_000, area_min: 80, area_max: 90,
   approval_year_min: null, household_count_min: 1000, parking_per_household_min: null,
-  floor_area_ratio_max: null, mgmt_fee_per_m2_max: null, station_distance_max_m: null, elementary_distance_max_m: null,
+  floor_area_ratio_max: null, station_distance_max_m: null, elementary_distance_max_m: null,
   rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null,
   priorities: { area: "must" }, region_codes: ["1168000000"],
 };

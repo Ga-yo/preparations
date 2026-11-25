@@ -1,11 +1,8 @@
-import { expect, test, vi } from "vitest";
+import { expect, test } from "vitest";
 import { runTool } from "../tool";
 import { getComplexDetail, loadComplexDetail } from "./get-complex-detail";
 import { complex, mk, saved } from "./test-fixtures";
 
-const fee = { status: "ok", kapt_code: "A10024564", kapt_name: "개포래미안포레스트", month: "2026-09", common: 400, individual: null, total: 400, per_m2: 2, partial: true, fetched_at: "2026-11-12T10:00:00.000Z" };
-const getMgmtFee = vi.fn<(...a: unknown[]) => Promise<typeof fee>>(async () => fee);
-vi.mock("@/lib/kapt/mgmt-fee", () => ({ getMgmtFee: (...a: unknown[]) => getMgmtFee(...a) }));
 
 const row = (id: number, o: Record<string, unknown> = {}) => ({
   id, name: `단지${id}`, region_code: "1168010300", jibun_address: "개포동 1", road_address: null,
@@ -157,43 +154,11 @@ test("no_location_data still emitted for an unlocated complex", async () => {
   expect((await getComplexDetail.run({ complex_id: 1 }, ctx)).notices).toContain("no_location_data");
 });
 
-test("includes mgmt_fee", async () => {
+test("관리비 기능은 없다: 상세에 mgmt_fee·기준일이 없다", async () => {
   const { ctx } = setup();
   const r = await getComplexDetail.run({ complex_id: 1 }, ctx);
-  expect((r.data as { mgmt_fee: unknown }).mgmt_fee).toEqual(fee);
-  expect(r.as_of).toMatchObject({ mgmt_fee: "2026-09" });
-  expect(getMgmtFee).toHaveBeenCalledWith(expect.objectContaining({ id: 1, name: "단지1", region_code: "1168010300", jibun_address: "개포동 1" }), ctx.today);
-});
-
-test("no mgmt_fee when conditions are not saved", async () => {
-  getMgmtFee.mockClear();
-  const { ctx } = setup({ sets: [saved({ region_codes: [] })], rows: [complex(1)] });
-  const r = await getComplexDetail.run({ complex_id: 1 }, ctx);
-  expect(getMgmtFee).not.toHaveBeenCalled();
   expect(r.data).not.toHaveProperty("mgmt_fee");
   expect(r.as_of).not.toHaveProperty("mgmt_fee");
-});
-
-test("no mgmt_fee and no K-apt call for a complex outside the user's regions", async () => {
-  getMgmtFee.mockClear();
-  const { ctx } = setup();
-  const r = await getComplexDetail.run({ complex_id: 9 }, ctx);
-  expect(getMgmtFee).not.toHaveBeenCalled();
-  expect(r.data).not.toHaveProperty("mgmt_fee");
-});
-
-test("K-apt hang becomes mgmt_fee error after the deadline", async () => {
-  vi.useFakeTimers();
-  try {
-    getMgmtFee.mockImplementationOnce(() => new Promise(() => {}));
-    const { ctx } = setup();
-    const p = getComplexDetail.run({ complex_id: 1 }, ctx);
-    await vi.advanceTimersByTimeAsync(6000);
-    const r = await p;
-    expect((r.data as { mgmt_fee: unknown }).mgmt_fee).toEqual({ status: "error" });
-  } finally {
-    vi.useRealTimers();
-  }
 });
 
 const project = { complex_id: 1, region_code: "1168010300", name: "개포구역", project_type: "reconstruction", stage: "관리처분인가", stage_date: "2025-09-29" };

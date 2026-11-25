@@ -14,7 +14,7 @@ export interface Conditions {
   housing_types: string[]; price_min: number | null; price_max: number | null;
   area_min: number | null; area_max: number | null; approval_year_min: number | null;
   household_count_min: number | null; parking_per_household_min: number | null;
-  floor_area_ratio_max: number | null; mgmt_fee_per_m2_max: number | null;
+  floor_area_ratio_max: number | null;
   station_distance_max_m: number | null; elementary_distance_max_m: number | null;
   rooms_min: number | null; baths_min: number | null; floor_pref: string | null; direction_pref: string | null;
   priorities: Partial<Record<string, Priority>>;
@@ -35,7 +35,7 @@ export type Conflict =
   | { code: "area_price_mismatch"; sigungu_codes: string[] }
   | { code: "no_match_for_musts"; blocking: ConditionKey[] }
   | { code: "few_matches_for_musts"; count: number };
-export type Notice = "no_data_for_type" | "data_unavailable:mgmt_fee" | "unit_level_condition"
+export type Notice = "no_data_for_type" | "unit_level_condition"
   | "no_complex_data" | "truncated" | "land_share_is_average"
   | "location_partial" | "no_poi_data";
 
@@ -115,7 +115,6 @@ export function findConflicts(c: Conditions, budgets: RegionBudget[], complexes:
 
   const notices: Notice[] = [];
   if (c.housing_types.some((t) => t !== "apartment")) notices.push("no_data_for_type");
-  if (c.mgmt_fee_per_m2_max !== null) notices.push("data_unavailable:mgmt_fee");
   if (c.rooms_min !== null || c.baths_min !== null || c.floor_pref !== null || c.direction_pref !== null) {
     notices.push("unit_level_condition");
   }

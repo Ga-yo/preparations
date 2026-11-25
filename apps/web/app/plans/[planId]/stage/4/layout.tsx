@@ -5,6 +5,8 @@ import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import type { RankedComplex } from "@/lib/calc/fit";
 import { AssistantPanel } from "../../_components/AssistantPanel";
+import { stageTipPicks } from "../../_components/assistant";
+import { TipPicks } from "../../_components/TipPanel";
 import { StageTabs } from "../../_components/StageTabs";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
 import { favoriteComplexIds, searchForPlan, setFavorite } from "./actions";
@@ -45,7 +47,10 @@ export default async function Stage4Layout({ children, params }: { children: Rea
   const asOf = Object.entries(search?.as_of ?? {});
   const stage = (n: number) => <Link href={`/plans/${planId}/stage/${n}`} className="font-semibold text-chb-accent hover:underline">{n}단계</Link>;
   const box = "rounded-3xl border border-chb-line bg-white p-6 text-chb-muted";
+  // 기다리지 않는다: TIP만 나중에 나타난다. layout이라 단지를 바꿔도 다시 고르지 않는다
+  const tipPicks = stageTipPicks(planId, 4).catch((e): null => (logError(e), null));
   return (
+    <TipPicks value={tipPicks}>
     <FavoritesProvider initial={favorites} save={save}>
       <div className="flex-1 bg-chb-soft2 pb-28">
         <StageTabs planId={planId} current={4} />
@@ -92,5 +97,6 @@ export default async function Stage4Layout({ children, params }: { children: Rea
         <CompareBar toStage5={toStage5} />
       </div>
     </FavoritesProvider>
+    </TipPicks>
   );
 }

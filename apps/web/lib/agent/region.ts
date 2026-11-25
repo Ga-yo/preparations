@@ -6,6 +6,9 @@ export type RegionResult =
   | { status: "ambiguous"; candidates: { code: string; fullName: string }[] }
   | { status: "not_found" };
 
+// 역 이름은 "역"을 떼고 저장한다(서울역만 예외). 화면에는 "OO역"으로
+export const stationLabel = (name: string) => (name.endsWith("역") ? name : `${name}역`);
+
 // 지역 코드는 LLM이 아니라 이 함수가 regions 테이블에서 찾는다.
 export async function resolveRegion(supabase: SupabaseClient<Database>, input: string): Promise<RegionResult> {
   // ilike 와일드카드는 지역명에 쓰이지 않으므로 제거

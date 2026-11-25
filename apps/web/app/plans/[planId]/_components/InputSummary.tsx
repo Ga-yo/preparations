@@ -19,10 +19,12 @@ const man = (v: FormDataEntryValue | null) => {
 };
 function read(form: HTMLFormElement): Snapshot {
   const f = new FormData(form);
+  // 부채 체크를 안 했으면 숨은 입력칸 값 대신 0(서버 저장 규칙과 같음)
+  const debtOf = (k: string) => (f.has("has_debt") ? man(f.get(k)) : 0);
   return {
     purpose: String(f.get("purpose") ?? ""), timeline: String(f.get("timeline") ?? ""),
-    cash: man(f.get("cash_assets")), income: man(f.get("annual_income")), debt: man(f.get("existing_debt")),
-    debtPayment: man(f.get("existing_debt_annual_payment")), extra: man(f.get("extra_funds")), houses: man(f.get("owned_house_count")),
+    cash: man(f.get("cash_assets")), income: man(f.get("annual_income")), debt: debtOf("existing_debt"),
+    debtPayment: debtOf("existing_debt_annual_payment"), extra: man(f.get("extra_funds")), houses: man(f.get("owned_house_count")),
     firstTime: f.has("is_first_time"), newlywed: f.has("is_newlywed"), newborn: f.has("has_newborn"),
   };
 }

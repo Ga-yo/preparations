@@ -3,13 +3,12 @@ import type { ComplexRow, ConditionKey, Conditions } from "./conditions";
 
 export interface LifePrefs {
   uses_transit: boolean | null; school_importance: number | null; infra_importance: number | null;
-  environment_prefs: string[]; parking_required: boolean | null;
+  parking_required: boolean | null;
 }
-export type TieBreaker = { field: "nearest_station_m" | "nearest_elementary_m" | "shop_count_500m" | "nearest_park_m"; dir: 1 | -1 };
+export type TieBreaker = { field: "nearest_station_m" | "nearest_elementary_m" | "shop_count_500m"; dir: 1 | -1 };
 
 const HIGH = 4; // 중요도 1~5 중 4·5를 "중요"로 본다
 const high = (v: number | null) => v !== null && v >= HIGH;
-const wantsShops = (p: LifePrefs) => high(p.infra_importance) || p.environment_prefs.includes("near_commercial");
 
 export function weightsFor(p: LifePrefs): Partial<Record<ConditionKey, number>> {
   return { ...(p.uses_transit && { station_distance_max: 2 }), ...(high(p.school_importance) && { elementary_distance_max: 2 }) };
@@ -20,8 +19,7 @@ export function tieBreakers(p: LifePrefs): TieBreaker[] {
   const t: TieBreaker[] = [];
   if (p.uses_transit) t.push({ field: "nearest_station_m", dir: 1 });
   if (high(p.school_importance)) t.push({ field: "nearest_elementary_m", dir: 1 });
-  if (wantsShops(p)) t.push({ field: "shop_count_500m", dir: -1 });
-  if (p.environment_prefs.includes("near_park")) t.push({ field: "nearest_park_m", dir: 1 });
+  if (high(p.infra_importance)) t.push({ field: "shop_count_500m", dir: -1 });
   return t;
 }
 
@@ -31,12 +29,7 @@ export function applyParkingDefault(c: Conditions, p: LifePrefs): Conditions {
 }
 
 export function lifeNotices(p: LifePrefs, rows: ComplexRow[]): string[] {
-  const none = (k: "nearest_park_m" | "shop_count_500m") => rows.every((x) => x[k] === null);
-  return [
-    ...(p.environment_prefs.includes("quiet") ? ["quiet_no_data"] : []),
-    ...(p.environment_prefs.includes("near_park") && none("nearest_park_m") ? ["no_park_data"] : []),
-    ...(wantsShops(p) && none("shop_count_500m") ? ["no_shop_data"] : []),
-  ];
+  return high(p.infra_importance) && rows.every((x) => x.shop_count_500m === null) ? ["no_shop_data"] : [];
 }
 
 export function profileNotices(p: { purpose: string | null; timeline: string | null }): string[] {

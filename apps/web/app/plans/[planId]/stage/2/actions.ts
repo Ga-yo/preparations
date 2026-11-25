@@ -34,7 +34,6 @@ export const stage2Schema = z
     household_size: num(1, 20),
     area_min: num(10, 300, false),
     area_max: num(10, 300, false),
-    environment_prefs: z.array(z.enum(["quiet", "near_commercial", "near_park"])).default([]),
     region_reason: text(200),
   })
   .refine((v) => v.area_min === null || v.area_max === null || v.area_min <= v.area_max, {
@@ -43,12 +42,24 @@ export const stage2Schema = z
   });
 
 type FieldErrors = Record<string, string[]>;
+const SAME_STATION_M = 1000; // 같은 이름 역이 이보다 멀면 다른 역(예: 경의중앙선 양평 vs 5호선 양평)
+
+// 지하철역 이름(예: 강남역·강남)을 pois 역 이름으로 찾는다. 역 이름은 "역"을 떼고 저장돼 있다(서울역만 예외)
+export async function resolveStation(supabase: SupabaseClient<Database>, input: string): Promise<{ status: "ok"; name: string } | { status: "ambiguous" | "not_found" }> {
+  const s = input.replace(/\s+/g, "");
+  const names = [...new Set([s, s.replace(/역$/, ""), `${s}역`])].filter(Boolean);
+  const { data, error } = await supabase.rpc("subway_station_match", { p_names: names });
+  if (error) throw new Error(error.message);
+  const hit = names.map((n) => data?.find((r) => r.name === n)).find(Boolean);
+  if (!hit) return { status: "not_found" };
+  return hit.spread_m > SAME_STATION_M ? { status: "ambiguous" } : { status: "ok", name: hit.name };
+}
 
 // 체크박스 코드는 capital_sigungu에 있는 것만, 이름은 resolveRegion으로 정확히 한 곳일 때만 코드로 바꾼다
 export async function resolveStage2Regions(
   supabase: SupabaseClient<Database>,
   v: { sigungu_codes: string[]; dong_names: string[]; commute_region_name: string | null },
-): Promise<{ ok: true; region_codes: string[]; commute_region_code: string | null } | { ok: false; fieldErrors: FieldErrors }> {
+): Promise<{ ok: true; region_codes: string[]; commute_region_code: string | null; commute_station: string | null } | { ok: false; fieldErrors: FieldErrors }> {
   const fieldErrors: FieldErrors = {};
   if (v.sigungu_codes.length) {
     const { data, error } = await supabase.from("capital_sigungu").select("sigungu_code").in("sigungu_code", v.sigungu_codes);
@@ -63,14 +74,18 @@ export async function resolveStage2Regions(
     else fieldErrors.dong_names = [r.status];
   }
   let commute: string | null = null;
+  let station: string | null = null;
   if (v.commute_region_name) {
+    // 지역명이 먼저, 못 찾으면 지하철역 이름으로 본다
     const r = await resolveRegion(supabase, v.commute_region_name);
+    const st = r.status === "ok" ? null : await resolveStation(supabase, v.commute_region_name);
     if (r.status === "ok") commute = r.code;
-    else fieldErrors.commute_region_name = [r.status];
+    else if (st?.status === "ok") station = st.name;
+    else fieldErrors.commute_region_name = [st?.status === "ambiguous" ? "ambiguous" : r.status];
   }
   if (Object.keys(fieldErrors).length) return { ok: false, fieldErrors };
   const region_codes = [...new Set([...v.sigungu_codes.map((c) => `${c}00000`), ...dongCodes])];
-  return { ok: true, region_codes, commute_region_code: commute };
+  return { ok: true, region_codes, commute_region_code: commute, commute_station: station };
 }
 
 export async function saveStage2Conditions(
@@ -82,7 +97,6 @@ export async function saveStage2Conditions(
   const parsed = stage2Schema.safeParse({
     ...Object.fromEntries(form),
     sigungu_codes: form.getAll("sigungu_codes"),
-    environment_prefs: form.getAll("environment_prefs"),
   });
   if (!parsed.success) return { ok: false, fieldErrors: z.flattenError(parsed.error).fieldErrors as FieldErrors };
   const { createClient } = await import("@/lib/supabase/server"); // server-only: 스키마 테스트가 import할 수 있게 지연 로드
@@ -105,6 +119,7 @@ export async function saveStage2Conditions(
     ...values,
     region_codes: regions.region_codes,
     commute_region_code: regions.commute_region_code,
+    commute_station: regions.commute_station,
     plan_id: planId,
     user_id: user.id,
   });

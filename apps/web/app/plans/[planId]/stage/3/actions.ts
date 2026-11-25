@@ -17,8 +17,6 @@ const won = z.string().optional().transform((s) => s?.replace(/,/g, "")).pipe(nu
 // 100~5000m, 50m 단위 직선거리
 const dist = num(100, 5000).refine((n) => n === null || n % 50 === 0, { message: "50m 단위로 입력하세요" });
 const check = z.string().optional().transform((s) => s === "on");
-const text = (max: number) =>
-  z.string().max(max).optional().transform((s) => (s?.trim() ? s.trim() : null));
 
 export const PRIORITY_KEYS: ConditionKey[] = ["price_max", "area", "approval_year_min", "household_count_min",
   "parking_per_household_min", "floor_area_ratio_max",
@@ -40,11 +38,10 @@ export const stage3Schema = z
     rooms_min: num(1, 10),
     baths_min: num(1, 5),
     floor_pref: z.enum(["low", "mid", "high", ""]).optional().transform((s) => (s ? s : null)),
-    direction_pref: text(20),
+    direction_pref: z.enum(["east", "west", "south", "north", ""]).optional().transform((s) => (s ? s : null)),
     approval_year_min: num(1950, 2030),
     household_count_min: num(1, 10000),
     parking_per_household_min: num(0, 5, false),
-    mgmt_fee_per_m2_max: num(0, 100000),
     floor_area_ratio_max: num(0, 2000, false),
     station_distance_max_m: dist,
     elementary_distance_max_m: dist,

@@ -7,7 +7,7 @@ describe("stage3Schema", () => {
       housing_types: [], price_min: null, price_max: null,
       rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null,
       approval_year_min: null, household_count_min: null, parking_per_household_min: null,
-      mgmt_fee_per_m2_max: null, floor_area_ratio_max: null, station_distance_max_m: null, elementary_distance_max_m: null,
+      floor_area_ratio_max: null, station_distance_max_m: null, elementary_distance_max_m: null,
       redevelopment_interest: false, priorities: {},
     });
   });
@@ -92,4 +92,14 @@ test("parsePrefill: 허용 키·값만 통과", () => {
   expect(parsePrefill("priority.price_max:must")).toBeNull();
   expect(parsePrefill("priority.price_max:prefer&x")).toBeNull();
   expect(parsePrefill(undefined)).toBeNull();
+});
+
+test("희망 향은 동·서·남·북 버튼 값만, 빈 값(상관없음)은 null", () => {
+  for (const d of ["east", "west", "south", "north"]) expect(stage3Schema.parse({ direction_pref: d }).direction_pref).toBe(d);
+  expect(stage3Schema.parse({ direction_pref: "" }).direction_pref).toBeNull();
+  expect(stage3Schema.safeParse({ direction_pref: "남향" }).success).toBe(false);
+});
+
+test("관리비 조건은 받지 않는다", () => {
+  expect(stage3Schema.parse({ mgmt_fee_per_m2_max: "3000" })).not.toHaveProperty("mgmt_fee_per_m2_max");
 });

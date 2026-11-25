@@ -2,6 +2,8 @@ import { describe, expect, test } from "vitest";
 import { fakeDb } from "@/lib/agent/fake-db";
 import { resolveStage2Regions, stage2Schema } from "./actions";
 
+// subway_station_match: 이름 후보 중 있는 역과 같은 이름 역들끼리의 최대 거리(m)
+const STATIONS: Record<string, number> = { 강남: 0, 서울역: 120, 양평: 53_425 };
 const db = fakeDb({
   capital_sigungu: [{ sigungu_code: "11680" }, { sigungu_code: "11140" }],
   regions: [
@@ -9,15 +11,17 @@ const db = fakeDb({
     { code: "1114000000", full_name: "서울특별시 중구", is_active: true },
     { code: "2611000000", full_name: "부산광역시 중구", is_active: true },
   ],
+}, {
+  subway_station_match: ({ p_names }) => (p_names as string[]).filter((n) => n in STATIONS).map((name) => ({ name, spread_m: STATIONS[name] })),
 });
 const none = { sigungu_codes: [], dong_names: [], commute_region_name: null };
 
 describe("stage2Schema", () => {
   test("빈 폼은 전부 null/false/[]", () => {
-    expect(stage2Schema.parse({ sigungu_codes: [], environment_prefs: [] })).toEqual({
+    expect(stage2Schema.parse({ sigungu_codes: [] })).toEqual({
       sigungu_codes: [], dong_names: [], commute_region_name: null, commute_minutes_max: null,
       uses_transit: false, parking_required: false, school_importance: null, infra_importance: null,
-      household_size: null, area_min: null, area_max: null, environment_prefs: [], region_reason: null,
+      household_size: null, area_min: null, area_max: null, region_reason: null,
     });
   });
   test("area_min > area_max → area_max 오류", () => {
@@ -25,9 +29,8 @@ describe("stage2Schema", () => {
     expect(r.success).toBe(false);
     expect(r.error?.issues[0].path).toEqual(["area_max"]);
   });
-  test("environment_prefs는 허용값만", () => {
-    expect(stage2Schema.safeParse({ environment_prefs: ["quiet", "near_park"] }).success).toBe(true);
-    expect(stage2Schema.safeParse({ environment_prefs: ["pool"] }).success).toBe(false);
+  test("선호 주거환경은 받지 않는다(5단계 입지 비교로 대신)", () => {
+    expect(stage2Schema.parse({ environment_prefs: ["near_park"] })).not.toHaveProperty("environment_prefs");
   });
   test("sigungu_codes 11개는 거부", () => {
     expect(stage2Schema.safeParse({ sigungu_codes: Array.from({ length: 11 }, (_, i) => String(11000 + i)) }).success).toBe(false);
@@ -44,7 +47,7 @@ describe("stage2Schema", () => {
 describe("resolveStage2Regions", () => {
   test("체크박스 코드는 10자리로, 희망 동 코드는 뒤에 추가", async () => {
     expect(await resolveStage2Regions(db, { sigungu_codes: ["11680"], dong_names: ["강남구 개포동"], commute_region_name: null }))
-      .toEqual({ ok: true, region_codes: ["1168000000", "1168010300"], commute_region_code: null });
+      .toEqual({ ok: true, region_codes: ["1168000000", "1168010300"], commute_region_code: null, commute_station: null });
   });
   test("capital_sigungu에 없는 코드(변조 26110) → sigungu_codes 오류", async () => {
     expect(await resolveStage2Regions(db, { ...none, sigungu_codes: ["11680", "26110"] })).toMatchObject({ ok: false, fieldErrors: { sigungu_codes: expect.any(Array) } });
@@ -54,10 +57,31 @@ describe("resolveStage2Regions", () => {
     expect(await resolveStage2Regions(db, { ...none, commute_region_name: "중구" })).toMatchObject({ ok: false, fieldErrors: { commute_region_name: expect.any(Array) } });
   });
   test("통근 지역 이름 → 코드", async () => {
-    expect(await resolveStage2Regions(db, { ...none, commute_region_name: "강남구 개포동" })).toEqual({ ok: true, region_codes: [], commute_region_code: "1168010300" });
+    expect(await resolveStage2Regions(db, { ...none, commute_region_name: "강남구 개포동" })).toEqual({ ok: true, region_codes: [], commute_region_code: "1168010300", commute_station: null });
   });
 });
 
 test("rooms are entered in stage 3 only (M6-D4)", () => {
   expect(stage2Schema.parse({ rooms_min: "3" })).not.toHaveProperty("rooms_min");
+});
+
+describe("직장·주요 이동 지역에 지하철역 입력", () => {
+  const commute = (name: string) => resolveStage2Regions(db, { ...none, commute_region_name: name });
+  test("'강남역'·'강남' → 역으로 저장(지역 코드 없음)", async () => {
+    for (const n of ["강남역", "강남", " 강남역 "]) {
+      expect(await commute(n)).toEqual({ ok: true, region_codes: [], commute_region_code: null, commute_station: "강남" });
+    }
+  });
+  test("서울역은 이름에 '역'이 붙은 채 저장돼 있다", async () => {
+    expect(await commute("서울역")).toMatchObject({ ok: true, commute_station: "서울역" });
+  });
+  test("같은 이름 역이 멀리 떨어져 있으면(양평) 모호하다고 알린다", async () => {
+    expect(await commute("양평역")).toMatchObject({ ok: false, fieldErrors: { commute_region_name: ["ambiguous"] } });
+  });
+  test("지역명으로 찾히면 지역이 우선", async () => {
+    expect(await commute("강남구 개포동")).toMatchObject({ ok: true, commute_region_code: "1168010300", commute_station: null });
+  });
+  test("역도 지역도 아니면 not_found", async () => {
+    expect(await commute("없는곳")).toMatchObject({ ok: false, fieldErrors: { commute_region_name: ["not_found"] } });
+  });
 });

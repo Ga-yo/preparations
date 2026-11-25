@@ -16,6 +16,7 @@ vi.mock("@/lib/supabase/server", () => ({
       from: (t: string) => {
         const q = db.from(t as never) as unknown as Record<string, unknown>;
         q.insert = async (row: Record<string, unknown>) => { inserts.push({ table: t, ...row }); return { error: null }; };
+        q.upsert = q.insert;
         return q;
       },
       rpc: async () => ({ data: used, error: null }),
@@ -23,10 +24,11 @@ vi.mock("@/lib/supabase/server", () => ({
     };
   },
 }));
-const { runCheck } = vi.hoisted(() => ({ runCheck: vi.fn() }));
+const { runCheck, pickTips } = vi.hoisted(() => ({ runCheck: vi.fn(), pickTips: vi.fn() }));
 vi.mock("@/lib/agent/check", async (orig) => ({ ...(await orig<typeof import("@/lib/agent/check")>()), runCheck }));
+vi.mock("@/lib/agent/tip-picks", async (orig) => ({ ...(await orig<typeof import("@/lib/agent/tip-picks")>()), pickTips }));
 
-const { loadAssistant, runAiCheck } = await import("./assistant");
+const { loadAssistant, runAiCheck, stageTipPicks } = await import("./assistant");
 
 const profile = { plan_id: PLAN, is_first_time: true, updated_at: "t" };
 const hashNow = () => inputHash({ profile, cond: null, favoriteIds: [], today: kstToday() });
@@ -34,7 +36,7 @@ const hashNow = () => inputHash({ profile, cond: null, favoriteIds: [], today: k
 beforeEach(() => {
   tables = { financial_profiles: [profile], condition_sets: [], candidates: [], ai_checks: [], chat_messages: [] };
   inserts = []; used = 1;
-  runCheck.mockReset();
+  runCheck.mockReset(); pickTips.mockReset();
   vi.stubEnv("GEMINI_API_KEY", "test-key");
 });
 
@@ -101,4 +103,32 @@ test("loadAssistant: 입력이 바뀐 점검은 fresh=false, 질문은 규칙으
   const r = await loadAssistant(PLAN, 1);
   expect(r.check?.fresh).toBe(false);
   expect(r.suggestions).not.toContain("AI 질문");
+});
+
+test("stageTipPicks: 입력이 바뀌면 AI가 고르고 저장, 같으면 다시 부르지 않는다", async () => {
+  tables.tips = [{ slug: "ltv-dsr", stage: 1, field_key: "annual_income", title: "LTV", sort_order: 1 }, { slug: "price-vs-real-price", stage: 1, field_key: null, title: "x", sort_order: 0 }];
+  tables.tip_picks = [{ plan_id: PLAN, stage: 1, input_hash: "old", tips: [] }];
+  pickTips.mockResolvedValue([{ slug: "ltv-dsr", note: "n" }]);
+  expect(await stageTipPicks(PLAN, 1)).toEqual([{ slug: "ltv-dsr", note: "n" }]);
+  expect(pickTips.mock.calls[0][0].options.map((o: { slug: string }) => o.slug)).toEqual(["ltv-dsr"]); // 화면에 붙지 않는 TIP은 후보에서 뺀다
+  const saved = inserts.find((r) => r.table === "tip_picks")!;
+  expect(saved).toMatchObject({ plan_id: PLAN, stage: 1, tips: [{ slug: "ltv-dsr", note: "n" }] });
+
+  tables.tip_picks = [saved];
+  pickTips.mockClear();
+  expect(await stageTipPicks(PLAN, 1)).toEqual([{ slug: "ltv-dsr", note: "n" }]);
+  expect(pickTips).not.toHaveBeenCalled();
+});
+
+test("stageTipPicks: 입력이 없거나 한도를 넘거나 AI가 실패하면 null(모두 보여 줌)", async () => {
+  tables.tips = []; tables.tip_picks = [];
+  tables.financial_profiles = [];
+  expect(await stageTipPicks(PLAN, 1)).toBeNull();
+  tables.financial_profiles = [profile];
+  used = 999;
+  expect(await stageTipPicks(PLAN, 1)).toBeNull();
+  used = 1;
+  pickTips.mockRejectedValue(new Error("timeout"));
+  expect(await stageTipPicks(PLAN, 1)).toBeNull();
+  expect(inserts).toEqual([]);
 });

@@ -14,6 +14,8 @@ const emptyToNull = (v: unknown) => (v === "" ? null : v);
 const check = z.string().optional().transform((s) => s === "on");
 
 export const financialProfileSchema = z.object({
+  // 부채 보유 여부(DB 컬럼 아님): 없음이면 숨은 부채 입력칸 값은 버리고 0으로 저장한다
+  has_debt: check,
   // 목적·시기는 필수(2026-11-19 결정): 빈 폼이 저장돼 "0원까지예요"가 나오던 문제
   purpose: z.preprocess(emptyToNull, z.enum(["live", "invest", "both"])),
   timeline: z.preprocess(emptyToNull, z.enum(["6m", "1y", "2_3y", "undecided"])),
@@ -27,7 +29,11 @@ export const financialProfileSchema = z.object({
   is_first_time: check,
   is_newlywed: check,
   has_newborn: check,
-});
+})
+  .refine((v) => !v.has_debt || v.existing_debt_annual_payment !== null, {
+    path: ["existing_debt_annual_payment"], message: "부채가 있으면 연간 원리금 상환액이 필요합니다",
+  })
+  .transform(({ has_debt, ...v }) => (!has_debt ? { ...v, existing_debt: 0, existing_debt_annual_payment: 0 } : v));
 
 export async function saveFinancialProfile(
   planId: string,

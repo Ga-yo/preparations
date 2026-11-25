@@ -1,31 +1,32 @@
 import Link from "next/link";
+import { stageTipPicks } from "../../_components/assistant";
 import { connection } from "next/server";
 import { notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { AssistantPanel } from "../../_components/AssistantPanel";
-import { ChoiceCards, CheckCard, inputClass, labelClass, PrioritySwitch, Section, ToggleChips, UnitInput } from "../../_components/Field";
+import { ChoiceCards, CheckCard, labelClass, PrioritySwitch, Section, ToggleChips, UnitInput } from "../../_components/Field";
 import { MoneyInput } from "../../_components/MoneyInput";
 import { CONDITION_LABELS, ConditionCheckCard } from "../../_components/ConditionCheckCard";
 import { StageForm } from "../../_components/StageForm";
 import { StageTabs } from "../../_components/StageTabs";
-import { TipPanel } from "../../_components/TipPanel";
+import { TipPanel, TipPicks } from "../../_components/TipPanel";
 import { checkConditionsForPlan, parsePrefill, PRIORITY_KEYS, saveStage3Conditions } from "./actions";
 import { Stage3Summary } from "./_components/Stage3Summary";
 
 const LABELS: Record<string, string> = {
   housing_types: "주택 유형", price_min: "희망 최저가", price_max: "희망 최고가(최저 ≤ 최고)",
   rooms_min: "방 개수(1~10)", baths_min: "욕실 개수(1~5)",
-  floor_pref: "희망 층", direction_pref: "희망 향(20자 이내)", approval_year_min: "준공 연도(1950~2030)",
+  floor_pref: "희망 층", direction_pref: "희망 향", approval_year_min: "준공 연도(1950~2030)",
   household_count_min: "세대수(1~10,000)", parking_per_household_min: "세대당 주차(0~5대)",
-  mgmt_fee_per_m2_max: "관리비",
   station_distance_max_m: "지하철역까지 직선거리(100~5,000m, 50m 단위)", elementary_distance_max_m: "초등학교까지 직선거리(100~5,000m, 50m 단위)", floor_area_ratio_max: "용적률 상한(0~2,000%)",
   ...Object.fromEntries(PRIORITY_KEYS.map((k) => [`priority.${k}`, `${CONDITION_LABELS[k]} 우선순위`])),
   plan: "계획(접근 권한 없음 또는 존재하지 않음)",
 };
 const TYPES = { apartment: "아파트", officetel: "오피스텔", row_house: "연립·다세대" } as const;
 const FLOORS = { low: "저층", mid: "중층", high: "고층" } as const;
+const DIRECTIONS = { east: "동향", west: "서향", south: "남향", north: "북향" } as const;
 // 요청마다 쿠키·DB로 렌더하는 페이지: cacheComponents 프리렌더 대신 요청 시 렌더
 export const instant = false;
 
@@ -73,7 +74,9 @@ export default async function Stage3({
   const cd = check.data as { conflicts?: unknown[]; counts?: { must: number } };
   const resultLabel = cd.counts ? `충돌 ${cd.conflicts?.length ? `${cd.conflicts.length}건` : "없음"} · 필수 충족 ${cd.counts.must.toLocaleString("ko-KR")}곳` : undefined;
 
+  const tipPicks = stageTipPicks(planId, 3).catch((e): null => (console.error("tip picks failed", e), null)); // 기다리지 않는다: TIP만 나중에 나타난다
   return (
+    <TipPicks value={tipPicks}>
     <div className="flex-1 bg-chb-soft2 pb-28">
       <StageTabs planId={planId} current={3} />
       <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -123,21 +126,16 @@ export default async function Stage3({
               </div>
               <ChoiceCards name="floor_pref" legend="희망 층" value={c?.floor_pref ?? ""} cols="grid-cols-2 sm:grid-cols-4" tip={tip("floor_pref")}
                 options={[["", "상관없음"], ...Object.entries(FLOORS) as [string, string][]]} />
-              <div>
-                <label htmlFor="direction_pref" className={labelClass}>희망 향</label>
-                <input id="direction_pref" name="direction_pref" maxLength={20} defaultValue={c?.direction_pref ?? ""} placeholder="예: 남향" className={inputClass} />
-                {tip("direction_pref")}
-              </div>
+              <ChoiceCards name="direction_pref" legend="희망 향" value={c?.direction_pref ?? ""} cols="grid-cols-3 sm:grid-cols-5" tip={tip("direction_pref")}
+                options={[["", "상관없음"], ...Object.entries(DIRECTIONS) as [string, string][]]} />
+              {/* 향은 세대마다 달라 단지 데이터에 없다. 후보를 거르지 않고 점검 결과에 안내만 한다(unit_level_condition) */}
+              <p className="-mt-4 text-sm text-chb-muted">향은 세대마다 달라 후보 단지를 거르지 않아요. 매물을 볼 때 확인하세요.</p>
             </Section>
             <Section n={2} heading="단지 조건" desc="단지의 나이와 규모, 주차 여건을 정해요.">
               <div className="grid gap-6 sm:grid-cols-2">
                 {unitField("approval_year_min", "준공 연도", "년 이후", c?.approval_year_min, 1950, 2030, 1, "approval_year_min")}
                 {unitField("household_count_min", "세대수", "세대 이상", c?.household_count_min, 1, 10000, 1, "household_count_min")}
                 {unitField("parking_per_household_min", "세대당 주차 대수", "대 이상", c?.parking_per_household_min, 0, 5, 0.1, "parking_per_household_min")}
-                <div>
-                  {unitField("mgmt_fee_per_m2_max", "관리비 (㎡당 월)", "원 이하", c?.mgmt_fee_per_m2_max, 0, 100000)}
-                  <p className="text-sm text-chb-muted">아직 점검할 데이터가 없어요.</p>
-                </div>
               </div>
             </Section>
             <Section n={3} heading="주택 가치 조건" desc="재건축·재개발 가능성을 볼 때 참고하는 지표예요.">
@@ -158,5 +156,6 @@ export default async function Stage3({
         </div>
       </main>
     </div>
+    </TipPicks>
   );
 }
