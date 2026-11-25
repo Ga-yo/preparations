@@ -15,7 +15,7 @@ async function DetailSection({ planId, complexId }: { planId: string; complexId:
     supabase.from("tips").select("slug, field_key, title, body, caution").eq("stage", 4).order("sort_order"),
   ]);
   if (!detail) return <p role="alert" className="rounded-3xl border border-chb-line bg-white p-6 text-chb-muted">단지 상세를 불러오지 못했습니다.</p>;
-  return <ComplexDetail result={detail} tips={tips ?? []} />;
+  return <ComplexDetail planId={planId} result={detail} tips={tips ?? []} />;
 }
 
 // 요청마다 쿠키·DB로 렌더하는 페이지: cacheComponents 프리렌더 대신 요청 시 렌더

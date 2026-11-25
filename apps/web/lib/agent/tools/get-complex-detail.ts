@@ -56,7 +56,7 @@ export async function loadComplexDetail(complexId: number, ctx: ToolContext, tra
   const ownRow = own ?? ((nb.data ?? []) as ComplexRow[]).find((r) => r.complex_id === c.id); // 사용자 지역 밖 단지는 같은 동 행으로 보충
   const fit = ok && own ? fitScore(l.conditions, own, maxBudgetFor(l.budgets, own), activeKeys(l.conditions, l.rows)) : null;
   const near = { nearest_station_name: ownRow?.nearest_station_name ?? null, nearest_station_m: ownRow?.nearest_station_m ?? null, nearest_elementary_m: ownRow?.nearest_elementary_m ?? null,
-    nearest_park_m: ownRow?.nearest_park_m ?? null, shop_count_500m: ownRow?.shop_count_500m ?? null, commute_m: ownRow?.commute_m ?? null };
+    nearest_park_name: ownRow?.nearest_park_name ?? null, nearest_park_m: ownRow?.nearest_park_m ?? null, shop_count_500m: ownRow?.shop_count_500m ?? null, commute_m: ownRow?.commute_m ?? null };
   const nearbyRows = nearby.data ?? [];
   const keys = monthKeys(ctx.today, CHART_MONTHS);
   // 최근 12개 달력월에 거래가 있는 면적만 탭으로 둔다(오래된 거래만 있는 면적은 빈 차트가 된다)
@@ -88,7 +88,7 @@ export async function loadComplexDetail(complexId: number, ctx: ToolContext, tra
         median_price: ownRow?.median_price ?? null, deal_count: ownRow?.deal_count ?? 0,
         ...near,
       },
-      fit, redevelopment, nearby: nearbyRows, areas, default_area,
+      fit, redevelopment, commute: ok ? l.commuteTarget : null, nearby: nearbyRows, areas, default_area,
       neighbors: { ...neighborStats(c.id, (nb.data ?? []) as ComplexRow[]), basis: "same_dong" },
       criteria: { area_min, area_max, chart_months: CHART_MONTHS },
     },

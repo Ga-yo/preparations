@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { RankedComplex } from "@/lib/calc/fit";
+import { walkMinutes } from "@/lib/calc/walk";
 import { formatWon, livingText } from "../../../_components/format";
 import { CandidateGroups, type CandidateItem } from "./CandidateGroups";
 import { FavoriteButton } from "./FavoriteButton";
@@ -27,7 +28,7 @@ function RowBody({ x, rank, planId }: { x: RankedComplex; rank: number; planId: 
       </p>
       <p className="mt-1 text-chb-muted">
         {x.nearest_station_m === null && x.nearest_elementary_m === null ? "위치 정보 없음"
-          : `${x.nearest_station_m === null ? "역 정보 없음" : `역 ${x.nearest_station_name ?? "-"} 직선 ${x.nearest_station_m}m`} · ${x.nearest_elementary_m === null ? "초등학교 정보 없음" : `초등학교 직선 ${x.nearest_elementary_m}m`}`}
+          : `${x.nearest_station_m === null ? "역 정보 없음" : `역 ${x.nearest_station_name ?? "-"} 약 도보 ${walkMinutes(x.nearest_station_m)}분`} · ${x.nearest_elementary_m === null ? "초등학교 정보 없음" : `초등학교 약 도보 ${walkMinutes(x.nearest_elementary_m)}분`}`}
       </p>
       {livingText(x) && <p className="text-chb-muted">{livingText(x)}</p>}
       <div className="mt-3"><FitChips fit={x.fit} /></div>

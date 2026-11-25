@@ -1,4 +1,5 @@
 import { expect, test } from "vitest";
+import { walkMinutes } from "@/lib/calc/walk";
 import { caretAfterDigits, formatEokShort, formatWon, groupDigits, livingText } from "./format";
 
 test.each([
@@ -7,10 +8,10 @@ test.each([
 ])("formatWon(%i) = %s", (n, s) => expect(formatWon(n)).toBe(s));
 
 test("livingText joins known values only", () => {
-  expect(livingText({ commute_m: 3140, nearest_park_m: 210, shop_count_500m: 42 }))
-    .toBe("출퇴근 지역까지 직선 3.1km · 공원 직선 210m · 반경 500m 생활 상가 42곳");
-  expect(livingText({ commute_m: 800, nearest_park_m: null, shop_count_500m: 0 })).toBe("출퇴근 지역까지 직선 800m · 반경 500m 생활 상가 0곳");
-  expect(livingText({ commute_m: null, nearest_park_m: null, shop_count_500m: null })).toBeNull();
+  expect(livingText({ nearest_park_name: "도곡공원", nearest_park_m: 210, shop_count_500m: 42 }))
+    .toBe(`도곡공원 약 도보 ${walkMinutes(210)}분 · 반경 500m 생활 상가 42곳`);
+  expect(livingText({ nearest_park_name: null, nearest_park_m: 210, shop_count_500m: null })).toBe(`공원 약 도보 ${walkMinutes(210)}분`);
+  expect(livingText({ nearest_park_name: null, nearest_park_m: null, shop_count_500m: null })).toBeNull();
 });
 
 test.each([

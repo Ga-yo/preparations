@@ -2,6 +2,9 @@ import type { ToolResult } from "@/lib/agent/tool";
 import type { Fit, NeighborStats } from "@/lib/calc/fit";
 import { TipPanel, type Tip } from "../../../_components/TipPanel";
 import { DATASETS } from "../../../_components/ConditionCheckCard";
+import { walkMinutes } from "@/lib/calc/walk";
+import type { CommuteTarget } from "@/lib/route/commute";
+import { Commute } from "../../../_components/Commute";
 import { formatWon, livingText } from "../../../_components/format";
 import { redevelopmentText } from "../../../_components/redevelopment";
 import type { RedevelopmentInfo } from "@/lib/agent/redevelopment";
@@ -15,10 +18,11 @@ type Data = {
     id: number; name: string; median_price: number | null; deal_count: number; jibun_address: string | null; road_address: string | null; approval_year: number | null;
     household_count: number | null; building_count: number | null; parking_per_household: number | null;
     floor_area_ratio: number | null; building_coverage_ratio: number | null; land_share_m2: number | null;
-    nearest_park_m: number | null; shop_count_500m: number | null; commute_m: number | null;
+    nearest_park_name?: string | null; nearest_park_m: number | null; shop_count_500m: number | null;
   };
   fit: Fit | null;
   redevelopment?: RedevelopmentInfo;
+  commute?: CommuteTarget | null;
   nearby: { category: string; name: string; lines: string[] | null; distance_m: number }[];
   areas: AreaPrices[];
   default_area: number | null;
@@ -28,11 +32,11 @@ type Data = {
 const CATEGORY: Record<string, string> = { subway_station: "지하철역", elementary_school: "초등학교", middle_school: "중학교", high_school: "고등학교" };
 const dash = (v: number | null, unit = "") => (v === null ? "-" : `${v.toLocaleString("ko-KR")}${unit}`);
 
-export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[] }) {
+export function ComplexDetail({ planId, result, tips }: { planId: string; result: ToolResult; tips: Tip[] }) {
   if ("error" in (result.data as object)) {
     return <section className="rounded-3xl border border-chb-line bg-white p-6 text-sm text-chb-muted">선택한 단지를 찾을 수 없습니다.</section>;
   }
-  const { complex: c, fit, redevelopment, nearby, areas, default_area, neighbors: n, criteria } = result.data as Data;
+  const { complex: c, fit, redevelopment, commute, nearby, areas, default_area, neighbors: n, criteria } = result.data as Data;
   const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 단지 좌표 유무로 정한다
   const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois|redevelopment):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
@@ -67,17 +71,18 @@ export function ComplexDetail({ result, tips }: { result: ToolResult; tips: Tip[
 
   const around = (
     <>
-      <h3 className={h3}>주변 시설 (직선거리 1km 이내)</h3>
+      <h3 className={h3}>주변 시설 (1km 이내)</h3>
+      {commute && <Commute key={`${c.id}:${commute.mode}:${commute.key}`} planId={planId} complexId={c.id} target={commute} />}
       {nearby.length ? (
         <>
-          <div className="overflow-x-auto rounded-2xl border border-chb-line"><table aria-label="주변 시설 (직선거리 1km 이내)" className={table}>
-            <thead className="bg-chb-soft2 text-chb-muted"><tr><th scope="col">구분</th><th scope="col">이름</th><th scope="col">노선</th><th scope="col">직선거리</th></tr></thead>
+          <div className="overflow-x-auto rounded-2xl border border-chb-line"><table aria-label="주변 시설 (1km 이내)" className={table}>
+            <thead className="bg-chb-soft2 text-chb-muted"><tr><th scope="col">구분</th><th scope="col">이름</th><th scope="col">노선</th><th scope="col">도보</th></tr></thead>
             <tbody>{nearby.map((p, i) => (
               <tr key={i}><td>{CATEGORY[p.category] ?? "기타"}</td><td>{p.name}</td>
-                <td>{p.category === "subway_station" ? p.lines?.join(", ") ?? "-" : "-"}</td><td>{p.distance_m}m</td></tr>
+                <td>{p.category === "subway_station" ? p.lines?.join(", ") ?? "-" : "-"}</td><td>약 {walkMinutes(p.distance_m)}분</td></tr>
             ))}</tbody>
           </table></div>
-          <p className="text-xs text-chb-muted">직선거리이며 실제 도보 거리는 더 깁니다.</p>
+          <p className="text-xs text-chb-muted">도보 시간은 직선거리 기반 추정입니다.</p>
         </>
       ) : <p className="text-chb-muted">{hasCoords ? "직선거리 1km 안에 역·학교가 없습니다." : "좌표 정보가 없어 주변 시설을 표시하지 못했습니다."}</p>}
       {livingText(c) && <p>{livingText(c)}</p>}

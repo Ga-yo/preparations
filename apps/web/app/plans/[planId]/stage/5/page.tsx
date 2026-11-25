@@ -13,7 +13,7 @@ import { getBudgetForPlan } from "../1/actions";
 import { DATASETS, ERRORS, NOTICES } from "../../_components/ConditionCheckCard";
 import { StageTabs } from "../../_components/StageTabs";
 import { favoriteComplexIds } from "../4/actions";
-import { changesForPlan, compareForPlan, parseIds } from "./actions";
+import { changesForPlan, commuteForPlan, compareForPlan, parseIds } from "./actions";
 import { CompareTable, type CompareData } from "./_components/CompareTable";
 import { ConditionChanges } from "./_components/ConditionChanges";
 
@@ -47,10 +47,11 @@ export default async function Stage5({
     favoriteComplexIds(planId).catch((e): { complex_id: number; name: string }[] => (logError(e), [])),
   ]);
   const ids = parseIds(rawIds, favorites.map((f) => f.complex_id));
-  const [compare, changes, budget] = await Promise.all([
+  const [compare, changes, budget, commute] = await Promise.all([
     ids.length >= 2 ? compareForPlan(planId, ids).catch((e): null => (logError(e), null)) : Promise.resolve<ToolResult | null | undefined>(undefined),
     changesForPlan(planId).catch((e): null => (logError(e), null)),
     getBudgetForPlan(planId).catch((e): null => (logError(e), null)),
+    ids.length >= 2 ? commuteForPlan(planId).catch((e): null => (logError(e), null)) : Promise.resolve(null),
   ]);
   const budgetData = budget?.data as { products?: ProductPayment[]; loan?: { amount: number } } | undefined;
   const products = byMonthly(budgetData?.products ?? []);
@@ -104,7 +105,7 @@ export default async function Stage5({
             ) : (
               <>
                 {compare?.stale?.length ? <p role="alert" className="rounded-2xl bg-amber-50 p-4 text-sm text-amber-900">오래된 데이터가 포함되어 있습니다: {compare.stale.map((k) => DATASETS[k] ?? k).join(", ")}</p> : null}
-                <CompareTable planId={planId} data={data} tips={tips ?? []} />
+                <CompareTable planId={planId} data={data} tips={tips ?? []} commute={commute} />
                 {!!compare?.notices?.filter((n) => COMPARE_NOTICES[n]).length && (
                   <ul className="list-disc space-y-1 pl-5 text-xs text-chb-muted">
                     {compare.notices.filter((n) => COMPARE_NOTICES[n]).map((n) => <li key={n}>{COMPARE_NOTICES[n]}</li>)}
