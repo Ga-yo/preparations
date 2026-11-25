@@ -24,7 +24,7 @@ export async function createReport(planId: string): Promise<void> {
     getBudgetForPlan(planId),
     favoriteComplexIds(planId),
     supabase.from("condition_sets")
-      .select("region_codes, region_reason, commute_region_code, area_min, area_max, price_max, redevelopment_interest")
+      .select("region_codes, region_reason, commute_region_code, commute_station, area_min, area_max, price_max, redevelopment_interest")
       .eq("plan_id", planId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("tips").select("field_key, title, body, caution").eq("stage", 5).in("field_key", ["checklist", "next_steps", "redevelopment"]).order("sort_order"),
   ]);

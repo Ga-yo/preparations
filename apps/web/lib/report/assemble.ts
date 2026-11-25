@@ -1,4 +1,5 @@
 // M6b 구매 검토 리포트 스냅숏. 숫자는 툴 결과를 그대로 담고 새로 계산하지 않는다(원칙 1). 순수 함수.
+import { stationLabel } from "@/lib/agent/region";
 import type { ToolResult } from "@/lib/agent/tool";
 
 export interface ReportConditions {
@@ -23,7 +24,7 @@ export function assembleReport(p: Omit<ReportPayload, "version" | "as_of" | "not
 }
 
 type ConditionRow = {
-  region_codes: string[]; region_reason: string | null; commute_region_code: string | null;
+  region_codes: string[]; region_reason: string | null; commute_region_code: string | null; commute_station: string | null;
   area_min: number | null; area_max: number | null; price_max: number | null; redevelopment_interest: boolean | null;
 };
 
@@ -31,7 +32,8 @@ export function conditionsSummary(row: ConditionRow | null, names: Record<string
   if (!row) return null;
   return {
     region_names: row.region_codes.map((c) => names[c] ?? c), region_reason: row.region_reason,
-    commute_region_name: row.commute_region_code ? names[row.commute_region_code] ?? row.commute_region_code : null,
+    commute_region_name: row.commute_station ? stationLabel(row.commute_station)
+      : row.commute_region_code ? names[row.commute_region_code] ?? row.commute_region_code : null,
     area_min: row.area_min, area_max: row.area_max, price_max: row.price_max, redevelopment_interest: !!row.redevelopment_interest,
   };
 }

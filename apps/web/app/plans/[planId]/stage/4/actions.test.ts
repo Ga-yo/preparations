@@ -32,7 +32,7 @@ const row = { complex_id: 7, name: "a", region_code: "11680", approval_year: 200
 const ctx = (rows = [row]) => ({
   conditions: { housing_types: [], price_min: null, price_max: 6e8, area_min: null, area_max: null,
     approval_year_min: 2010, household_count_min: null, parking_per_household_min: null, floor_area_ratio_max: null,
-    mgmt_fee_per_m2_max: null, rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null, priorities: {} },
+    rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null, priorities: {} },
   conditionSetId: "set-latest", budgets: [], rows,
 });
 const find = (table: string, op: string) => calls.find((c) => c.table === table && c.op === op);

@@ -32,7 +32,7 @@ export const compareComplexesTool = defineTool({
         const rpc = await ctx.supabase.rpc("complexes_for_conditions", {
           region_codes: codes, months: MONTHS,
           ...(area_min !== null && { area_min }), ...(area_max !== null && { area_max }),
-          ...(l.commuteCode && { commute_code: l.commuteCode }),
+          ...l.commute,
         });
         if (rpc.error) throw new Error(rpc.error.message);
         for (const r of (rpc.data ?? []) as ComplexRow[]) if (missing.includes(r.complex_id)) outside.set(r.complex_id, r);

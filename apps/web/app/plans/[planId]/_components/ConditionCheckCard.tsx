@@ -19,15 +19,12 @@ export const ERRORS: Record<string, string> = {
 };
 export const NOTICES: Record<string, string> = {
   no_data_for_type: "오피스텔·연립·다세대는 아직 데이터가 없어 아파트만 점검했습니다.",
-  "data_unavailable:mgmt_fee": "관리비 조건은 아직 점검할 데이터가 없습니다.",
   unit_level_condition: "방·욕실 수, 층, 향은 세대마다 달라 단지 단위로 점검하지 않습니다.",
   no_complex_data: "희망 지역에 단지 데이터가 아직 없습니다.",
   no_location_data: "교통·학교·생활 인프라 데이터는 아직 없습니다.",
   location_partial: "좌표가 없는 단지는 거리 조건을 판단하지 못했습니다.",
   no_poi_data: "역·학교 위치나 희망 지역 단지 좌표가 아직 없어 거리 조건을 점검하지 못했습니다.",
   truncated: "단지가 많아 3,000개까지만 점검했습니다. 지역을 좁혀 보세요.",
-  quiet_no_data: "조용한 환경은 판단할 데이터가 없어 반영하지 못했습니다.",
-  no_park_data: "공원 위치 데이터가 아직 없어 공원 인접을 반영하지 못했습니다.",
   no_shop_data: "생활 상가 데이터가 아직 없어 편의시설 중요도를 반영하지 못했습니다.",
   commute_is_straight_line: "출퇴근 거리는 직선거리 근사입니다. 실제 이동 시간은 노선·환승에 따라 다릅니다.",
 };

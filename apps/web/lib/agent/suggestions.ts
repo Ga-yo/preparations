@@ -5,7 +5,7 @@ export type SuggestionInput = {
     is_first_time?: boolean | null; is_newlywed?: boolean | null; has_newborn?: boolean | null; income_is_combined?: boolean | null;
   } | null;
   cond: {
-    region_codes?: string[] | null; commute_region_code?: string | null; school_importance?: number | null;
+    region_codes?: string[] | null; commute_region_code?: string | null; commute_station?: string | null; school_importance?: number | null;
     price_max?: number | null; redevelopment_interest?: boolean | null; priorities?: unknown;
   } | null;
   favoriteCount: number;
@@ -29,7 +29,7 @@ export function ruleQuestions(stage: number, { profile: p, cond: c, favoriteCoun
   } else if (stage === 2) {
     q.push(
       !c?.region_codes?.length && "내 예산으로 갈 수 있는 지역을 추천해 주세요",
-      !!c?.commute_region_code && "직장 가까운 지역 중 예산에 맞는 곳은 어디인가요?",
+      !!(c?.commute_region_code || c?.commute_station) && "직장 가까운 지역 중 예산에 맞는 곳은 어디인가요?",
       (c?.school_importance ?? 0) >= 4 && "초등학교 가까운 단지를 찾으려면 어떻게 해야 하나요?",
       "희망 지역의 시세는 어느 정도인가요?", "전용면적과 공급면적은 어떻게 다른가요?",
     );

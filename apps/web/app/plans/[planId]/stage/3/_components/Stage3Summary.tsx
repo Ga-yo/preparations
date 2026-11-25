@@ -15,6 +15,7 @@ const KEYS: { key: string; field?: string; text: (v: number) => string }[] = [
 ];
 const TYPES: Record<string, string> = { apartment: "아파트", officetel: "오피스텔", row_house: "연립·다세대" };
 const FLOORS: Record<string, string> = { low: "저층", mid: "중층", high: "고층" };
+const DIRECTIONS: Record<string, string> = { east: "동향", west: "서향", south: "남향", north: "북향" };
 
 type Cond = { text: string; priority: string };
 export type Stage3Snapshot = { conds: Cond[]; basics: string[] };
@@ -37,7 +38,7 @@ export function readStage3(form: HTMLFormElement, areaText: string | null): Stag
   const basics = [
     ...f.getAll("housing_types").map((t) => TYPES[String(t)] ?? String(t)),
     rooms !== null && `방 ${rooms}개 이상`, baths !== null && `욕실 ${baths}개 이상`,
-    FLOORS[String(f.get("floor_pref") ?? "")], String(f.get("direction_pref") ?? "").trim(),
+    FLOORS[String(f.get("floor_pref") ?? "")], DIRECTIONS[String(f.get("direction_pref") ?? "")],
     f.has("redevelopment_interest") && "재건축·재개발 관심",
   ].filter(Boolean) as string[];
   return { conds, basics };

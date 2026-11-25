@@ -16,7 +16,8 @@ import { getBudgetForPlan, saveFinancialProfile } from "./actions";
 
 const LABELS: Record<string, string> = {
   purpose: "구매 목적", timeline: "구매 희망 시기", cash_assets: "보유 현금·자기자본", annual_income: "연 소득",
-  existing_debt: "기존 대출·부채 총액", existing_debt_annual_payment: "기존 대출 연간 원리금 상환액",
+  has_debt: "기존 대출·부채 보유 여부", existing_debt: "기존 대출·부채 총액",
+  existing_debt_annual_payment: "기존 대출 연간 원리금 상환액(부채가 있으면 필수)",
   extra_funds: "추가 가용 자금", owned_house_count: "보유 주택 수", plan: "계획(접근 권한 없음 또는 존재하지 않음)",
 };
 // 요청마다 쿠키·DB로 렌더하는 페이지: cacheComponents 프리렌더 대신 요청 시 렌더
@@ -55,6 +56,8 @@ export default async function Stage1({
     debtPayment: MAN(p?.existing_debt_annual_payment), extra: MAN(p?.extra_funds), houses: p?.owned_house_count ?? 0,
     firstTime: !!p?.is_first_time, newlywed: !!p?.is_newlywed, newborn: !!p?.has_newborn,
   };
+  // 보유 여부는 저장하지 않으므로 저장된 금액에서 되살린다(처음이면 미선택)
+  const hasDebt = p ? ((p.existing_debt ?? 0) > 0 || (p.existing_debt_annual_payment ?? 0) > 0 ? "yes" : "no") : undefined;
   const b = budget.data as { maxRatePrice?: number; minRatePrice?: number };
   const resultLabel = b.maxRatePrice != null && b.minRatePrice != null ? `${formatEokShort(b.maxRatePrice)} ~ ${formatEokShort(b.minRatePrice)}` : undefined;
 
@@ -98,8 +101,6 @@ export default async function Stage1({
             <div className="grid gap-6 sm:grid-cols-2">
               {money("cash_assets", "보유 현금·자기자본", p?.cash_assets)}
               {money("annual_income", "연 소득", p?.annual_income, "세전")}
-              {money("existing_debt", "기존 대출·부채 총액", p?.existing_debt)}
-              {money("existing_debt_annual_payment", "기존 대출 연간 원리금 상환액", p?.existing_debt_annual_payment)}
               {money("extra_funds", "추가 가용 자금", p?.extra_funds)}
               <div>
                 <label htmlFor="owned_house_count" className={labelClass}>보유 주택 수</label>
@@ -108,6 +109,16 @@ export default async function Stage1({
               </div>
             </div>
             {checkbox("income_is_combined", "연 소득은 부부 합산 소득입니다", p?.income_is_combined)}
+            {/* 있음을 고를 때만 부채 입력칸을 보여 준다. 없음이면 서버가 0으로 저장한다 */}
+            <div className="group/debt space-y-6">
+              <ChoiceCards name="has_debt" legend="기존 대출·부채가 있나요?" value={hasDebt} cols="grid-cols-2" options={[
+                ["no", "없어요"], ["yes", "있어요", "대출 금액과 상환액을 알려 주세요"],
+              ]} />
+              <div className="hidden gap-6 group-has-[input[value=yes]:checked]/debt:grid sm:grid-cols-2">
+                {money("existing_debt", "기존 대출·부채 총액", p?.existing_debt)}
+                {money("existing_debt_annual_payment", "기존 대출 연간 원리금 상환액", p?.existing_debt_annual_payment)}
+              </div>
+            </div>
           </Section>
           <Section n={3} heading="금융 관련 정보" desc="해당하면 정책대출 자격과 세금 감면을 함께 따져 볼게요.">
             {checkbox("is_first_time", "생애 최초 주택 구입입니다", p?.is_first_time)}

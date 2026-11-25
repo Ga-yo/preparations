@@ -19,7 +19,7 @@ test("fewer than two favorites has no compare", () => {
 });
 
 test("conditions summary keeps only report fields", () => {
-  const row = { region_codes: ["1168000000"], region_reason: "직장", commute_region_code: "1114000000", area_min: 59, area_max: 85,
+  const row = { region_codes: ["1168000000"], region_reason: "직장", commute_region_code: "1114000000", commute_station: null, area_min: 59, area_max: 85,
     price_max: 900_000_000, redevelopment_interest: true, household_size: 3 };
   const names = { "1168000000": "서울특별시 강남구", "1114000000": "서울특별시 중구" };
   expect(conditionsSummary(row, names)).toEqual({
@@ -27,6 +27,12 @@ test("conditions summary keeps only report fields", () => {
     area_min: 59, area_max: 85, price_max: 900_000_000, redevelopment_interest: true,
   });
   expect(conditionsSummary(null, names)).toBeNull();
+});
+
+test("출퇴근 지역이 지하철역이면 'OO역'으로 보여 준다", () => {
+  const row = { region_codes: [], region_reason: null, commute_region_code: null, area_min: null, area_max: null, price_max: null, redevelopment_interest: null };
+  expect(conditionsSummary({ ...row, commute_station: "강남" }, {})?.commute_region_name).toBe("강남역");
+  expect(conditionsSummary({ ...row, commute_station: "서울역" }, {})?.commute_region_name).toBe("서울역");
 });
 
 const tips = [

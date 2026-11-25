@@ -6,7 +6,7 @@ const fitScore = (c: Conditions, x: ComplexRow, b: number | null) => score(c, x,
 const C: Conditions = {
   housing_types: [], price_min: null, price_max: null, area_min: null, area_max: null,
   approval_year_min: null, household_count_min: null, parking_per_household_min: null,
-  floor_area_ratio_max: null, mgmt_fee_per_m2_max: null, station_distance_max_m: null, elementary_distance_max_m: null, rooms_min: null, baths_min: null,
+  floor_area_ratio_max: null, station_distance_max_m: null, elementary_distance_max_m: null, rooms_min: null, baths_min: null,
   floor_pref: null, direction_pref: null, priorities: {},
 };
 const X = (id: number, o: Partial<ComplexRow> = {}): ComplexRow => ({
@@ -109,8 +109,8 @@ describe("M6 weights and ties", () => {
     expect(fitScore(c, X(1, { nearest_station_m: 900, household_count: 2000 }), null).score).toBe(33); // 1 / 3
   });
   it("ties sort within same score", () => {
-    const c = { ...C, ties: [{ field: "nearest_park_m" as const, dir: 1 as const }] };
-    const r = rankComplexes(c, [X(1, { nearest_park_m: 900 }), X(2, { nearest_park_m: null }), X(3, { nearest_park_m: 100 })], B(null), 10);
+    const c = { ...C, ties: [{ field: "nearest_station_m" as const, dir: 1 as const }] };
+    const r = rankComplexes(c, [X(1, { nearest_station_m: 900 }), X(2, { nearest_station_m: null }), X(3, { nearest_station_m: 100 })], B(null), 10);
     expect(r.map((x) => x.complex_id)).toEqual([3, 1, 2]); // null은 뒤로
   });
   it("descending tie for shop count", () => {

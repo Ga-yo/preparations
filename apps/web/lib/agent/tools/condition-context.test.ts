@@ -29,16 +29,26 @@ test("stage 2 life prefs become weights ties and parking default", async () => {
   const r = await loadConditionContext(ctx);
   if ("error" in r) throw new Error(r.error);
   expect(r.conditions.weights).toEqual({ station_distance_max: 2, elementary_distance_max: 2 });
-  expect(r.conditions.ties?.map((t) => t.field)).toEqual(["nearest_station_m", "nearest_elementary_m", "nearest_park_m"]);
+  // 선호 주거환경은 2단계에서 뺐다: 예전에 저장돼 복사된 값이 남아 있어도 정렬·안내에 쓰지 않는다
+  expect(r.conditions.ties?.map((t) => t.field)).toEqual(["nearest_station_m", "nearest_elementary_m"]);
   expect(r.conditions.parking_per_household_min).toBe(1);
-  expect(r.notices).toEqual(expect.arrayContaining(["quiet_no_data", "no_park_data"]));
+  expect(r.notices ?? []).not.toEqual(expect.arrayContaining(["quiet_no_data"]));
+  expect(r.notices ?? []).not.toEqual(expect.arrayContaining(["no_park_data"]));
 });
 
 test("commute code reaches rpc with straight-line notice", async () => {
   const { ctx, calls } = mk({ sets: [saved({ commute_region_code: "1114000000" })] });
   const r = await loadConditionContext(ctx);
   expect(calls[0].commute_code).toBe("1114000000");
-  expect(r).toMatchObject({ commuteCode: "1114000000", notices: expect.arrayContaining(["commute_is_straight_line"]) });
+  expect(r).toMatchObject({ commute: { commute_code: "1114000000" }, notices: expect.arrayContaining(["commute_is_straight_line"]) });
+});
+
+test("출퇴근 역은 역 이름으로 rpc에 전달된다", async () => {
+  const { ctx, calls } = mk({ sets: [saved({ commute_station: "강남" })] });
+  const r = await loadConditionContext(ctx);
+  expect(calls[0]).toMatchObject({ commute_station: "강남" });
+  expect(calls[0]).not.toHaveProperty("commute_code");
+  expect(r).toMatchObject({ commute: { commute_station: "강남" }, notices: expect.arrayContaining(["commute_is_straight_line"]) });
 });
 
 test("no commute code sends none", async () => {

@@ -6,7 +6,7 @@ import { CONDITION_LABELS, ERRORS } from "../../../_components/ConditionCheckCar
 const FIELD_LABELS: Record<string, string> = {
   ...CONDITION_LABELS, region_codes: "희망 지역", housing_types: "주택 유형", price_min: "희망 최저가",
   area_min: "희망 면적(최소)", area_max: "희망 면적(최대)", station_distance_max_m: "지하철역 거리",
-  elementary_distance_max_m: "초등학교 거리", mgmt_fee_per_m2_max: "관리비", rooms_min: "방 개수", baths_min: "욕실 개수",
+  elementary_distance_max_m: "초등학교 거리", rooms_min: "방 개수", baths_min: "욕실 개수",
   floor_pref: "선호 층", direction_pref: "선호 향",
 };
 const field = (k: string) =>

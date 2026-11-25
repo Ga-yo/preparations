@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 export type Stage2Snapshot = {
   sigungu: string[]; dong: string; commuteRegion: string; commuteMin: number | null; transit: boolean;
   school: number | null; infra: number | null; household: number | null; areaMin: number | null; areaMax: number | null;
-  parking: boolean; env: string[];
+  parking: boolean;
 };
-const ENV: Record<string, string> = { quiet: "조용한 환경", near_commercial: "상권 인접", near_park: "공원 인접" };
 const TOTAL = 7;
 
 const num = (v: FormDataEntryValue | null) => (String(v ?? "").trim() ? Number(v) : null);
@@ -17,7 +16,7 @@ function read(form: HTMLFormElement): Stage2Snapshot {
     commuteRegion: String(f.get("commute_region_name") ?? "").trim(), commuteMin: num(f.get("commute_minutes_max")),
     transit: f.has("uses_transit"), school: num(f.get("school_importance")), infra: num(f.get("infra_importance")),
     household: num(f.get("household_size")), areaMin: num(f.get("area_min")), areaMax: num(f.get("area_max")),
-    parking: f.has("parking_required"), env: f.getAll("environment_prefs").map(String),
+    parking: f.has("parking_required"),
   };
 }
 
@@ -75,11 +74,6 @@ export function Stage2Summary({ formId, initial, names }: { formId: string; init
         </Row>
         <Row label="거주">{living.length ? living.join(" · ") : <Empty />}</Row>
       </div>
-      {s.env.length > 0 && (
-        <ul className="flex flex-wrap gap-2 pt-4" aria-label="선호 환경">
-          {s.env.map((e) => <li key={e} className="rounded-full bg-chb-soft px-3 py-1.5 text-sm font-semibold text-chb-accent">{ENV[e] ?? e}</li>)}
-        </ul>
-      )}
 
       <button type="submit" form={formId} className="mt-6 w-full rounded-full bg-chb-accent py-4 text-lg font-bold text-white shadow-[0_16px_32px_-14px_rgba(46,125,91,0.55)] transition hover:-translate-y-0.5">
         저장하고 시세 보기
