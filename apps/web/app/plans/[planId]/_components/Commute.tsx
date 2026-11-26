@@ -6,6 +6,7 @@ import {
   cacheKey, commuteText, parseOdsay, readCache, straightMeters, writeCache,
   type CommuteResult, type CommuteTarget,
 } from "@/lib/route/commute";
+import { RouteLegs } from "./Transit";
 
 const UNAVAILABLE: CommuteResult = { status: "unavailable" };
 
@@ -43,5 +44,10 @@ export function Commute({ planId, complexId, target }: { planId: string; complex
 
   if (state === undefined) return null;
   if (state === "loading") return <p className="text-chb-muted">소요시간 확인 중…</p>;
-  return <p className={state.status === "unavailable" ? "text-chb-muted" : undefined}>{commuteText(target, state)}</p>;
+  return (
+    <div>
+      <p className={state.status === "unavailable" ? "text-chb-muted" : "font-medium"}>{commuteText(target, state)}</p>
+      {state.status === "ok" && state.legs && <RouteLegs legs={state.legs} />}
+    </div>
+  );
 }

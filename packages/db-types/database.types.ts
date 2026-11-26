@@ -423,6 +423,11 @@ isOneToOne: false
               "category": string,"distance_m": number,"lines": (string)[],"name": string
             }[]
                            },
+"complex_nearest_pois":
+{ Args: { "p_complex_ids": (number)[] }; Returns: {
+              "category": string,"complex_id": number,"distance_m": number,"lines": (string)[],"name": string,"within_1km": number
+            }[]
+                           },
 "complex_points":
 { Args: { "sgg": string }; Returns: {
               "id": number,"lat": number,"lon": number

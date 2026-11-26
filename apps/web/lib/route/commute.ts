@@ -3,8 +3,13 @@ import { walkMinutes } from "@/lib/calc/walk";
 export type CommuteMode = "transit" | "car";
 export type CommuteTarget = { mode: CommuteMode; key: string; label: string };
 export type RoutePoints = { from_lon: number; from_lat: number; to_lon: number; to_lat: number };
+// 대중교통 경로의 구간(ODsay subPath). 도보 0분 구간은 뺀다
+export type Leg =
+  | { kind: "walk"; minutes: number }
+  | { kind: "subway"; line: string; from: string; to: string; stops: number; minutes: number }
+  | { kind: "bus"; busNo: string; busType: number | null; from: string; to: string; stops: number; minutes: number };
 export type CommuteResult =
-  | { status: "ok"; mode: CommuteMode; minutes: number; transfers: number | null }
+  | { status: "ok"; mode: CommuteMode; minutes: number; transfers: number | null; legs?: Leg[] }
   | { status: "near"; walkMinutes: number }
   | { status: "unavailable" };
 
@@ -42,7 +47,19 @@ export function parseOdsay(json: unknown, straightM: number): CommuteResult {
   const t = info?.totalTime;
   if (typeof t !== "number") return UNAVAILABLE;
   const boardings = (Number(info.busTransitCount) || 0) + (Number(info.subwayTransitCount) || 0);
-  return { status: "ok", mode: "transit", minutes: t, transfers: Math.max(0, boardings - 1) };
+  return { status: "ok", mode: "transit", minutes: t, transfers: Math.max(0, boardings - 1), legs: odsayLegs(j.result.path[0].subPath) };
+}
+
+function odsayLegs(sub: Json): Leg[] {
+  if (!Array.isArray(sub)) return [];
+  return sub.flatMap((s: Json): Leg[] => {
+    const minutes = Number(s?.sectionTime) || 0;
+    const lane = Array.isArray(s?.lane) ? s.lane[0] : undefined;
+    const seg = { from: String(s?.startName ?? ""), to: String(s?.endName ?? ""), stops: Number(s?.stationCount) || 0, minutes };
+    if (s?.trafficType === 1) return [{ kind: "subway", line: String(lane?.name ?? "지하철"), ...seg }];
+    if (s?.trafficType === 2) return [{ kind: "bus", busNo: String(lane?.busNo ?? "버스"), busType: typeof lane?.type === "number" ? lane.type : null, ...seg }];
+    return s?.trafficType === 3 && minutes > 0 ? [{ kind: "walk", minutes }] : [];
+  });
 }
 
 export function parseKakao(json: unknown, straightM: number): CommuteResult {

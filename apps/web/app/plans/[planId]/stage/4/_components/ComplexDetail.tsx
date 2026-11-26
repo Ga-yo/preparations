@@ -2,10 +2,10 @@ import type { ToolResult } from "@/lib/agent/tool";
 import type { Fit, NeighborStats } from "@/lib/calc/fit";
 import { TipPanel, type Tip } from "../../../_components/TipPanel";
 import { DATASETS } from "../../../_components/ConditionCheckCard";
-import { walkMinutes } from "@/lib/calc/walk";
 import type { CommuteTarget } from "@/lib/route/commute";
 import { Commute } from "../../../_components/Commute";
 import { formatWon, livingText } from "../../../_components/format";
+import { NEAREST_LABELS, NearestPlaces, type NearestPoi } from "../../../_components/Nearest";
 import { redevelopmentText } from "../../../_components/redevelopment";
 import type { RedevelopmentInfo } from "@/lib/agent/redevelopment";
 import { DetailTabs } from "./DetailTabs";
@@ -24,19 +24,19 @@ type Data = {
   redevelopment?: RedevelopmentInfo;
   commute?: CommuteTarget | null;
   nearby: { category: string; name: string; lines: string[] | null; distance_m: number }[];
+  nearest?: NearestPoi[];
   areas: AreaPrices[];
   default_area: number | null;
   neighbors: NeighborStats;
   criteria: { area_min: number | null; area_max: number | null; chart_months: number };
 };
-const CATEGORY: Record<string, string> = { subway_station: "지하철역", elementary_school: "초등학교", middle_school: "중학교", high_school: "고등학교" };
 const dash = (v: number | null, unit = "") => (v === null ? "-" : `${v.toLocaleString("ko-KR")}${unit}`);
 
 export function ComplexDetail({ planId, result, tips }: { planId: string; result: ToolResult; tips: Tip[] }) {
   if ("error" in (result.data as object)) {
     return <section className="rounded-3xl border border-chb-line bg-white p-6 text-sm text-chb-muted">선택한 단지를 찾을 수 없습니다.</section>;
   }
-  const { complex: c, fit, redevelopment, commute, nearby, areas, default_area, neighbors: n, criteria } = result.data as Data;
+  const { complex: c, fit, redevelopment, commute, nearest = [], areas, default_area, neighbors: n, criteria } = result.data as Data;
   const hasCoords = !result.notices?.includes("no_location_data"); // 툴이 단지 좌표 유무로 정한다
   const asOf = Object.entries(result.as_of).filter(([k]) => /^(complexes|transactions|pois|redevelopment):/.test(k));
   const area = criteria.area_min === null && criteria.area_max === null ? "전체 면적"
@@ -44,7 +44,6 @@ export function ComplexDetail({ planId, result, tips }: { planId: string; result
     : criteria.area_min === null ? `전용 ${criteria.area_max}㎡ 이하`
     : `전용 ${criteria.area_min}~${criteria.area_max}㎡`;
   const h3 = "border-t border-chb-line pt-5 font-bold text-chb-ink first:border-t-0 first:pt-0";
-  const table = "w-full text-left [&_td]:border-t [&_td]:border-chb-line [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2";
 
   const neighborsText = `${n.rank === null || n.dong_median === null
     ? `같은 동 ${n.count}개 단지 중 이 단지의 최근 12개월 거래가 없어 순위를 매기지 못했습니다.`
@@ -71,20 +70,26 @@ export function ComplexDetail({ planId, result, tips }: { planId: string; result
 
   const around = (
     <>
-      <h3 className={h3}>주변 시설 (1km 이내)</h3>
-      {commute && <Commute key={`${c.id}:${commute.mode}:${commute.key}`} planId={planId} complexId={c.id} target={commute} />}
-      {nearby.length ? (
+      {commute && (
         <>
-          <div className="overflow-x-auto rounded-2xl border border-chb-line"><table aria-label="주변 시설 (1km 이내)" className={table}>
-            <thead className="bg-chb-soft2 text-chb-muted"><tr><th scope="col">구분</th><th scope="col">이름</th><th scope="col">도보</th><th scope="col">노선</th></tr></thead>
-            <tbody>{nearby.map((p, i) => (
-              <tr key={i}><td>{CATEGORY[p.category] ?? "기타"}</td><td>{p.name}</td>
-                <td className="whitespace-nowrap">약 {walkMinutes(p.distance_m)}분</td><td>{p.category === "subway_station" ? p.lines?.join(", ") ?? "-" : "-"}</td></tr>
-            ))}</tbody>
-          </table></div>
-          <p className="text-xs text-chb-muted">도보 시간은 직선거리 기반 추정입니다.</p>
+          <h3 className={h3}>출퇴근</h3>
+          <Commute key={`${c.id}:${commute.mode}:${commute.key}`} planId={planId} complexId={c.id} target={commute} />
         </>
-      ) : <p className="text-chb-muted">{hasCoords ? "직선거리 1km 안에 역·학교가 없습니다." : "좌표 정보가 없어 주변 시설을 표시하지 못했습니다."}</p>}
+      )}
+      <h3 className={h3}>가까운 역·학교</h3>
+      {nearest.length ? (
+        <>
+          <dl className="divide-y divide-chb-line rounded-2xl border border-chb-line">
+            {NEAREST_LABELS.map(([k, label]) => (
+              <div key={k} className="flex gap-3 px-3 py-2.5">
+                <dt className="w-16 shrink-0 text-chb-muted">{label}</dt>
+                <dd><NearestPlaces rows={nearest.filter((r) => r.category === k)} /></dd>
+              </div>
+            ))}
+          </dl>
+          <p className="text-xs text-chb-muted">도보 시간은 직선거리 기반 추정입니다. 외 n개는 직선 1km 안 개수입니다.</p>
+        </>
+      ) : <p className="text-chb-muted">{hasCoords ? "역·학교 정보를 불러오지 못했습니다." : "좌표 정보가 없어 주변 시설을 표시하지 못했습니다."}</p>}
       {livingText(c) && <p>{livingText(c)}</p>}
     </>
   );

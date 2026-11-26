@@ -28,6 +28,9 @@ vi.mock("@/lib/agent/tools/condition-context", () => ({ loadConditionContext: (.
 const loadComplexDetail = vi.fn();
 vi.mock("@/lib/agent/tools/get-complex-detail", () => ({ loadComplexDetail: (...a: unknown[]) => loadComplexDetail(...a), PAGE_TRADES_PER_AREA: 5 }));
 
+const nearestPois = vi.fn();
+vi.mock("../../nearest-pois", () => ({ nearestPois: (...a: unknown[]) => nearestPois(...a) }));
+
 const { setFavorite, favoriteComplexIds, detailForPlan } = await import("./actions");
 
 const row = { complex_id: 7, name: "a", region_code: "11680", approval_year: 2000, household_count: 500,
@@ -102,10 +105,13 @@ describe("favoriteComplexIds", () => {
 });
 
 describe("detailForPlan", () => {
-  test("화면 경로에서만 출퇴근지를 붙인다", async () => {
+  test("화면 경로에서만 출퇴근지·최근접 역/학교를 붙인다", async () => {
     loadComplexDetail.mockResolvedValue({ data: { complex: { id: 7 } }, as_of: {} });
+    const school = { category: "elementary_school", name: "가초", lines: null, distance_m: 300, within_1km: 2 };
+    nearestPois.mockResolvedValue({ 7: [school] });
     results["condition_sets.select"] = { data: { uses_transit: true, commute_station: "강남", commute_region_code: null } };
     const r = await detailForPlan(PLAN, 7);
-    expect(r.data).toMatchObject({ complex: { id: 7 }, commute: { mode: "transit", key: "station:강남" } });
+    expect(r.data).toMatchObject({ complex: { id: 7 }, commute: { mode: "transit", key: "station:강남" }, nearest: [school] });
+    expect(nearestPois).toHaveBeenCalledWith([7]);
   });
 });

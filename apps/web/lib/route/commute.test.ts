@@ -25,7 +25,21 @@ test("commuteTarget: 역 이름이 이미 '역'으로 끝나면 중복하지 않
 });
 test("parseOdsay: totalTime, 환승 = 버스+지하철 탑승 − 1", () => {
   const ok = { result: { path: [{ info: { totalTime: 28, busTransitCount: 0, subwayTransitCount: 3 } }] } };
-  expect(parseOdsay(ok, 12000)).toEqual({ status: "ok", mode: "transit", minutes: 28, transfers: 2 });
+  expect(parseOdsay(ok, 12000)).toEqual({ status: "ok", mode: "transit", minutes: 28, transfers: 2, legs: [] });
+});
+test("parseOdsay: subPath를 구간으로, 도보 0분은 뺀다", () => {
+  const subPath = [
+    { trafficType: 3, sectionTime: 1 },
+    { trafficType: 2, sectionTime: 18, startName: "난향동주민센터", endName: "신림역", stationCount: 13, lane: [{ busNo: "506", type: 11 }] },
+    { trafficType: 3, sectionTime: 0 },
+    { trafficType: 1, sectionTime: 17, startName: "신림", endName: "강남", stationCount: 8, lane: [{ name: "수도권 2호선", subwayCode: 2 }] },
+  ];
+  const r = parseOdsay({ result: { path: [{ info: { totalTime: 39, busTransitCount: 1, subwayTransitCount: 1 }, subPath }] } }, 9000);
+  expect(r).toMatchObject({ status: "ok", transfers: 1, legs: [
+    { kind: "walk", minutes: 1 },
+    { kind: "bus", busNo: "506", busType: 11, from: "난향동주민센터", to: "신림역", stops: 13, minutes: 18 },
+    { kind: "subway", line: "수도권 2호선", from: "신림", to: "강남", stops: 8, minutes: 17 },
+  ] });
 });
 test("parseOdsay: -98(700m 이내)은 near", () => {
   expect(parseOdsay({ error: { code: "-98", msg: "x" } }, 400)).toEqual({ status: "near", walkMinutes: walkMinutes(400) });
