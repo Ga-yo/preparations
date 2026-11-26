@@ -25,7 +25,13 @@ vi.mock("@/lib/supabase/server", () => ({
 const loadConditionContext = vi.fn();
 vi.mock("@/lib/agent/tools/condition-context", () => ({ loadConditionContext: (...a: unknown[]) => loadConditionContext(...a), MONTHS: 12 }));
 
-const { setFavorite, favoriteComplexIds } = await import("./actions");
+const loadComplexDetail = vi.fn();
+vi.mock("@/lib/agent/tools/get-complex-detail", () => ({ loadComplexDetail: (...a: unknown[]) => loadComplexDetail(...a), PAGE_TRADES_PER_AREA: 5 }));
+
+const nearestPois = vi.fn();
+vi.mock("../../nearest-pois", () => ({ nearestPois: (...a: unknown[]) => nearestPois(...a) }));
+
+const { setFavorite, favoriteComplexIds, detailForPlan } = await import("./actions");
 
 const row = { complex_id: 7, name: "a", region_code: "11680", approval_year: 2000, household_count: 500,
   parking_per_household: 1, floor_area_ratio: 200, building_coverage_ratio: 20, land_share_m2: 30, median_price: 5e8, deal_count: 3 };
@@ -33,7 +39,7 @@ const ctx = (rows = [row]) => ({
   conditions: { housing_types: [], price_min: null, price_max: 6e8, area_min: null, area_max: null,
     approval_year_min: 2010, household_count_min: null, parking_per_household_min: null, floor_area_ratio_max: null,
     rooms_min: null, baths_min: null, floor_pref: null, direction_pref: null, priorities: {} },
-  conditionSetId: "set-latest", budgets: [], rows,
+  conditionSetId: "set-latest", commuteTarget: null, budgets: [], rows,
 });
 const find = (table: string, op: string) => calls.find((c) => c.table === table && c.op === op);
 
@@ -95,5 +101,17 @@ describe("favoriteComplexIds", () => {
       { complex_id: 7, complexes: { name: "가" } }, { complex_id: 7, complexes: { name: "가" } }, { complex_id: 9, complexes: null },
     ] };
     expect(await favoriteComplexIds(PLAN)).toEqual([{ complex_id: 7, name: "가" }, { complex_id: 9, name: "단지 9" }]);
+  });
+});
+
+describe("detailForPlan", () => {
+  test("화면 경로에서만 출퇴근지·최근접 역/학교를 붙인다", async () => {
+    loadComplexDetail.mockResolvedValue({ data: { complex: { id: 7 } }, as_of: {} });
+    const school = { category: "elementary_school", name: "가초", lines: null, distance_m: 300, within_1km: 2 };
+    nearestPois.mockResolvedValue({ 7: [school] });
+    results["condition_sets.select"] = { data: { uses_transit: true, commute_station: "강남", commute_region_code: null } };
+    const r = await detailForPlan(PLAN, 7);
+    expect(r.data).toMatchObject({ complex: { id: 7 }, commute: { mode: "transit", key: "station:강남" }, nearest: [school] });
+    expect(nearestPois).toHaveBeenCalledWith([7]);
   });
 });

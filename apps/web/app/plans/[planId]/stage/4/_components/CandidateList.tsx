@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { RankedComplex } from "@/lib/calc/fit";
-import { formatWon, livingText } from "../../../_components/format";
+import { formatWon } from "../../../_components/format";
 import { CandidateGroups, type CandidateItem } from "./CandidateGroups";
 import { FavoriteButton } from "./FavoriteButton";
 import { FitChips } from "./FitChips";
@@ -25,11 +25,6 @@ function RowBody({ x, rank, planId }: { x: RankedComplex; rank: number; planId: 
         <span className="mr-1 font-display text-lg font-black text-chb-ink">{x.median_price === null ? "최근 거래 없음" : formatWon(x.median_price)}</span>
         최근 12개월 중위가 · 거래 {x.deal_count}건 · {x.approval_year ?? "-"}년 승인 · {x.household_count?.toLocaleString("ko-KR") ?? "-"}세대
       </p>
-      <p className="mt-1 text-chb-muted">
-        {x.nearest_station_m === null && x.nearest_elementary_m === null ? "위치 정보 없음"
-          : `${x.nearest_station_m === null ? "역 정보 없음" : `역 ${x.nearest_station_name ?? "-"} 직선 ${x.nearest_station_m}m`} · ${x.nearest_elementary_m === null ? "초등학교 정보 없음" : `초등학교 직선 ${x.nearest_elementary_m}m`}`}
-      </p>
-      {livingText(x) && <p className="text-chb-muted">{livingText(x)}</p>}
       <div className="mt-3"><FitChips fit={x.fit} /></div>
     </>
   );

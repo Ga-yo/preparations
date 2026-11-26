@@ -5,6 +5,8 @@ import { loadComplexDetail, PAGE_TRADES_PER_AREA } from "@/lib/agent/tools/get-c
 import { loadConditionContext } from "@/lib/agent/tools/condition-context";
 import { searchComplexes } from "@/lib/agent/tools/search-complexes";
 import { activeKeys } from "@/lib/calc/conditions";
+import { nearestPois } from "../../nearest-pois";
+import { commuteForPlan } from "../../commute-target";
 import { fitScore, maxBudgetFor } from "@/lib/calc/fit";
 
 type Result = { ok: true } | { ok: false; error: "invalid" | "not_found" | "conditions_required" };
@@ -63,5 +65,9 @@ export async function searchForPlan(planId: string, offset = 0): Promise<ToolRes
 }
 
 export async function detailForPlan(planId: string, complexId: number): Promise<ToolResult> {
-  return loadComplexDetail(complexId, await ctxOf(planId), PAGE_TRADES_PER_AREA);
+  const r = await loadComplexDetail(complexId, await ctxOf(planId), PAGE_TRADES_PER_AREA);
+  // 출퇴근지는 화면 경로 계산용이라 LLM 툴 결과에는 넣지 않고 여기서만 붙인다(원칙 9)
+  if (typeof r.data !== "object" || r.data === null) return r;
+  const [commute, nearest] = await Promise.all([commuteForPlan(planId), nearestPois([complexId])]);
+  return { ...r, data: { ...r.data, commute, nearest: nearest[complexId] ?? [] } };
 }

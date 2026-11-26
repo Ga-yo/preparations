@@ -24,7 +24,7 @@ export const NOTICES: Record<string, string> = {
   no_poi_data: "역·학교 위치나 희망 지역 단지 좌표가 아직 없어 거리 조건을 점검하지 못했습니다.",
   truncated: "단지가 많아 3,000개까지만 점검했습니다. 지역을 좁혀 보세요.",
   no_shop_data: "생활 상가 데이터가 아직 없어 편의시설 중요도를 반영하지 못했습니다.",
-  commute_is_straight_line: "출퇴근 거리는 직선거리 근사입니다. 실제 이동 시간은 노선·환승에 따라 다릅니다.",
+  commute_is_straight_line: "출퇴근 순서는 직선거리로 정했어요. 실제 소요시간은 단지 상세와 비교표에서 확인하세요.",
 };
 export const DATASETS: Record<string, string> = {
   "complexes:building_ledger": "건축물대장 단지", "transactions:apartment": "아파트 실거래가",

@@ -1,3 +1,5 @@
+import { walkMinutes } from "@/lib/calc/walk";
+
 // 만원 단위로 먼저 반올림한 뒤 억/만원으로 나눈다(반올림 올림수 방지). 1만원 미만은 원 단위.
 export function formatWon(n: number): string {
   if (n < 10_000) return `${n.toLocaleString("ko-KR")}원`;
@@ -11,11 +13,24 @@ export function formatWon(n: number): string {
 
 const dist = (m: number) => (m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`);
 
-// 4단계 후보·상세, 5단계 비교 공용: 2단계 생활 조건 관련 값(M6). 값이 없으면 빼고, 다 없으면 null
-export function livingText(r: { commute_m: number | null; nearest_park_m: number | null; shop_count_500m: number | null }): string | null {
+// "○○학교(620m), 약 도보 9분". 도보 60분 이상은 걸어갈 곳이 아니라 보고 거리만 쓴다
+export function placeText(name: string, m: number): string {
+  const w = walkMinutes(m);
+  return w >= 60 ? `${name}(${dist(m)})` : `${name}(${dist(m)}), 약 도보 ${w}분`;
+}
+
+// 가장 가까운 곳과 도보 분이 같은 곳만 보이고 나머지는 "외 n개"로. rows는 거리순, total은 1km 안 개수
+export function nearestTies<T extends { distance_m: number }>(rows: T[], total: number): { shown: T[]; more: number } {
+  if (!rows.length) return { shown: [], more: 0 };
+  const w = walkMinutes(rows[0].distance_m);
+  const shown = rows.filter((r) => walkMinutes(r.distance_m) === w);
+  return { shown, more: Math.max(0, total - shown.length) };
+}
+
+// 4단계 상세 공용: 2단계 생활 조건 관련 값(M6). 값이 없으면 빼고, 다 없으면 null
+export function livingText(r: { nearest_park_name?: string | null; nearest_park_m: number | null; shop_count_500m: number | null }): string | null {
   const parts = [
-    r.commute_m !== null && `출퇴근 지역까지 직선 ${dist(r.commute_m)}`,
-    r.nearest_park_m !== null && `공원 직선 ${dist(r.nearest_park_m)}`,
+    r.nearest_park_m !== null && `가까운 공원 ${placeText(r.nearest_park_name ?? "공원", r.nearest_park_m)}`,
     r.shop_count_500m !== null && `반경 500m 생활 상가 ${r.shop_count_500m}곳`,
   ].filter(Boolean);
   return parts.length ? parts.join(" · ") : null;

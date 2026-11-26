@@ -182,3 +182,8 @@ test("detail carries park shop and commute values", async () => {
   const d = (await getComplexDetail.run({ complex_id: 1 }, ctx)).data as { complex: Record<string, unknown> };
   expect(d.complex).toMatchObject({ nearest_park_m: 210, shop_count_500m: 42, commute_m: 3100 });
 });
+
+test("툴 결과에는 출퇴근지(commute)가 없다(원칙 9)", async () => {
+  const { ctx } = setup({ sets: [saved({ uses_transit: true, commute_station: "강남" })] });
+  expect((await getComplexDetail.run({ complex_id: 1 }, ctx)).data).not.toHaveProperty("commute");
+});

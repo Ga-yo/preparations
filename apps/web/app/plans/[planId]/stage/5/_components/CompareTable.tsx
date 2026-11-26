@@ -4,7 +4,10 @@ import type { RedevelopmentInfo } from "@/lib/agent/redevelopment";
 import type { CompareItem, CompareResult, Metric } from "@/lib/calc/compare";
 import type { ComplexRow } from "@/lib/calc/conditions";
 import { CONDITION_LABELS } from "../../../_components/ConditionCheckCard";
-import { formatWon } from "../../../_components/format";
+import type { CommuteTarget } from "@/lib/route/commute";
+import { Commute } from "../../../_components/Commute";
+import { formatWon, placeText } from "../../../_components/format";
+import { NearestPlaces, type NearestPoi } from "../../../_components/Nearest";
 import { redevelopmentText } from "../../../_components/redevelopment";
 import { TipPanel, type Tip } from "../../../_components/TipPanel";
 
@@ -22,7 +25,10 @@ const num = (v: number | null, unit = "") => (v === null ? "-" : `${v.toLocaleSt
 
 type Line = { key: string; group?: string; title: string; metric?: Metric; cell: (r: ComplexRow, i: Item) => React.ReactNode };
 
-export function CompareTable({ planId, data, tips }: { planId: string; data: CompareData; tips: Tip[] }) {
+// commute: 5단계 화면만 넘긴다(저장된 리포트는 실시간 길찾기를 부르지 않도록 안 넘김)
+// nearest: 5단계 화면이 단지별 최근접 역·학교를 넘긴다. 저장된 리포트에는 없어 역·초등학교 거리만 보인다
+export function CompareTable({ planId, data, tips, commute, nearest }: { planId: string; data: CompareData; tips: Tip[]; commute?: CommuteTarget | null; nearest?: Record<number, NearestPoi[]> }) {
+  const near = (k: string) => function NearCell(r: ComplexRow) { return <NearestPlaces rows={(nearest?.[r.complex_id] ?? []).filter((p) => p.category === k)} />; };
   const byId = new Map(data.rows.map((r) => [r.complex_id, r]));
   const lines: Line[] = [
     { key: "price", group: "가격·비용", title: `최근 ${data.criteria.months}개월 중위가`, metric: "median_price", cell: (r) => (r.median_price === null ? "최근 거래 없음" : formatWon(r.median_price)) },
@@ -37,10 +43,11 @@ export function CompareTable({ planId, data, tips }: { planId: string; data: Com
     { key: "parking", title: "세대당 주차", metric: "parking_per_household", cell: (r) => num(r.parking_per_household, "대") },
     { key: "far", title: "용적률", cell: (r) => num(r.floor_area_ratio, "%") },
     { key: "land", title: "대지지분(평균 근사)", metric: "land_share_m2", cell: (r) => num(r.land_share_m2, "㎡") },
-    { key: "station", group: "입지 (직선거리)", title: "가까운 역(직선)", metric: "nearest_station_m", cell: (r) => (r.nearest_station_m === null ? "-" : `${r.nearest_station_name ?? ""} ${num(r.nearest_station_m, "m")}`) },
-    { key: "school", title: "가까운 초등학교(직선)", metric: "nearest_elementary_m", cell: (r) => num(r.nearest_elementary_m, "m") },
-    { key: "commute", title: "출퇴근 지역까지(직선, 근사)", cell: (r) => num(r.commute_m, "m") },
-    { key: "park", title: "가까운 공원(직선)", cell: (r) => num(r.nearest_park_m, "m") },
+    { key: "station", group: "입지", title: "가까운 역", metric: "nearest_station_m", cell: nearest ? near("subway_station") : (r) => (r.nearest_station_m === null ? "-" : placeText(r.nearest_station_name ?? "역", r.nearest_station_m)) },
+    { key: "school", title: "가까운 초등학교", metric: "nearest_elementary_m", cell: nearest ? near("elementary_school") : (r) => (r.nearest_elementary_m === null ? "-" : placeText("초등학교", r.nearest_elementary_m)) },
+    ...(nearest ? [{ key: "middle", title: "가까운 중학교", cell: near("middle_school") }, { key: "high", title: "가까운 고등학교", cell: near("high_school") }] : []),
+    ...(commute ? [{ key: "commute", title: "출퇴근", cell: (r: ComplexRow) => <Commute key={`${r.complex_id}:${commute.mode}:${commute.key}`} planId={planId} complexId={r.complex_id} target={commute} /> }] : []),
+    { key: "park", title: "가까운 공원", cell: (r) => (r.nearest_park_m === null ? "-" : placeText(r.nearest_park_name ?? "공원", r.nearest_park_m)) },
     { key: "shops", title: "반경 500m 생활 상가", cell: (r) => num(r.shop_count_500m, "곳") },
     { key: "redev", group: "정비사업·위험", title: "정비사업", cell: (_, i) => redevelopmentText(i.redevelopment) },
     { key: "risks", title: "위험 요소", cell: (_, i) => (i.risks.length ? (
@@ -94,7 +101,7 @@ export function CompareTable({ planId, data, tips }: { planId: string; data: Com
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-chb-muted">부대비용은 중위가에 샀다고 보고 계산했어요. 중개보수는 상한 요율 기준, 부가세 별도입니다. &lsquo;유리&rsquo;는 항목별로 나은 단지 표시이며 종합 순위가 아닙니다. 거리는 직선거리입니다.</p>
+      <p className="text-xs text-chb-muted">부대비용은 중위가에 샀다고 보고 계산했어요. 중개보수는 상한 요율 기준, 부가세 별도입니다. &lsquo;유리&rsquo;는 항목별로 나은 단지 표시이며 종합 순위가 아닙니다. 도보 시간은 직선거리 기반 추정입니다.</p>
       <TipPanel tips={tips} fieldKey="risks" />
     </div>
   );
