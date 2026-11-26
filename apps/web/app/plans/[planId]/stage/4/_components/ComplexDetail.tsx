@@ -76,10 +76,10 @@ export function ComplexDetail({ planId, result, tips }: { planId: string; result
       {nearby.length ? (
         <>
           <div className="overflow-x-auto rounded-2xl border border-chb-line"><table aria-label="주변 시설 (1km 이내)" className={table}>
-            <thead className="bg-chb-soft2 text-chb-muted"><tr><th scope="col">구분</th><th scope="col">이름</th><th scope="col">노선</th><th scope="col">도보</th></tr></thead>
+            <thead className="bg-chb-soft2 text-chb-muted"><tr><th scope="col">구분</th><th scope="col">이름</th><th scope="col">도보</th><th scope="col">노선</th></tr></thead>
             <tbody>{nearby.map((p, i) => (
               <tr key={i}><td>{CATEGORY[p.category] ?? "기타"}</td><td>{p.name}</td>
-                <td>{p.category === "subway_station" ? p.lines?.join(", ") ?? "-" : "-"}</td><td>약 {walkMinutes(p.distance_m)}분</td></tr>
+                <td className="whitespace-nowrap">약 {walkMinutes(p.distance_m)}분</td><td>{p.category === "subway_station" ? p.lines?.join(", ") ?? "-" : "-"}</td></tr>
             ))}</tbody>
           </table></div>
           <p className="text-xs text-chb-muted">도보 시간은 직선거리 기반 추정입니다.</p>
