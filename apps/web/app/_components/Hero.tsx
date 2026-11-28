@@ -9,10 +9,10 @@ const DONE = { title: "구매 전 확인 항목 정리 완료", sub: "5단계 �
 
 const Check = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
 
-function StartButton() {
+export function StartButton({ className = "chb-btn" }: { className?: string }) {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="chb-btn" disabled={pending}>
+    <button type="submit" className={className} disabled={pending}>
       {pending ? "준비하는 중…" : "채비 시작하기"}
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
     </button>
