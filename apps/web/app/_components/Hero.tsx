@@ -9,7 +9,7 @@ const DONE = { title: "구매 전 확인 항목 정리 완료", sub: "5단계 �
 
 const Check = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>;
 
-function StartButton() {
+export function StartButton() {
   const { pending } = useFormStatus();
   return (
     <button type="submit" className="chb-btn" disabled={pending}>

@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { Hero } from './_components/Hero'
+import { HowItWorks } from './_components/HowItWorks'
 
 async function start() {
   'use server'
@@ -19,6 +20,7 @@ export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
       <Hero start={start} />
+      <HowItWorks start={start} />
     </main>
   )
 }
