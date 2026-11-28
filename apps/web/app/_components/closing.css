@@ -1,0 +1,23 @@
+/* 홈 마무리 배너. 색·글꼴 토큰은 hero.css의 .chb-hero와 같이 쓴다. TIP(흰 바탕) 다음에 짙은 초록 띠 */
+.chb-end { background: var(--hx-bg); color: var(--hx-ink); font-family: var(--hx-body); word-break: keep-all; padding: 0 0 clamp(48px, 8vh, 96px); }
+.chb-end * { box-sizing: border-box; }
+.chb-end-band {
+  position: relative; overflow: hidden;
+  max-width: calc(1200px - 48px); margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: 32px;
+  padding: clamp(40px, 7vh, 72px) clamp(28px, 5vw, 72px);
+  border-radius: 32px; background: #24392e; color: #fff;
+}
+/* 오른쪽에 겹친 둥근 무늬 */
+.chb-end-rings { position: absolute; right: -12%; top: 50%; width: 60%; aspect-ratio: 1; transform: translateY(-50%); border-radius: 50%;
+  background: radial-gradient(circle, transparent 52%, rgba(255,255,255,0.05) 52.2%, rgba(255,255,255,0.05) 62%, transparent 62.2%, transparent 70%, rgba(255,255,255,0.04) 70.2%); }
+.chb-end-text, .chb-end form { position: relative; }
+.chb-end-eyebrow { margin: 0; font-size: 15px; font-weight: 600; letter-spacing: 0.04em; color: #a9cdb9; }
+.chb-end-title { margin: 14px 0 0; font: 700 clamp(20px, 2vw, 28px)/1.45 var(--hx-display); letter-spacing: -0.04em; }
+.chb-btn-light { background: #fff; color: var(--hx-ink); box-shadow: none; white-space: nowrap; }
+.chb-end .chb-btn-light:focus-visible { outline-color: #fff; }
+@media (max-width: 1247px) { .chb-end-band { margin-inline: 24px; } }
+@media (max-width: 900px) {
+  .chb-end-band { margin-inline: 16px; flex-direction: column; align-items: flex-start; border-radius: 24px; }
+  .chb-end-rings { width: 120%; right: -60%; top: 100%; }
+}
