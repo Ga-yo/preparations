@@ -10,10 +10,10 @@ import { ChoiceCards, CheckCard, labelClass, PrioritySwitch, Section, ToggleChip
 import { MoneyInput } from "../../_components/MoneyInput";
 import { CONDITION_LABELS, ConditionCheckCard } from "../../_components/ConditionCheckCard";
 import { StageForm } from "../../_components/StageForm";
+import { StageProgress } from "../../_components/StageProgress";
 import { StageTabs } from "../../_components/StageTabs";
 import { TipPanel, TipPicks } from "../../_components/TipPanel";
 import { checkConditionsForPlan, parsePrefill, PRIORITY_KEYS, saveStage3Conditions } from "./actions";
-import { Stage3Summary } from "./_components/Stage3Summary";
 
 const LABELS: Record<string, string> = {
   housing_types: "주택 유형", price_min: "희망 최저가", price_max: "희망 최고가(최저 ≤ 최고)",
@@ -79,9 +79,9 @@ export default async function Stage3({
     <TipPicks value={tipPicks}>
     <div className="flex-1 bg-chb-soft2 pb-28">
       <StageTabs planId={planId} current={3} />
-      <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <main className="mx-auto w-full max-w-6xl px-6 py-10">
         <StageForm
-          id={FORM_ID} title="3단계. 주택 선택 기준" labels={LABELS} action={save}
+          id={FORM_ID} submitLabel="저장하고 조건 점검" progress={<StageProgress key={`${c?.id ?? "new"}-${prefill?.key ?? ""}`} formId={FORM_ID} stage={3} areaText={areaText} />} title="3단계. 주택 선택 기준" labels={LABELS} action={save}
           result={<ConditionCheckCard result={check} flat />} resultKey={c?.id} resultLabel={resultLabel}
           resultTitle="조건 점검 결과" resultCaption="조건 점검 보기"
           next={{ href: `/plans/${planId}/stage/4`, label: "4단계로 →" }}
@@ -154,11 +154,9 @@ export default async function Stage3({
             </Section>
           </div>
         </StageForm>
-        <div className="space-y-6 lg:sticky lg:top-24">
-          <Stage3Summary key={`${c?.id ?? "new"}-${prefill?.key ?? ""}`} formId={FORM_ID} areaText={areaText} />
-          <AssistantPanel planId={planId} stage={3} />
-        </div>
       </main>
+      {/* 오른쪽 칸은 결과 패널, AI 상담은 화면 구석에 떠 있는 버튼 */}
+      <AssistantPanel planId={planId} stage={3} />
     </div>
     </TipPicks>
   );

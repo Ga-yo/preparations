@@ -44,7 +44,7 @@ export function BudgetCard({ result, flat = false, income, detail = false }: { r
   const data = result.data as Data;
   const asOf = Object.entries(result.as_of);
   return (
-    <section className={flat ? "p-4" : "rounded-3xl border border-chb-line bg-white p-6"} aria-label="예산 결과">
+    <section className={`@container ${flat ? "p-4" : "rounded-3xl border border-chb-line bg-white p-6"}`} aria-label="예산 결과">
       {result.notices?.includes("dummy_data:loan_products:bank") && (
         <p role="alert" className="mb-3 rounded-xl bg-red-50 p-3 font-bold text-red-800">
           은행 상품 금리는 테스트용 가짜 데이터입니다
@@ -59,7 +59,7 @@ export function BudgetCard({ result, flat = false, income, detail = false }: { r
         <p className="text-chb-muted">{ERRORS[data.error] ?? "예산을 계산하지 못했습니다."}</p>
       ) : (
         // 팝업(flat)은 넓은 화면에서 두 칸: 왼쪽은 답(예산·전제), 오른쪽은 근거(상품·부대비용·진단). 스크롤 없이 보이게
-        <div className={`text-sm ${flat ? "grid gap-x-8 gap-y-4 md:grid-cols-2" : "space-y-4"}`}>
+        <div className={`text-sm ${flat ? "grid gap-x-8 gap-y-4 @2xl:grid-cols-2" : "space-y-4"}`}>
           <div className="space-y-4">
           <BudgetHeadline data={data} income={income} />
           {/* 헤드라인 숫자의 전제라 숫자 바로 아래에 둔다 */}
