@@ -41,8 +41,9 @@ export function StageForm({
   // 저장 성공 후 새 결과를 기다리는 동안 저장 시점의 resultKey를 담는다
   const [awaiting, setAwaiting] = useState<{ key: string | null | undefined } | null>(null);
   const [pending, start] = useTransition();
-  // 결과 패널을 통째로 숨기면 입력 칸이 전체 폭을 쓰고, 화면 오른쪽 가장자리의 ‹ 손잡이로 다시 연다
-  const [collapsed, setCollapsed] = useState(false);
+  // 넓은 화면의 보기: 나란히(입력 | 결과) · 입력만(결과 숨김, 오른쪽 가장자리 손잡이로 다시 연다) · 결과만(결과가 전체 폭)
+  const [view, setView] = useState<"split" | "input" | "result">("split");
+  const collapsed = view === "input";
   const dialog = useRef<HTMLDialogElement>(null);
   const panelBody = useRef<HTMLDivElement>(null);
   const desktop = useSyncExternalStore(subscribeDesktop, () => window.matchMedia(DESKTOP).matches, () => false);
@@ -79,12 +80,12 @@ export function StageForm({
   return (
     <form
       id={id}
-      className={`grid items-start gap-8 ${result && !collapsed ? "lg:grid-cols-[minmax(0,1fr)_500px]" : ""}`}
+      className={`grid items-start gap-8 ${result && view === "split" ? "lg:grid-cols-[minmax(0,1fr)_500px]" : ""}`}
       onSubmit={(e) => {
         e.preventDefault();
         if (waiting) return; // 패널의 제출 버튼은 fieldset 밖이라 여기서 막는다
         const form = new FormData(e.currentTarget);
-        setCollapsed(false); // 숨겨 둔 채 저장해도 새 결과가 보이게 연다
+        if (collapsed) setView("split"); // 숨겨 둔 채 저장해도 새 결과가 보이게 연다
         start(async () => {
           const key = resultKey;
           const errs = await action(form);
@@ -93,7 +94,7 @@ export function StageForm({
         });
       }}
     >
-      <div className="min-w-0 space-y-6">
+      <div className={`min-w-0 space-y-6 ${result && view === "result" ? "lg:hidden" : ""}`}>
         {/* 진행 막대: 패널이 없을 때(모바일·패널 접힘) 단계 탭 아래에 붙어 스크롤해도 보인다. 넓은 화면은 패널 안 */}
         {progress && <div className={`sticky top-[65px] z-10 -mx-1 rounded-2xl border border-chb-line bg-white/95 px-5 py-3 backdrop-blur ${result && !collapsed ? "lg:hidden" : ""}`}>{progress}</div>}
         {back}
@@ -111,10 +112,10 @@ export function StageForm({
         </button>
       </div>
       {result && (collapsed ? (
-        <button type="button" onClick={() => setCollapsed(false)} aria-expanded={false} aria-controls={`${id}-result`} aria-label={`${resultTitle} 열기`} title={`${resultTitle} 열기`}
-          className="fixed top-1/2 right-0 z-30 hidden -translate-y-1/2 flex-col items-center gap-2 rounded-l-2xl border border-r-0 border-chb-line bg-white py-4 pr-2 pl-2.5 font-semibold text-chb-ink shadow-[-8px_0_24px_-12px_rgba(20,32,26,0.35)] transition hover:pl-3.5 hover:text-chb-accent lg:flex print:hidden">
-          <span aria-hidden="true" className="text-xl text-chb-accent">‹</span>
-          <span aria-hidden="true" className="text-sm [writing-mode:vertical-rl] tracking-widest">결과</span>
+        <button type="button" onClick={() => setView("split")} aria-expanded={false} aria-controls={`${id}-result`} aria-label={`${resultTitle} 열기`} title={`${resultTitle} 열기`}
+          className="fixed top-1/2 right-0 z-30 hidden -translate-y-1/2 flex-col items-center gap-3 rounded-l-3xl bg-chb-accent py-6 pr-3 pl-4 font-bold text-white shadow-[-10px_0_30px_-10px_rgba(20,32,26,0.45)] transition hover:pl-6 lg:flex print:hidden">
+          <span aria-hidden="true" className="text-2xl leading-none">‹</span>
+          <span aria-hidden="true" className="text-base [writing-mode:vertical-rl] tracking-[0.3em]">결과 보기</span>
         </button>
       ) : (
         <aside id={`${id}-result`} aria-label={resultTitle}
@@ -123,8 +124,19 @@ export function StageForm({
           <div className="shrink-0 space-y-3 border-b border-chb-line px-6 pt-4 pb-3">
             <div className="flex items-center justify-between gap-2">
               <h2 className="font-display text-xl font-black tracking-tight">{resultTitle}</h2>
-              <button type="button" onClick={() => setCollapsed(true)} aria-expanded aria-controls={`${id}-result`} aria-label={`${resultTitle} 숨기기`} title="결과 숨기기"
-                className="grid size-9 place-items-center rounded-full border border-chb-line text-lg text-chb-muted hover:border-chb-ink hover:text-chb-ink">›</button>
+              <div className="flex items-center gap-1">
+                {view === "split" ? (
+                  <>
+                    <button type="button" onClick={() => setView("result")} aria-label={`${resultTitle} 크게 보기`} title="결과만 크게 보기"
+                      className="grid size-9 place-items-center rounded-full border border-chb-line text-lg text-chb-accent hover:border-chb-accent hover:bg-chb-soft2">‹</button>
+                    <button type="button" onClick={() => setView("input")} aria-expanded aria-controls={`${id}-result`} aria-label={`${resultTitle} 숨기기`} title="결과 숨기기"
+                      className="grid size-9 place-items-center rounded-full border border-chb-line text-lg text-chb-muted hover:border-chb-ink hover:text-chb-ink">›</button>
+                  </>
+                ) : (
+                  <button type="button" onClick={() => setView("split")} aria-label="입력 칸과 나란히 보기"
+                    className="flex items-center gap-1 rounded-full border border-chb-line px-4 py-2 text-sm font-semibold text-chb-ink hover:border-chb-ink">입력 칸 다시 보기 <span aria-hidden="true">›</span></button>
+                )}
+              </div>
             </div>
             {progress}
           </div>
