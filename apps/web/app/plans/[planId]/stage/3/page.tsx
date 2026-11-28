@@ -155,8 +155,8 @@ export default async function Stage3({
           </div>
         </StageForm>
       </main>
-      {/* 오른쪽 칸은 결과 패널이 쓴다. AI 상담은 폼 아래 */}
-      <div className="mx-auto w-full max-w-6xl px-6 pb-10"><AssistantPanel planId={planId} stage={3} /></div>
+      {/* 오른쪽 칸은 결과 패널, AI 상담은 화면 구석에 떠 있는 버튼 */}
+      <AssistantPanel planId={planId} stage={3} />
     </div>
     </TipPicks>
   );

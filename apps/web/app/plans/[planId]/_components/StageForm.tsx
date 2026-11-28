@@ -119,7 +119,7 @@ export function StageForm({
         </aside>
       ) : (
         <aside id={`${id}-result`} aria-label={resultTitle}
-          className="hidden flex-col overflow-hidden rounded-3xl border border-chb-line bg-white lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-7rem)]">
+          className="hidden flex-col overflow-hidden rounded-3xl border border-chb-line bg-white lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-12rem)]">
           <div className="shrink-0 space-y-4 border-b border-chb-line px-6 pt-5 pb-4">
             <div className="flex items-center justify-between gap-2">
               <h2 className="font-display text-xl font-black tracking-tight">{resultTitle}</h2>
