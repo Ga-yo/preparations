@@ -41,6 +41,7 @@ export function StageForm({
   // 저장 성공 후 새 결과를 기다리는 동안 저장 시점의 resultKey를 담는다
   const [awaiting, setAwaiting] = useState<{ key: string | null | undefined } | null>(null);
   const [pending, start] = useTransition();
+  // 결과 패널을 통째로 숨기면 입력 칸이 전체 폭을 쓰고, 화면 오른쪽 가장자리의 ‹ 손잡이로 다시 연다
   const [collapsed, setCollapsed] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
   const panelBody = useRef<HTMLDivElement>(null);
@@ -78,12 +79,12 @@ export function StageForm({
   return (
     <form
       id={id}
-      className={`grid items-start gap-8 ${result ? (collapsed ? "lg:grid-cols-[minmax(0,1fr)_56px]" : "lg:grid-cols-[minmax(0,1fr)_420px]") : ""}`}
+      className={`grid items-start gap-8 ${result && !collapsed ? "lg:grid-cols-[minmax(0,1fr)_500px]" : ""}`}
       onSubmit={(e) => {
         e.preventDefault();
         if (waiting) return; // 패널의 제출 버튼은 fieldset 밖이라 여기서 막는다
         const form = new FormData(e.currentTarget);
-        setCollapsed(false); // 접어 둔 채 저장해도 새 결과가 보이게 편다
+        setCollapsed(false); // 숨겨 둔 채 저장해도 새 결과가 보이게 연다
         start(async () => {
           const key = resultKey;
           const errs = await action(form);
@@ -110,21 +111,20 @@ export function StageForm({
         </button>
       </div>
       {result && (collapsed ? (
-        <aside aria-label={resultTitle} className="hidden lg:sticky lg:top-24 lg:block">
-          <button type="button" onClick={() => setCollapsed(false)} aria-expanded={false} aria-controls={`${id}-result`} aria-label={`${resultTitle} 펼치기`}
-            className="flex w-14 flex-col items-center gap-3 rounded-3xl border border-chb-line bg-white py-5 font-semibold text-chb-ink transition hover:border-chb-accent">
-            <span aria-hidden="true" className="text-lg text-chb-accent">‹</span>
-            <span aria-hidden="true" className="[writing-mode:vertical-rl] tracking-widest">결과 열기</span>
-          </button>
-        </aside>
+        <button type="button" onClick={() => setCollapsed(false)} aria-expanded={false} aria-controls={`${id}-result`} aria-label={`${resultTitle} 열기`} title={`${resultTitle} 열기`}
+          className="fixed top-1/2 right-0 z-30 hidden -translate-y-1/2 flex-col items-center gap-2 rounded-l-2xl border border-r-0 border-chb-line bg-white py-4 pr-2 pl-2.5 font-semibold text-chb-ink shadow-[-8px_0_24px_-12px_rgba(20,32,26,0.35)] transition hover:pl-3.5 hover:text-chb-accent lg:flex print:hidden">
+          <span aria-hidden="true" className="text-xl text-chb-accent">‹</span>
+          <span aria-hidden="true" className="text-sm [writing-mode:vertical-rl] tracking-widest">결과</span>
+        </button>
       ) : (
         <aside id={`${id}-result`} aria-label={resultTitle}
-          className="hidden flex-col overflow-hidden rounded-3xl border border-chb-line bg-white lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-12rem)]">
-          <div className="shrink-0 space-y-4 border-b border-chb-line px-6 pt-5 pb-4">
+          className="hidden flex-col overflow-hidden rounded-3xl border border-chb-line bg-white lg:sticky lg:top-24 lg:flex lg:max-h-[calc(100vh-12rem)] min-[90rem]:max-h-[calc(100vh-7rem)]">
+          {/* 1440px 미만은 아래에 떠 있는 AI 버튼과 겹치지 않게 높이를 줄인다 */}
+          <div className="shrink-0 space-y-3 border-b border-chb-line px-6 pt-4 pb-3">
             <div className="flex items-center justify-between gap-2">
               <h2 className="font-display text-xl font-black tracking-tight">{resultTitle}</h2>
-              <button type="button" onClick={() => setCollapsed(true)} aria-expanded aria-controls={`${id}-result`} aria-label={`${resultTitle} 접기`}
-                className="grid size-9 place-items-center rounded-full text-lg text-chb-muted hover:bg-chb-soft2 hover:text-chb-ink">›</button>
+              <button type="button" onClick={() => setCollapsed(true)} aria-expanded aria-controls={`${id}-result`} aria-label={`${resultTitle} 숨기기`} title="결과 숨기기"
+                className="grid size-9 place-items-center rounded-full border border-chb-line text-lg text-chb-muted hover:border-chb-ink hover:text-chb-ink">›</button>
             </div>
             {progress}
           </div>
@@ -142,13 +142,14 @@ export function StageForm({
               <p className="p-6 leading-relaxed text-chb-muted">왼쪽을 입력하고 아래 &lsquo;{submitLabel}&rsquo; 버튼을 누르면 {resultTitle}가 여기 보여요.</p>
             )}
           </div>
-          <div className="shrink-0 space-y-2 border-t border-chb-line p-4">
+          {/* 결과가 보이는 칸을 넓히려고 저장·다음 단계 버튼을 한 줄에 둔다 */}
+          <div className="flex shrink-0 gap-2 border-t border-chb-line p-3">
             <button type="submit" disabled={waiting}
-              className="w-full rounded-full bg-chb-accent py-3.5 text-lg font-bold text-white shadow-[0_16px_32px_-14px_rgba(46,125,91,0.55)] transition hover:-translate-y-0.5 disabled:cursor-progress disabled:opacity-60">
+              className="min-w-0 flex-1 rounded-full bg-chb-accent px-4 py-3 font-bold text-white shadow-[0_16px_32px_-14px_rgba(46,125,91,0.55)] transition hover:-translate-y-0.5 disabled:cursor-progress disabled:opacity-60">
               {waiting ? "계산 중…" : submitLabel}
             </button>
             {next && resultLabel && !waiting && (
-              <Link href={next.href} className="block w-full rounded-full border border-chb-line py-3 text-center font-semibold hover:border-chb-ink"><NextLabel label={next.label} dark /></Link>
+              <Link href={next.href} className="shrink-0 rounded-full border border-chb-line px-5 py-3 text-center font-semibold whitespace-nowrap hover:border-chb-ink"><NextLabel label={next.label} dark /></Link>
             )}
           </div>
         </aside>
