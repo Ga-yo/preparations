@@ -92,6 +92,8 @@ export function ChatPanel({ planId, stage, initial, runCheck }: {
   }
 
   const badge = !open && ((check && !seen) || checking);
+  // 처음엔 작게 열고, 대화·점검 결과가 생기면 넓어진다. 높이는 내용만큼 늘다가 최대 높이부터 대화 칸만 스크롤
+  const grown = log.length > 0 || !!check || checking || pending;
   return (
     <>
       <button ref={toggleRef} type="button" aria-expanded={open} aria-controls="ai-chat"
@@ -106,7 +108,7 @@ export function ChatPanel({ planId, stage, initial, runCheck }: {
       </button>
       {open && <div aria-hidden="true" onClick={close} className="fixed inset-0 z-40 bg-chb-ink/30 sm:hidden" />}
       <section id="ai-chat" hidden={!open} aria-label="AI 상담"
-        className="fixed inset-x-0 bottom-0 z-50 flex h-[85vh] flex-col overflow-hidden rounded-t-3xl border border-chb-line bg-white shadow-[0_24px_60px_-12px_rgba(20,32,26,0.35)] [&[hidden]]:hidden sm:inset-x-auto sm:right-6 sm:bottom-24 sm:h-[min(720px,calc(100vh-8rem))] sm:w-[460px] sm:rounded-3xl lg:w-[500px] print:hidden">
+        className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[85vh] flex-col overflow-hidden rounded-t-3xl border border-chb-line bg-white shadow-[0_24px_60px_-12px_rgba(20,32,26,0.35)] transition-[width] duration-300 [&[hidden]]:hidden sm:inset-x-auto sm:right-6 sm:bottom-24 sm:max-h-[min(720px,calc(100vh-8rem))] sm:rounded-3xl print:hidden ${grown ? "sm:w-[460px] lg:w-[500px]" : "sm:w-[380px]"}`}>
         <div className="flex shrink-0 items-center justify-between gap-2 border-b border-chb-line px-6 py-4">
           <h2 className="flex items-center gap-2 text-lg font-bold"><span aria-hidden="true" className="size-2 rounded-full bg-chb-accent" />AI 상담</h2>
           <div className="flex items-center gap-1">
