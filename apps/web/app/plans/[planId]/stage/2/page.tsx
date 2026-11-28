@@ -8,12 +8,12 @@ import { AssistantPanel } from "../../_components/AssistantPanel";
 import { CheckCard, inputClass, labelClass, ScaleChoice, Section, UnitInput } from "../../_components/Field";
 import { RegionPriceCard } from "../../_components/RegionPriceCard";
 import { StageForm } from "../../_components/StageForm";
+import { StageProgress } from "../../_components/StageProgress";
 import { StageTabs } from "../../_components/StageTabs";
 import { TipPanel, TipPicks } from "../../_components/TipPanel";
 import { stationLabel } from "@/lib/agent/region";
 import { getRegionPricesForPlan, saveStage2Conditions } from "./actions";
 import { SigunguPicker } from "./_components/SigunguPicker";
-import { Stage2Summary, type Stage2Snapshot } from "./_components/Stage2Summary";
 
 const LABELS: Record<string, string> = {
   sigungu_codes: "희망 시군구", dong_names: "희망 동(지역명을 찾지 못했거나 여러 곳과 일치 — 시·구부터 입력해 주세요)",
@@ -77,15 +77,8 @@ export default async function Stage2({
 
   const initialCodes = [...saved].filter((x) => x.endsWith("00000")).map((x) => x.slice(0, 5))
     .filter((code) => sigungu?.some((s) => s.sigungu_code === code)); // 비수도권·상위 코드는 지도에 없으니 뺀다
-  const names = Object.fromEntries((sigungu ?? []).map((r) => [r.sigungu_code ?? "", r.full_name.slice(r.sido.length + 1) || r.full_name]));
   const dongText = dongCodes.map(nameOf).join(", ");
   const commuteText = c?.commute_station ? stationLabel(c.commute_station) : c?.commute_region_code ? nameOf(c.commute_region_code) : "";
-  const initial: Stage2Snapshot = {
-    sigungu: initialCodes, dong: dongText, commuteRegion: commuteText, commuteMin: c?.commute_minutes_max ?? null,
-    transit: !!c?.uses_transit, school: c?.school_importance ?? null, infra: c?.infra_importance ?? null,
-    household: c?.household_size ?? null, areaMin: c?.area_min ?? null, areaMax: c?.area_max ?? null,
-    parking: !!c?.parking_required,
-  };
   const pd = prices.data as { regions?: { affordable?: boolean }[] };
   const rows = pd.regions ?? [];
   const known = rows.filter((r) => r.affordable !== undefined);
@@ -97,9 +90,9 @@ export default async function Stage2({
     <TipPicks value={tipPicks}>
     <div className="flex-1 bg-chb-soft2 pb-28">
       <StageTabs planId={planId} current={2} />
-      <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <main className="mx-auto w-full max-w-6xl px-6 py-10">
         <StageForm
-          id={FORM_ID} title="2단계. 희망하는 주거 환경" labels={LABELS} action={save}
+          id={FORM_ID} submitLabel="저장하고 시세 보기" progress={<StageProgress formId={FORM_ID} stage={2} />} title="2단계. 희망하는 주거 환경" labels={LABELS} action={save}
           result={<RegionPriceCard result={prices} flat />} resultKey={c?.id} resultLabel={resultLabel}
           resultTitle="희망 지역 시세" resultCaption="지역 시세 보기"
           next={{ href: `/plans/${planId}/stage/3`, label: "3단계로 →" }}
@@ -136,11 +129,9 @@ export default async function Stage2({
             </Section>
           </div>
         </StageForm>
-        <div className="space-y-6 lg:sticky lg:top-24">
-          <Stage2Summary key={c?.id ?? "new"} formId={FORM_ID} initial={initial} names={names} />
-          <AssistantPanel planId={planId} stage={2} />
-        </div>
       </main>
+      {/* 오른쪽 칸은 결과 패널이 쓴다. AI 상담은 폼 아래 */}
+      <div className="mx-auto w-full max-w-6xl px-6 pb-10"><AssistantPanel planId={planId} stage={2} /></div>
     </div>
     </TipPicks>
   );

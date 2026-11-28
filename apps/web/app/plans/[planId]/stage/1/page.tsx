@@ -8,9 +8,9 @@ import { BudgetCard } from "../../_components/BudgetCard";
 import { AssistantPanel } from "../../_components/AssistantPanel";
 import { CheckCard, ChoiceCards, inputClass, labelClass, Section } from "../../_components/Field";
 import { formatEokShort } from "../../_components/format";
-import { InputSummary, type Snapshot } from "../../_components/InputSummary";
 import { MoneyInput } from "../../_components/MoneyInput";
 import { StageForm } from "../../_components/StageForm";
+import { StageProgress } from "../../_components/StageProgress";
 import { StageTabs } from "../../_components/StageTabs";
 import { TipPanel, TipPicks } from "../../_components/TipPanel";
 import { getBudgetForPlan, saveFinancialProfile } from "./actions";
@@ -51,12 +51,6 @@ export default async function Stage1({
   }
 
   const FORM_ID = "stage1-form";
-  const initial: Snapshot = {
-    purpose: p?.purpose ?? "", timeline: p?.timeline ?? "",
-    cash: MAN(p?.cash_assets), income: MAN(p?.annual_income), debt: MAN(p?.existing_debt),
-    debtPayment: MAN(p?.existing_debt_annual_payment), extra: MAN(p?.extra_funds), houses: p?.owned_house_count ?? 0,
-    firstTime: !!p?.is_first_time, newlywed: !!p?.is_newlywed, newborn: !!p?.has_newborn,
-  };
   // 보유 여부는 저장하지 않으므로 저장된 금액에서 되살린다(처음이면 미선택)
   const hasDebt = (p?.existing_debt ?? 0) > 0 || (p?.existing_debt_annual_payment ?? 0) > 0;
   const b = budget.data as { maxRatePrice?: number; minRatePrice?: number };
@@ -81,9 +75,9 @@ export default async function Stage1({
     <TipPicks value={tipPicks}>
     <div className="flex-1 bg-chb-soft2 pb-28">
       <StageTabs planId={planId} current={1} />
-      <main className="mx-auto grid w-full max-w-6xl items-start gap-8 px-6 py-10 lg:grid-cols-[minmax(0,1fr)_380px]">
+      <main className="mx-auto w-full max-w-6xl px-6 py-10">
         <StageForm
-          id={FORM_ID} title="1단계. 나의 구매 상황" labels={LABELS} action={save}
+          id={FORM_ID} submitLabel="예산 계산하기" progress={<StageProgress formId={FORM_ID} stage={1} />} title="1단계. 나의 구매 상황" labels={LABELS} action={save}
           wide result={<BudgetCard result={budget} flat income={p?.annual_income} />} resultKey={p?.updated_at} resultLabel={resultLabel}
           next={{ href: `/plans/${planId}/stage/2`, label: "2단계로 →" }}
           pendingText="저장하고 예산을 계산하는 중이에요…"
@@ -127,11 +121,9 @@ export default async function Stage1({
             {checkbox("has_newborn", "2년 내 출산(예정) 가구입니다", p?.has_newborn)}
           </Section>
         </StageForm>
-        <div className="space-y-6 lg:sticky lg:top-24">
-          <InputSummary formId={FORM_ID} initial={initial} />
-          <AssistantPanel planId={planId} stage={1} />
-        </div>
       </main>
+      {/* 오른쪽 칸은 결과 패널이 쓴다. AI 상담은 폼 아래 */}
+      <div className="mx-auto w-full max-w-6xl px-6 pb-10"><AssistantPanel planId={planId} stage={1} /></div>
     </div>
     </TipPicks>
   );
