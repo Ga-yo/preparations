@@ -27,7 +27,7 @@
   padding: clamp(32px, 6vh, 72px) 0;
 }
 .chb-hero * { box-sizing: border-box; }
-.chb-hero svg, .chb-how svg { display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.chb-hero svg { display: block; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .chb-wrap {
   width: 100%;
   max-width: 1200px;
@@ -67,7 +67,7 @@
 .chb-btn:hover { transform: translateY(-2px); }
 .chb-btn:hover svg { transform: translateX(3px); }
 .chb-btn:disabled { opacity: 0.6; cursor: progress; transform: none; }
-.chb-hero button:focus-visible, .chb-how button:focus-visible { outline: 2px solid var(--hx-accent); outline-offset: 3px; }
+.chb-hero button:focus-visible { outline: 2px solid var(--hx-accent); outline-offset: 3px; }
 
 /* 오른쪽: 비주얼. 노트북 높이에서 잘리지 않게 vh로도 제한 */
 .chb-visual { position: relative; width: min(100%, 600px, 74vh); margin-inline: auto; aspect-ratio: 1 / 1; }

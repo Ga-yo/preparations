@@ -20,7 +20,7 @@ export default function Home() {
   return (
     <main className="flex flex-1 flex-col">
       <Hero start={start} />
-      <HowItWorks start={start} />
+      <HowItWorks />
     </main>
   )
 }

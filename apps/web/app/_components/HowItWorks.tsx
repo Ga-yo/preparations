@@ -1,4 +1,3 @@
-import { StartButton } from "./Hero";
 import "./how.css";
 
 // 홈 첫 화면 아래 "이용 방법". 앱 1~5단계·리포트에 실제로 있는 기능만 쓴다.
@@ -22,7 +21,7 @@ const STEPS: { stages: string; title: string; body: string; rows: Row[] }[] = [
   },
 ];
 
-export function HowItWorks({ start }: { start: () => Promise<void> }) {
+export function HowItWorks() {
   return (
     <section className="chb-how" aria-labelledby="chb-how-title">
       <div className="chb-how-wrap">
@@ -45,9 +44,6 @@ export function HowItWorks({ start }: { start: () => Promise<void> }) {
             </li>
           ))}
         </ol>
-        <form action={start} className="chb-how-cta">
-          <StartButton />
-        </form>
       </div>
     </section>
   );
